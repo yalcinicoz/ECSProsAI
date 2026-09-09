@@ -29,6 +29,7 @@ public static class ProductGrid
         .Date("createdAt", p => p.CreatedAt)
         .Guid("productGroupId", p => p.ProductGroupId)
         .Guid("supplierId", p => p.SupplierId)
+        .Sort("group", p => GridJson.Text(p.ProductGroup.NameI18n, "tr"))
         .Sort("code", p => p.Code)
         .Sort("name", p => GridJson.Text(p.NameI18n, "tr"))
         .Sort("variantCount", p => p.Variants.Count)

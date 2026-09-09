@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, AlertTriangle } from 'lucide-react'
 import api from '@/api/client'
@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { PageSpinner } from '@/components/ui/Spinner'
 
 interface Firm {
@@ -37,7 +39,12 @@ interface ChannelCategoryItem {
   displayImageUrl: string | null
   badgeLabel: string | null
   productGroupCount: number
+  // 2026-09-09 (DataGrid): kategoriye bağlı ürün sayısı + oluşturma (kolon/sıralama)
+  productCount: number
+  createdAt: string
 }
+
+interface Sayfali<T> { items: T[]; totalCount: number; page: number; pageSize: number }
 
 const STATUS_LABELS: Record<string, { label: string; variant: 'success' | 'warning' | 'neutral' }> = {
   published: { label: 'Yayında',   variant: 'success' },
@@ -71,9 +78,12 @@ export function ChannelCategoriesPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const [selectedChannelId, setSelectedChannelId] = useState<string>(
-    () => sessionStorage.getItem('channelCategories.channelId') ?? ''
-  )
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (ChannelCategoryGrid.Schema) + Excel + görünümler.
+  // ★ Ayrı uç: /navigation/channel-categories TAM liste döner (Menü Yerleşimi + Ürün Kartı ekranları);
+  // bu ekran sayfalı /channel-categories/grid kullanır. Kanal seçimi URL'de (paylaşılabilir link).
+  const [sp] = useSearchParams()
+  const grid = useGridState('channel-categories', { defaultPageSize: 30, defaultSort: 'sortOrder', defaultDir: 'asc' })
+  const selectedChannelId = sp.get('firmPlatformId') ?? (sessionStorage.getItem('channelCategories.channelId') ?? '')
 
   useEffect(() => {
     if (selectedChannelId)
@@ -112,13 +122,24 @@ export function ChannelCategoriesPage() {
     label: `${getChannelLabel(c)} (${c.firmName})`,
   }))
 
-  const { data: categories = [], isLoading: catLoading } = useQuery<ChannelCategoryItem[]>({
-    queryKey: ['channel-categories', selectedChannelId],
-    queryFn: async () => {
-      const { data } = await api.get(`/navigation/channel-categories?firmPlatformId=${selectedChannelId}`)
-      return data.data ?? []
-    },
+  const { data, isLoading: catLoading, isFetching, error: listError } = useQuery<Sayfali<ChannelCategoryItem>>({
+    queryKey: ['channel-categories-grid', selectedChannelId, ...grid.queryKey],
+    queryFn: async () =>
+      (await api.get(`/navigation/channel-categories/grid?${grid.toParams({ firmPlatformId: selectedChannelId })}`)).data.data,
     enabled: !!selectedChannelId,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
+  })
+  const categories = data?.items ?? []
+
+  // "Tanımsız" uyarısı artık SUNUCUDAN sayılır: sayfalı listede istemci tarafı sayım yanlış olurdu
+  // (yalnız açık sayfayı görür). Şemadaki `tanimsiz` filtresi = yayında + hiçbir ürün grubu yok.
+  const { data: tanimsizSayim } = useQuery<Sayfali<ChannelCategoryItem>>({
+    queryKey: ['channel-categories-uncovered', selectedChannelId],
+    queryFn: async () => (await api.get(
+      `/navigation/channel-categories/grid?firmPlatformId=${selectedChannelId}&pageSize=1&f.tanimsiz=eq:true`)).data.data,
+    enabled: !!selectedChannelId,
+    staleTime: 60_000,
   })
 
   const createMutation = useMutation({
@@ -141,8 +162,42 @@ export function ChannelCategoriesPage() {
     },
   })
 
-  // Coverage hesapla: tüm gruplar kapsanıyor mu?
-  const uncoveredCount = categories.filter(c => c.productGroupCount === 0 && c.status === 'published').length
+  const uncoveredCount = tanimsizSayim?.totalCount ?? 0
+
+  const columns: GridColumn<ChannelCategoryItem>[] = [
+    { key: 'name', header: 'KATEGORİ', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 260,
+      filter: { type: 'text', label: 'Kategori adı' },
+      filters: [{ field: 'slug', label: 'Slug', type: 'text' }, { field: 'badgeLabel', label: 'Rozet', type: 'text' },
+                { field: 'isRoot', label: 'Üst seviye', type: 'boolean' }],
+      cell: cat => <div>
+        <div className="font-medium text-sm" style={{ color: 'var(--text)' }}>
+          {getName(cat.nameI18n)}
+          {cat.badgeLabel && (
+            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
+              style={{ background: 'var(--brand-bg)', color: 'var(--brand)' }}>{cat.badgeLabel}</span>
+          )}
+        </div>
+        <code className="text-xs" style={{ color: 'var(--text-s)' }}>{cat.slug}</code>
+      </div> },
+    { key: 'fillType', header: 'DOLUM', priority: 1, align: 'center', sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Dolum', options: Object.entries(FILL_LABELS).map(([value, label]) => ({ value, label })) },
+      cell: cat => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{FILL_LABELS[cat.fillType] ?? cat.fillType}</span> },
+    { key: 'productGroupCount', header: 'GRUPLAR', priority: 1, align: 'center', sortable: true,
+      filter: { type: 'number', label: 'Ürün grubu sayısı' },
+      filters: [{ field: 'tanimsiz', label: 'Tanımsız (yayında, grubu yok)', type: 'boolean' }],
+      cell: cat => cat.productGroupCount === 0
+        ? <span className="text-xs" style={{ color: '#f59e0b' }}>⚠ Tanımsız</span>
+        : <span className="text-sm" style={{ color: 'var(--text-m)' }}>{cat.productGroupCount}</span> },
+    { key: 'productCount', header: 'ÜRÜN', priority: 2, align: 'center', sortable: true,
+      filter: { type: 'number', label: 'Ürün sayısı' },
+      cell: cat => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{cat.productCount}</span> },
+    { key: 'sortOrder', header: 'SIRA', priority: 3, align: 'center', sortable: true, filter: { type: 'number', label: 'Sıra' },
+      cell: cat => <span className="text-sm" style={{ color: 'var(--text-s)' }}>{cat.sortOrder}</span> },
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, align: 'center', sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(STATUS_LABELS).map(([value, v]) => ({ value, label: v.label })) },
+      filters: [{ field: 'hasImage', label: 'Görseli var', type: 'boolean' }, { field: 'createdAt', label: 'Oluşturma', type: 'date' }],
+      cell: cat => { const st = STATUS_LABELS[cat.status] ?? { label: cat.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
+  ]
 
   if (chLoading) return <PageSpinner />
 
@@ -165,7 +220,7 @@ export function ChannelCategoriesPage() {
         <label className="flbl mb-2">Satış Kanalı</label>
         <SearchableSelect
           value={selectedChannelId}
-          onChange={(v) => v && setSelectedChannelId(v)}
+          onChange={(v) => v && grid.mutate(n => n.set('firmPlatformId', v))}
           options={channelOptions}
           placeholder="Kanal seçin…"
           hasValue={!!selectedChannelId}
@@ -174,73 +229,40 @@ export function ChannelCategoriesPage() {
 
       {/* Coverage uyarısı */}
       {uncoveredCount > 0 && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-xl mb-4 text-sm"
-          style={{ background: '#fef9c3', color: '#854d0e', border: '1px solid #fde68a' }}>
+        <button type="button" className="flex items-center gap-2 px-4 py-3 rounded-xl mb-4 text-sm w-full text-left"
+          style={{ background: '#fef9c3', color: '#854d0e', border: '1px solid #fde68a' }}
+          onClick={() => grid.mutate(n => n.set('f.tanimsiz', 'eq:true'))}>
           <AlertTriangle size={15} />
           <span>
             <strong>{uncoveredCount}</strong> yayındaki kategori henüz hiçbir ürün grubundan sorumlu değil.
+            <span className="underline ml-1">Listede göster</span>
           </span>
-        </div>
+        </button>
       )}
 
-      {/* Tablo */}
       {selectedChannelId && (
-        <div className="card overflow-hidden p-0">
-          <table className="w-full">
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Kategori</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Dolum</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Gruplar</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Durum</th>
-              </tr>
-            </thead>
-            <tbody>
-              {catLoading && (
-                <tr><td colSpan={4} className="py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor…</td></tr>
-              )}
-              {!catLoading && categories.length === 0 && (
-                <tr><td colSpan={4} className="py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Bu kanalda henüz kategori yok</td></tr>
-              )}
-              {categories.map(cat => {
-                const st = STATUS_LABELS[cat.status] ?? { label: cat.status, variant: 'neutral' as const }
-                return (
-                  <tr
-                    key={cat.id}
-                    onClick={() => navigate(`/storefront/channel-categories/${cat.id}`)}
-                    className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                    style={{ borderBottom: '1px solid var(--border)' }}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-sm" style={{ color: 'var(--text)' }}>
-                        {getName(cat.nameI18n)}
-                        {cat.badgeLabel && (
-                          <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
-                            style={{ background: 'var(--brand-bg)', color: 'var(--brand)' }}>
-                            {cat.badgeLabel}
-                          </span>
-                        )}
-                      </div>
-                      <code className="text-xs" style={{ color: 'var(--text-s)' }}>{cat.slug}</code>
-                    </td>
-                    <td className="px-4 py-3 text-center text-sm" style={{ color: 'var(--text-m)' }}>
-                      {FILL_LABELS[cat.fillType] ?? cat.fillType}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {cat.productGroupCount === 0
-                        ? <span className="text-xs" style={{ color: '#f59e0b' }}>⚠ Tanımsız</span>
-                        : <span className="text-sm" style={{ color: 'var(--text-m)' }}>{cat.productGroupCount}</span>
-                      }
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <Badge variant={st.variant}>{st.label}</Badge>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <DataGrid<ChannelCategoryItem>
+          gridId="channel-categories"
+          views
+          grid={grid}
+          columns={columns}
+          rows={categories}
+          totalCount={data?.totalCount ?? 0}
+          loading={catLoading}
+          fetching={isFetching}
+          error={listError ? errText(listError) : null}
+          onRowClick={cat => navigate(`/storefront/channel-categories/${cat.id}`)}
+          empty="Bu kanalda henüz kategori yok."
+          search={{ placeholder: 'Kategori adı veya slug ara…' }}
+          minWidth={900}
+          export={{ endpoint: '/navigation/channel-categories/export', named: () => ({ firmPlatformId: selectedChannelId }), fallbackFileName: 'kanal-kategorileri.xlsx' }}
+          compact={{
+            title: cat => getName(cat.nameI18n),
+            subtitle: cat => `${cat.slug} · ${FILL_LABELS[cat.fillType] ?? cat.fillType}`,
+            right: cat => `${cat.productGroupCount} grup`,
+            badge: cat => { const st = STATUS_LABELS[cat.status] ?? { label: cat.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> },
+          }}
+        />
       )}
 
       {/* Create Modal */}

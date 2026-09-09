@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Ban, CheckCircle2, PauseCircle, PlayCircle } from 'lucide-react'
+import { Ban, CheckCircle2, PauseCircle, PlayCircle } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
-import { Pagination } from '@/components/ui/Pagination'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { ChannelProductDrawer, type DrawerProduct } from './ChannelProductDrawer'
 
@@ -29,7 +31,13 @@ interface ChannelProductItem {
   saleStoppedFrom: string | null
   saleStoppedUntil: string | null
   isStoppedNow: boolean
+  // 2026-09-09 (DataGrid): kolon/sıralama için gerçek ürün alanları
+  sourceType: string
+  basePrice: number
+  variantCount: number
 }
+
+const SOURCE_LABELS: Record<string, string> = { own: 'Kendi', seller: 'Satıcı', supply: 'Tedarik' }
 interface PagedResult {
   items: ChannelProductItem[]
   totalCount: number
@@ -58,27 +66,30 @@ const STATUS_OPTIONS = [
   { value: 'stopped', label: 'Durdurulan' },
 ]
 
-const PAGE_SIZE = 30
-
 export function ChannelProductsPage() {
+  // DataGrid (2026-09-09): ÜRÜN alanlarında sunucu filtre/sıralama/arama (ChannelProductGrid.Schema)
+  // + toplu seçim (DataGrid.selection) + görünümler.
+  // ★ SINIR: kanal durumu (Kanalda / Çıkarıldı / Durduruldu) ve listeleme durumu Storefront tarafında
+  // BELLEKTE çözülüyor (opt-out: satırı olmayan ürün de kanalda) → o kolonlar sunucuda sıralanamaz;
+  // onlar eskiden olduğu gibi adlandırılmış süzgeçlerle (status / listing / reason) çalışır.
   const queryClient = useQueryClient()
+  const [sp] = useSearchParams()
 
-  const [channelId, setChannelId] = useState<string>(
-    () => sessionStorage.getItem('channelProducts.channelId') ?? ''
-  )
+  // Kanal seçimi URL'de tutulur (paylaşılabilir link); ilk açılışta son kanal sessionStorage'dan gelir.
+  const urlChannel = sp.get('channelId') ?? ''
+  const status = sp.get('status') ?? 'all'
+  const listingF = sp.get('listing') ?? ''
+  const reasonF = sp.get('reason') ?? ''
+  const grid = useGridState('channel-products', { defaultPageSize: 30, defaultSort: 'code', defaultDir: 'asc' })
+  const setNamed = (k: string, v: string) => grid.mutate(n => { if (v) n.set(k, v); else n.delete(k) })
+
+  const channelId = urlChannel || (sessionStorage.getItem('channelProducts.channelId') ?? '')
   useEffect(() => { if (channelId) sessionStorage.setItem('channelProducts.channelId', channelId) }, [channelId])
 
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
-  const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [stopModalOpen, setStopModalOpen] = useState(false)
   const [stopFrom, setStopFrom] = useState('')
   const [stopUntil, setStopUntil] = useState('')
-  // F3: listeleme durumu/sebep filtreleri + sağ çekmece + durdurma hedefi (toplu ya da tek ürün)
-  const [listingF, setListingF] = useState('')
-  const [reasonF, setReasonF] = useState('')
   const [drawer, setDrawer] = useState<DrawerProduct | null>(null)
   const [stopTargetIds, setStopTargetIds] = useState<string[] | null>(null)
 
@@ -102,18 +113,20 @@ export function ChannelProductsPage() {
   const chLoading = firmsLoading || platformQueries.some(q => q.isLoading)
   const channelOptions = channels.map(c => ({ value: c.id, label: `${channelLabel(c)} (${c.firmName})` }))
 
+  const named = () => ({
+    status,
+    listing: listingF || undefined,
+    reason: reasonF || undefined,
+  })
+
   // ── Ürün listesi ──────────────────────────────────────────────────────────
-  const { data: pagedData, isLoading: listLoading } = useQuery<PagedResult>({
-    queryKey: ['channel-products', channelId, search, status, listingF, reasonF, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ status, page: String(page), pageSize: String(PAGE_SIZE) })
-      if (search) params.set('search', search)
-      if (listingF) params.set('listing', listingF)
-      if (reasonF) params.set('reason', reasonF)
-      const { data } = await api.get(`/navigation/channel-products/${channelId}/manage?${params}`)
-      return data.data
-    },
+  const { data: pagedData, isLoading: listLoading, isFetching, error: listError } = useQuery<PagedResult>({
+    queryKey: ['channel-products', channelId, status, listingF, reasonF, ...grid.queryKey],
+    queryFn: async () =>
+      (await api.get(`/navigation/channel-products/${channelId}/manage?${grid.toParams(named())}`)).data.data,
     enabled: !!channelId,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
   const items = pagedData?.items ?? []
 
@@ -132,10 +145,9 @@ export function ChannelProductsPage() {
   })
 
   const totalCount = pagedData?.totalCount ?? 0
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
-  // Kanal/filtre değişince seçim sıfırlanır
-  useEffect(() => { setSelected(new Set()); setDrawer(null) }, [channelId, search, status, listingF, reasonF])
+  // Kanal/filtre değişince seçim sıfırlanır (yanlış ürüne toplu işlem yapılmasın)
+  useEffect(() => { setSelected(new Set()); setDrawer(null) }, [channelId, status, listingF, reasonF, grid.state.search])
   useEffect(() => {
     if (!drawer) return
     const it = items.find(i => i.productId === drawer.productId)
@@ -151,8 +163,6 @@ export function ChannelProductsPage() {
   }
   const selectedChannel = channels.find(c => c.id === channelId)
   const isPushChannel = selectedChannel?.capabilities?.pushListing === true
-
-  const applySearch = () => { setPage(1); setSearch(searchInput.trim()) }
 
   // ── Toplu işlemler ──────────────────────────────────────────────────────────
   const selectMutation = useMutation({
@@ -170,11 +180,9 @@ export function ChannelProductsPage() {
     onSuccess: () => { setSelected(new Set()); setStopModalOpen(false); setStopFrom(''); setStopUntil(''); setStopTargetIds(null); invalidate() },
   })
 
+  // "Filtreye uyan tümünü seç" — arama/sıralama dahil AYNI filtre kümesiyle id listesi alınır.
   const selectAllMatching = async () => {
-    const params = new URLSearchParams({ status })
-    if (search) params.set('search', search)
-    if (listingF) params.set('listing', listingF)
-    if (reasonF) params.set('reason', reasonF)
+    const params = grid.toParams(named())
     const { data } = await api.get(`/navigation/channel-products/${channelId}/manage/ids?${params}`)
     setSelected(new Set(data.data as string[]))
   }
@@ -195,23 +203,62 @@ export function ChannelProductsPage() {
     else { setStopTargetIds([productId]); setStopModalOpen(true) }
   }
 
-  const toggleRow = (id: string) => {
-    setSelected(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-  const pageAllSelected = items.length > 0 && items.every(i => selected.has(i.productId))
-  const togglePageAll = () => {
-    setSelected(prev => {
-      const n = new Set(prev)
-      if (pageAllSelected) items.forEach(i => n.delete(i.productId))
-      else items.forEach(i => n.add(i.productId))
-      return n
-    })
-  }
+  const columns: GridColumn<ChannelProductItem>[] = [
+    { key: 'code', header: 'ÜRÜN', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 300,
+      filter: { type: 'text', label: 'Ürün kodu', ops: ['startswith', 'contains', 'eq'] },
+      filters: [
+        { field: 'name', label: 'Ürün adı', type: 'text' },
+        { field: 'supplierProductCode', label: 'Tedarikçi ürün kodu', type: 'text' }],
+      cell: it => <div className="flex items-center gap-2">
+        {it.mainImageUrl
+          ? <img src={it.mainImageUrl} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" style={{ background: 'var(--surface2)' }} />
+          : <div className="w-10 h-10 rounded flex-shrink-0" style={{ background: 'var(--surface2)' }} />}
+        <div className="min-w-0">
+          <div className="truncate" style={{ color: 'var(--text)' }}>{nameOf(it.nameI18n)}</div>
+          <div className="text-xs" style={{ color: 'var(--text-s)' }}>{it.code}</div>
+        </div>
+      </div> },
+    // Kanal durumu Storefront'ta bellekte çözülüyor → sıralama YOK; süzgeç adlandırılmış "status" ile.
+    { key: 'channelStatus', header: 'KANAL DURUMU', priority: 1, lockVisible: true, minWidth: 200,
+      cell: it => !it.isSelected
+        ? <Badge variant="neutral">Kanaldan çıkarıldı</Badge>
+        : it.isStoppedNow
+          ? <Badge variant="warning">Durduruldu{it.saleStoppedUntil ? ` — ${new Date(it.saleStoppedUntil).toLocaleDateString('tr-TR')} kadar` : ''}</Badge>
+          : <Badge variant="success">Kanalda</Badge> },
+    // Listeleme durumu ayrı serviste hesaplanıyor (sayfa başına toplu sorgu) → sıralama YOK.
+    { key: 'listing', header: 'LİSTELEME', priority: 2, minWidth: 240,
+      cell: it => {
+        const ls = listingMap[it.productId]
+        if (!ls) return <span className="text-xs" style={{ color: 'var(--text-s)' }}>…</span>
+        const m = LISTING_LABELS[ls.status] ?? { label: ls.status, variant: 'neutral' as const }
+        const sebep = ls.reasons.filter(r => !['channel_excluded', 'sale_stopped'].includes(r.code))
+        return <div>
+          <Badge variant={m.variant}>{m.label}</Badge>
+          {sebep.length > 0 && (
+            <div className="text-xs mt-0.5 max-w-[260px] truncate" title={sebep.map(r => r.label).join(' · ')}
+              style={{ color: 'var(--text-s)' }}>{sebep.map(r => r.label).join(' · ')}</div>
+          )}
+        </div>
+      } },
+    { key: 'sourceType', header: 'KAYNAK', priority: 3, defaultVisible: false, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Kaynak', options: Object.entries(SOURCE_LABELS).map(([value, label]) => ({ value, label })) },
+      cell: it => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{SOURCE_LABELS[it.sourceType] ?? it.sourceType}</span> },
+    { key: 'variantCount', header: 'VARYANT', priority: 3, defaultVisible: false, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Varyant sayısı' },
+      cell: it => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{it.variantCount}</span> },
+    { key: 'basePrice', header: 'LİSTE FİYATI', priority: 3, defaultVisible: false, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Liste fiyatı' },
+      filters: [{ field: 'isSaleOpen', label: 'Satışa açık (ürün)', type: 'boolean' },
+                { field: 'createdAt', label: 'Ürün oluşturma', type: 'date' }],
+      cell: it => <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+        {it.basePrice > 0 ? `${it.basePrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺` : '—'}</span> },
+    { key: 'actions', header: 'İŞLEM', priority: 1, align: 'right', exportable: false, stopRowClick: true, minWidth: 110,
+      cell: it => it.isSelected
+        ? <button className="text-xs underline" style={{ color: 'var(--text-m)' }} disabled={busy}
+            onClick={() => selectMutation.mutate({ productIds: [it.productId], selected: false })}>Çıkar</button>
+        : <button className="text-xs underline" style={{ color: 'var(--brand)' }} disabled={busy}
+            onClick={() => selectMutation.mutate({ productIds: [it.productId], selected: true })}>Kanala al</button> },
+  ]
 
   if (chLoading) return <PageSpinner />
 
@@ -230,7 +277,7 @@ export function ChannelProductsPage() {
         <label className="flbl mb-2">Satış Kanalı</label>
         <SearchableSelect
           value={channelId}
-          onChange={(v) => { if (v) { setChannelId(v); setPage(1) } }}
+          onChange={(v) => { if (v) setNamed('channelId', v) }}
           options={channelOptions}
           placeholder="Kanal seçin…"
           hasValue={!!channelId}
@@ -243,7 +290,7 @@ export function ChannelProductsPage() {
           {listingSummary && (
             <div className="flex flex-wrap items-center gap-1.5 mb-3 text-xs">
               <span style={{ color: 'var(--text-s)' }}>Listeleme:</span>
-              <button type="button" onClick={() => { setPage(1); setListingF(''); setReasonF('') }}
+              <button type="button" onClick={() => grid.mutate(n => { n.delete('listing'); n.delete('reason') })}
                 className="px-2 py-0.5 rounded-full"
                 style={{ border: '1px solid var(--border)', background: listingF === '' && reasonF === '' ? 'var(--brand)' : 'var(--surface)', color: listingF === '' && reasonF === '' ? '#fff' : 'var(--text-s)' }}>
                 Tümü {listingSummary.total}
@@ -251,7 +298,8 @@ export function ChannelProductsPage() {
               {Object.entries(LISTING_LABELS)
                 .filter(([k]) => (listingSummary.statusCounts[k] ?? 0) > 0)
                 .map(([k, m]) => (
-                  <button key={k} type="button" onClick={() => { setPage(1); setReasonF(''); setListingF(f => f === k ? '' : k) }}
+                  <button key={k} type="button"
+                    onClick={() => grid.mutate(n => { n.delete('reason'); if (listingF === k) n.delete('listing'); else n.set('listing', k) })}
                     className="rounded-full" style={{ outline: listingF === k ? '2px solid var(--brand)' : 'none', borderRadius: '9999px' }}>
                     <Badge variant={m.variant}>{m.label} {listingSummary.statusCounts[k]}</Badge>
                   </button>
@@ -259,169 +307,88 @@ export function ChannelProductsPage() {
             </div>
           )}
 
-          {/* Filtre çubuğu */}
-          <div className="card mb-4 flex flex-wrap items-end gap-3">
-            <div className="flex-1 min-w-[220px]">
-              <label className="flbl mb-1.5">Ara (kod veya ad)</label>
-              <div className="flex gap-2">
-                <input
-                  className="inp flex-1"
-                  value={searchInput}
-                  onChange={e => setSearchInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && applySearch()}
-                  placeholder="Ürün kodu veya adı…"
-                />
-                <Button variant="secondary" onClick={applySearch}><Search size={14} /> Ara</Button>
-              </div>
-            </div>
-            <div className="min-w-[180px]">
-              <label className="flbl mb-1.5">Durum</label>
-              <select className="inp" value={status} onChange={e => { setPage(1); setStatus(e.target.value) }}>
-                {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-            {/* Fiili yayın durumu filtresi — üstteki çiplerle aynı state'i kullanır (senkron) */}
-            <div className="min-w-[180px]">
-              <label className="flbl mb-1.5">Listeleme</label>
-              <select className="inp" value={listingF} onChange={e => { setPage(1); setListingF(e.target.value) }}>
-                <option value="">Tümü{listingSummary ? ` (${listingSummary.total})` : ''}</option>
-                {Object.entries(LISTING_LABELS).map(([k, m]) => {
-                  const n = listingSummary?.statusCounts[k] ?? 0
-                  return <option key={k} value={k}>{m.label}{listingSummary ? ` (${n})` : ''}</option>
-                })}
-              </select>
-            </div>
-            <div className="min-w-[220px]">
-              <label className="flbl mb-1.5">Sebep</label>
-              <select className="inp" value={reasonF} onChange={e => { setPage(1); setReasonF(e.target.value) }}>
-                <option value="">Tümü</option>
-                {(listingSummary?.reasons ?? []).map(r => (
-                  <option key={r.code} value={r.code.split(':')[0]}>{r.label} ({r.count})</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Toplu işlem çubuğu */}
-          {selected.size > 0 && (
-            <div className="flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl mb-3 text-sm"
-              style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-              <span style={{ color: 'var(--text-m)' }}>
-                <strong>{selected.size}</strong> ürün seçili
-              </span>
-              <button className="text-xs underline" style={{ color: 'var(--brand)' }} onClick={selectAllMatching}>
-                Filtreye uyan tümünü seç ({totalCount})
-              </button>
-              <button className="text-xs underline" style={{ color: 'var(--text-s)' }} onClick={() => setSelected(new Set())}>
-                Temizle
-              </button>
-              <div className="flex-1" />
-              <Button variant="secondary" disabled={busy}
-                onClick={() => selectMutation.mutate({ productIds: selectedIds, selected: true })}>
-                <CheckCircle2 size={14} /> Kanala Al
-              </Button>
-              <Button variant="secondary" disabled={busy}
-                onClick={() => selectMutation.mutate({ productIds: selectedIds, selected: false })}>
-                <Ban size={14} /> Kanaldan Çıkar
-              </Button>
-              <Button variant="secondary" disabled={busy} onClick={() => { setStopTargetIds(null); setStopModalOpen(true) }}>
-                <PauseCircle size={14} /> Satışı Durdur
-              </Button>
-              <Button variant="secondary" disabled={busy}
-                onClick={() => stopMutation.mutate({ productIds: selectedIds, from: null, until: null })}>
-                <PlayCircle size={14} /> Satışı Başlat
-              </Button>
-              {isPushChannel && (
-                <Button disabled={busy} loading={pushMutation.isPending}
-                  onClick={() => pushMutation.mutate(selectedIds)}>
-                  Pazaryerine Gönder
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* Tablo */}
-          <div className="card overflow-hidden p-0">
-            {listLoading ? <div className="p-8"><PageSpinner /></div> : (
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-xs" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>
-                    <th className="px-4 py-3 w-10">
-                      <input type="checkbox" checked={pageAllSelected} onChange={togglePageAll} />
-                    </th>
-                    <th className="px-2 py-3 w-14"></th>
-                    <th className="px-2 py-3">Ürün</th>
-                    <th className="px-4 py-3">Kanal Durumu</th>
-                    <th className="px-4 py-3">Listeleme</th>
-                    <th className="px-4 py-3 text-right">İşlem</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map(it => (
-                    <tr key={it.productId} className="text-sm cursor-pointer hover:opacity-90"
-                      style={{ borderBottom: '1px solid var(--border)' }}
-                      onClick={() => setDrawer({
-                        productId: it.productId, code: it.code, name: nameOf(it.nameI18n),
-                        mainImageUrl: it.mainImageUrl, isSelected: it.isSelected,
-                        isStoppedNow: it.isStoppedNow, saleStoppedUntil: it.saleStoppedUntil,
-                      })}>
-                      <td className="px-4 py-2" onClick={e => e.stopPropagation()}>
-                        <input type="checkbox" checked={selected.has(it.productId)} onChange={() => toggleRow(it.productId)} />
-                      </td>
-                      <td className="px-2 py-2">
-                        {it.mainImageUrl
-                          ? <img src={it.mainImageUrl} alt="" className="w-10 h-10 rounded object-cover" style={{ background: 'var(--surface2)' }} />
-                          : <div className="w-10 h-10 rounded" style={{ background: 'var(--surface2)' }} />}
-                      </td>
-                      <td className="px-2 py-2">
-                        <div style={{ color: 'var(--text)' }}>{nameOf(it.nameI18n)}</div>
-                        <div className="text-xs" style={{ color: 'var(--text-s)' }}>{it.code}</div>
-                      </td>
-                      <td className="px-4 py-2">
-                        {!it.isSelected
-                          ? <Badge variant="neutral">Kanaldan çıkarıldı</Badge>
-                          : it.isStoppedNow
-                            ? <Badge variant="warning">Durduruldu{it.saleStoppedUntil ? ` — ${new Date(it.saleStoppedUntil).toLocaleDateString('tr-TR')} kadar` : ''}</Badge>
-                            : <Badge variant="success">Kanalda</Badge>}
-                      </td>
-                      <td className="px-4 py-2">
-                        {(() => {
-                          const ls = listingMap[it.productId]
-                          if (!ls) return <span className="text-xs" style={{ color: 'var(--text-s)' }}>…</span>
-                          const m = LISTING_LABELS[ls.status] ?? { label: ls.status, variant: 'neutral' as const }
-                          const sebep = ls.reasons.filter(r => !['channel_excluded', 'sale_stopped'].includes(r.code))
-                          return (
-                            <div>
-                              <Badge variant={m.variant}>{m.label}</Badge>
-                              {sebep.length > 0 && (
-                                <div className="text-xs mt-0.5 max-w-[260px] truncate" title={sebep.map(r => r.label).join(' · ')}
-                                  style={{ color: 'var(--text-s)' }}>
-                                  {sebep.map(r => r.label).join(' · ')}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })()}
-                      </td>
-                      <td className="px-4 py-2 text-right" onClick={e => e.stopPropagation()}>
-                        {it.isSelected
-                          ? <button className="text-xs underline" style={{ color: 'var(--text-m)' }} disabled={busy}
-                              onClick={() => selectMutation.mutate({ productIds: [it.productId], selected: false })}>Çıkar</button>
-                          : <button className="text-xs underline" style={{ color: 'var(--brand)' }} disabled={busy}
-                              onClick={() => selectMutation.mutate({ productIds: [it.productId], selected: true })}>Kanala al</button>}
-                      </td>
-                    </tr>
+          <DataGrid<ChannelProductItem>
+            gridId="channel-products"
+            views
+            grid={grid}
+            columns={columns}
+            rows={items}
+            rowKey={it => it.productId}
+            totalCount={totalCount}
+            loading={listLoading}
+            fetching={isFetching}
+            error={listError ? errText(listError) : null}
+            onRowClick={it => setDrawer({
+              productId: it.productId, code: it.code, name: nameOf(it.nameI18n),
+              mainImageUrl: it.mainImageUrl, isSelected: it.isSelected,
+              isStoppedNow: it.isStoppedNow, saleStoppedUntil: it.saleStoppedUntil,
+            })}
+            empty="Kayıt bulunamadı."
+            search={{ placeholder: 'Ürün kodu veya adı…' }}
+            minWidth={1080}
+            filterLeading={
+              <>
+                <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={status} aria-label="Kanal durumu"
+                  onChange={e => setNamed('status', e.target.value)}>
+                  {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={listingF} aria-label="Listeleme"
+                  onChange={e => setNamed('listing', e.target.value)}>
+                  <option value="">Listeleme: Tümü{listingSummary ? ` (${listingSummary.total})` : ''}</option>
+                  {Object.entries(LISTING_LABELS).map(([k, m]) => {
+                    const n = listingSummary?.statusCounts[k] ?? 0
+                    return <option key={k} value={k}>{m.label}{listingSummary ? ` (${n})` : ''}</option>
+                  })}
+                </select>
+                <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={reasonF} aria-label="Sebep"
+                  onChange={e => setNamed('reason', e.target.value)}>
+                  <option value="">Sebep: Tümü</option>
+                  {(listingSummary?.reasons ?? []).map(r => (
+                    <option key={r.code} value={r.code.split(':')[0]}>{r.label} ({r.count})</option>
                   ))}
-                  {items.length === 0 && (
-                    <tr><td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                      Kayıt bulunamadı.
-                    </td></tr>
+                </select>
+              </>
+            }
+            selection={{
+              selected,
+              onChange: setSelected,
+              actions: () => (
+                <>
+                  <button className="text-xs underline" style={{ color: 'var(--brand)' }} onClick={selectAllMatching}>
+                    Filtreye uyan tümünü seç ({totalCount})
+                  </button>
+                  <Button variant="secondary" disabled={busy}
+                    onClick={() => selectMutation.mutate({ productIds: selectedIds, selected: true })}>
+                    <CheckCircle2 size={14} /> Kanala Al
+                  </Button>
+                  <Button variant="secondary" disabled={busy}
+                    onClick={() => selectMutation.mutate({ productIds: selectedIds, selected: false })}>
+                    <Ban size={14} /> Kanaldan Çıkar
+                  </Button>
+                  <Button variant="secondary" disabled={busy} onClick={() => { setStopTargetIds(null); setStopModalOpen(true) }}>
+                    <PauseCircle size={14} /> Satışı Durdur
+                  </Button>
+                  <Button variant="secondary" disabled={busy}
+                    onClick={() => stopMutation.mutate({ productIds: selectedIds, from: null, until: null })}>
+                    <PlayCircle size={14} /> Satışı Başlat
+                  </Button>
+                  {isPushChannel && (
+                    <Button disabled={busy} loading={pushMutation.isPending}
+                      onClick={() => pushMutation.mutate(selectedIds)}>
+                      Pazaryerine Gönder
+                    </Button>
                   )}
-                </tbody>
-              </table>
-            )}
-            <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onChange={setPage} />
-          </div>
+                </>
+              ),
+            }}
+            compact={{
+              title: it => nameOf(it.nameI18n),
+              subtitle: it => it.code,
+              badge: it => !it.isSelected
+                ? <Badge variant="neutral">Çıkarıldı</Badge>
+                : it.isStoppedNow ? <Badge variant="warning">Durduruldu</Badge> : <Badge variant="success">Kanalda</Badge>,
+            }}
+          />
         </>
       )}
 

@@ -1,12 +1,15 @@
 using ECSPros.Accounts.Application.Services;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 namespace ECSPros.Accounts.Application.Queries.GetCurrentAccounts;
 
 public record GetCurrentAccountsQuery(
     string? AccountType, Guid? GroupId, bool? IsActive, string? Search,
-    int Page = 1, int PageSize = 30, string? OwnerType = null) : IRequest<Result<PagedResult<CurrentAccountDto>>>;
+    int Page = 1, int PageSize = 30, string? OwnerType = null,
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<CurrentAccountDto>>>;
+    // Grid (2026-09-09, DataGrid): beyaz listeli f.* filtreleri + sort/dir (CurrentAccountGrid.Schema)
 
 public record CurrentAccountDto(
     Guid Id, string Code, string Title, string AccountType, string SupplierKind,
@@ -21,20 +24,13 @@ public class GetCurrentAccountsQueryHandler : IRequestHandler<GetCurrentAccounts
     public GetCurrentAccountsQueryHandler(IAccountsDbContext db) => _db = db;
     public async Task<Result<PagedResult<CurrentAccountDto>>> Handle(GetCurrentAccountsQuery request, CancellationToken ct)
     {
-        var query = _db.CurrentAccounts.Include(a => a.Group).AsQueryable();
-        if (!string.IsNullOrWhiteSpace(request.AccountType)) query = query.Where(a => a.AccountType == request.AccountType);
-        if (!string.IsNullOrWhiteSpace(request.OwnerType)) query = query.Where(a => a.OwnerType == request.OwnerType);
-        if (request.GroupId.HasValue) query = query.Where(a => a.GroupId == request.GroupId);
-        if (request.IsActive.HasValue) query = query.Where(a => a.IsActive == request.IsActive.Value);
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var s = request.Search.ToLower();
-            query = query.Where(a => a.Title.ToLower().Contains(s) || a.Code.ToLower().Contains(s)
-                || (a.TaxNumber != null && a.TaxNumber.Contains(s))
-                || (a.Email != null && a.Email.ToLower().Contains(s)));
-        }
+        // Adlandırılmış + grid filtreleri TEK yerden (liste ve Excel aynı sonucu verir).
+        var query = CurrentAccountGrid.ApplyAll(
+            _db.CurrentAccounts.Include(a => a.Group),
+            new CurrentAccountFilters(request.AccountType, request.GroupId, request.IsActive, request.Search, request.OwnerType),
+            request.Grid);
         var total = await query.CountAsync(ct);
-        var items = await query.OrderBy(a => a.Title)
+        var items = await CurrentAccountGrid.Schema.ApplySort(query, request.Grid)
             .Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
             .Select(a => new CurrentAccountDto(a.Id, a.Code, a.Title, a.AccountType, a.SupplierKind,
                 a.GroupId, a.Group != null ? a.Group.Name : null,

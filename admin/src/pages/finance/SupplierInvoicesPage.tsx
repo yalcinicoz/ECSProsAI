@@ -87,6 +87,12 @@ export function SupplierInvoicesPage() {
         search={{ placeholder: 'Fatura no / not ara…' }}
         export={{ endpoint: '/finance/supplier-invoices/export', named: () => ({ status: tab || undefined }), fallbackFileName: 'tedarikci-faturalari.xlsx' }}
         views
+        compact={{
+          title: f => f.invoiceNumber,
+          subtitle: f => `${new Date(f.invoiceDate).toLocaleDateString('tr-TR')} · ${f.itemCount} kalem`,
+          right: f => f.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺',
+          badge: f => { const [l, v] = DURUM[f.status] ?? [f.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> },
+        }}
       />
     </div>
   )

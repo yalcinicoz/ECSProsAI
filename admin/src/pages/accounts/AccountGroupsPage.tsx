@@ -1,11 +1,13 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { IntegerInput } from '@/components/ui/IntegerInput'
-import { PageSpinner } from '@/components/ui/Spinner'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 
 const GROUP_TYPES = [
@@ -25,6 +27,13 @@ export interface AccountGroup {
   accountCount: number
 }
 
+/** DataGrid satırı — /accounts/groups/grid (createdAt de gelir). */
+export interface AccountGroupRow extends AccountGroup {
+  createdAt: string
+}
+
+interface PagedResult<T> { items: T[]; totalCount: number; page: number; pageSize: number }
+
 type FormState = {
   code: string
   name: string
@@ -40,18 +49,23 @@ const emptyForm = (): FormState => ({
 
 export function AccountGroupsPage() {
   const queryClient = useQueryClient()
-  const [activeOnly, setActiveOnly] = useState(false)
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (AccountGroupGrid.Schema) + Excel + görünümler.
+  // ★ Ayrı uç: /accounts/groups TÜM grupları döner (cari listesinin süzgeci); ekran /groups/grid kullanır.
+  const [sp] = useSearchParams()
+  const activeOnly = sp.get('activeOnly') === 'true'
+  const grid = useGridState('account-groups', { defaultPageSize: 20, defaultSort: 'sortOrder', defaultDir: 'asc' })
   const [createOpen, setCreateOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<AccountGroup | null>(null)
+  const [editTarget, setEditTarget] = useState<AccountGroupRow | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm())
 
-  const { data: groups = [], isLoading } = useQuery<AccountGroup[]>({
-    queryKey: ['account-groups', activeOnly],
-    queryFn: async () => {
-      const { data } = await api.get(`/accounts/groups?activeOnly=${activeOnly}`)
-      return data.data
-    },
+  const { data, isLoading, isFetching, error: listError } = useQuery<PagedResult<AccountGroupRow>>({
+    queryKey: ['account-groups-grid', activeOnly, ...grid.queryKey],
+    queryFn: async () =>
+      (await api.get(`/accounts/groups/grid?${grid.toParams({ activeOnly: activeOnly ? 'true' : undefined })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
+  const groups = data?.items ?? []
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -74,12 +88,12 @@ export function AccountGroupsPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['account-groups'] }); setEditTarget(null) },
   })
 
-  function openEdit(g: AccountGroup) {
+  function openEdit(g: AccountGroupRow) {
     setEditTarget(g)
     setForm({ code: g.code, name: g.name, groupType: g.groupType, description: g.description ?? '', sortOrder: g.sortOrder, isActive: g.isActive })
   }
 
-  if (isLoading) return <PageSpinner />
+  // Liste yüklemesi DataGrid'in kendi göstergesinde; sayfa iskeleti hemen çizilir.
 
   const formFields = (isEdit: boolean) => (
     <div className="space-y-4">
@@ -120,17 +134,49 @@ export function AccountGroupsPage() {
     </div>
   )
 
+  const columns: GridColumn<AccountGroupRow>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 120,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      cell: g => <code className="text-xs px-2 py-0.5 rounded-md font-mono"
+        style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>{g.code}</code> },
+    { key: 'name', header: 'AD', priority: 1, frozen: true, sortable: true, minWidth: 220,
+      filter: { type: 'text', label: 'Ad' },
+      filters: [{ field: 'description', label: 'Açıklama', type: 'text' }],
+      cell: g => <div>
+        <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{g.name}</span>
+        {g.description && <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>{g.description}</p>}
+      </div> },
+    { key: 'groupType', header: 'TİP', priority: 1, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Tip', options: GROUP_TYPES.map(t => ({ value: t.value, label: t.label })) },
+      cell: g => { const t = GROUP_TYPES.find(x => x.value === g.groupType); return <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+        style={{ color: t?.color ?? 'var(--text-m)', background: `${t?.color ?? '#888'}18` }}>{t?.label ?? g.groupType}</span> } },
+    { key: 'accountCount', header: 'CARİ SAYISI', priority: 1, align: 'center', sortable: true,
+      filter: { type: 'number', label: 'Cari sayısı' },
+      filters: [{ field: 'hasAccounts', label: 'Carisi olan', type: 'boolean' }],
+      cell: g => <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{g.accountCount}</span> },
+    { key: 'sortOrder', header: 'SIRA', priority: 3, align: 'center', sortable: true, filter: { type: 'number', label: 'Sıra' },
+      cell: g => <span className="text-sm" style={{ color: 'var(--text-s)' }}>{g.sortOrder}</span> },
+    { key: 'isActive', header: 'DURUM', priority: 1, lockVisible: true, align: 'center', sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      filters: [{ field: 'createdAt', label: 'Oluşturma', type: 'date' }],
+      cell: g => <Badge variant={g.isActive ? 'success' : 'neutral'}>{g.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'actions', header: '', priority: 3, align: 'right', exportable: false, stopRowClick: true,
+      cell: g => <button className="text-xs px-2 py-1 rounded-lg transition-colors"
+        style={{ color: 'var(--brand)', background: 'var(--surface2)', border: '1px solid var(--border)' }}
+        onClick={() => openEdit(g)}>Düzenle</button> },
+  ]
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Cari Grupları</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{groups.length} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{(data?.totalCount ?? 0).toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
             {[false, true].map(v => (
-              <button key={String(v)} onClick={() => setActiveOnly(v)}
+              <button key={String(v)} onClick={() => grid.mutate(n => { if (v) n.set('activeOnly', 'true'); else n.delete('activeOnly') })}
                 className={cn('px-3 py-1 rounded-lg text-sm font-medium transition-all', activeOnly === v ? 'bg-white shadow-sm' : 'text-[var(--text-s)]')}
                 style={activeOnly === v ? { color: 'var(--text)' } : {}}>
                 {v ? 'Aktif' : 'Tümü'}
@@ -141,54 +187,27 @@ export function AccountGroupsPage() {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'AD', 'TİP', 'CARİ SAYISI', 'DURUM', ''].map(h => (
-                <th key={h} className={cn('px-4 py-3 text-xs font-semibold', h === '' ? 'w-20' : 'text-left')} style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {groups.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Grup bulunamadı.</td></tr>
-            )}
-            {groups.map(g => {
-              const typeInfo = GROUP_TYPES.find(t => t.value === g.groupType)
-              return (
-                <tr key={g.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3">
-                    <code className="text-xs px-2 py-0.5 rounded-md font-mono" style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>{g.code}</code>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div>
-                      <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{g.name}</span>
-                      {g.description && <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>{g.description}</p>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: typeInfo?.color ?? 'var(--text-m)', background: `${typeInfo?.color ?? '#888'}18` }}>
-                      {typeInfo?.label ?? g.groupType}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{g.accountCount}</span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <Badge variant={g.isActive ? 'success' : 'neutral'}>{g.isActive ? 'Aktif' : 'Pasif'}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="text-xs px-2 py-1 rounded-lg transition-colors"
-                      style={{ color: 'var(--brand)', background: 'var(--surface2)', border: '1px solid var(--border)' }}
-                      onClick={() => openEdit(g)}>Düzenle</button>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid<AccountGroupRow>
+        gridId="account-groups"
+        views
+        grid={grid}
+        columns={columns}
+        rows={groups}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        empty="Grup bulunamadı."
+        search={{ placeholder: 'Grup kodu veya adıyla ara…' }}
+        minWidth={820}
+        export={{ endpoint: '/accounts/groups/export', named: () => ({ activeOnly: activeOnly ? 'true' : undefined }), fallbackFileName: 'cari-gruplari.xlsx' }}
+        compact={{
+          title: g => g.name,
+          subtitle: g => `${g.code} · ${GROUP_TYPES.find(t => t.value === g.groupType)?.label ?? g.groupType}`,
+          right: g => `${g.accountCount} cari`,
+          badge: g => <Badge variant={g.isActive ? 'success' : 'neutral'}>{g.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
+      />
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Yeni Cari Grubu">
         {formFields(false)}

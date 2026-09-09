@@ -3,16 +3,16 @@
  * HAFİF kayıt katmanı: hiçbir akışı kilitlemez (İ2); kapanış elle (İ3/İ4).
  */
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
-import { Pagination } from '@/components/ui/Pagination'
-import { PageSpinner } from '@/components/ui/Spinner'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { PO_STATUS, apiErrorMessage, useSuppliers } from './procurementHelpers'
 
 interface PoRow {
@@ -21,17 +21,18 @@ interface PoRow {
 }
 interface Paged { items: PoRow[]; totalCount: number; page: number; pageSize: number }
 
-const PAGE_SIZE = 20
 const tl = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export function PurchaseOrdersPage() {
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (PurchaseOrderGrid.Schema) + Excel + görünümler.
+  // Tedarikçi ADI Accounts modülünde → o kolon sıralanamaz; tedarikçi adlandırılmış süzgeçle filtrelenir.
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const [status, setStatus] = useState('')
-  const [supplierId, setSupplierId] = useState('')
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1)
+  const [sp] = useSearchParams()
+  const status = sp.get('status') ?? ''
+  const supplierId = sp.get('supplierId') ?? ''
+  const grid = useGridState('purchase-orders', { defaultPageSize: 20, defaultSort: 'code', defaultDir: 'desc' })
+  const setNamed = (k: string, v: string) => grid.mutate(n => { if (v) n.set(k, v); else n.delete(k) })
   const [createOpen, setCreateOpen] = useState(false)
   const [newSupplier, setNewSupplier] = useState('')
   const [newNotes, setNewNotes] = useState('')
@@ -39,15 +40,13 @@ export function PurchaseOrdersPage() {
   const { data: suppliers = [] } = useSuppliers()
   const supplierName = (id: string) => suppliers.find(s => s.id === id)?.title ?? '—'
 
-  const { data, isLoading } = useQuery<Paged>({
-    queryKey: ['purchase-orders', status, supplierId, search, page],
-    queryFn: async () => {
-      const p = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) })
-      if (status) p.set('status', status)
-      if (supplierId) p.set('supplierId', supplierId)
-      if (search) p.set('search', search)
-      return (await api.get(`/procurement/purchase-orders?${p}`)).data.data
-    },
+  const named = () => ({ status: status || undefined, supplierId: supplierId || undefined })
+
+  const { data, isLoading, isFetching, error: listError } = useQuery<Paged>({
+    queryKey: ['purchase-orders', status, supplierId, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/procurement/purchase-orders?${grid.toParams(named())}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const createMut = useMutation({
@@ -56,8 +55,33 @@ export function PurchaseOrdersPage() {
   })
 
   const rows = data?.items ?? []
-  const totalPages = Math.max(1, Math.ceil((data?.totalCount ?? 0) / PAGE_SIZE))
-  if (isLoading && !data) return <PageSpinner />
+
+  const columns: GridColumn<PoRow>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 150,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      filters: [{ field: 'notes', label: 'Not', type: 'text' }],
+      cell: r => <span className="font-mono text-xs" style={{ color: 'var(--text)' }}>{r.code}</span> },
+    // Tedarikçi adı Accounts modülünde çözülüyor → sıralama şemada YOK (bilinçli); süzgeç supplierId ile.
+    { key: 'supplier', header: 'TEDARİKÇİ', priority: 1, frozen: true, minWidth: 200,
+      filter: { type: 'enum', label: 'Tedarikçi', field: 'supplierId', options: suppliers.map(s => ({ value: s.id, label: s.title })) },
+      cell: r => <span style={{ color: 'var(--text)' }}>{supplierName(r.supplierId)}</span> },
+    { key: 'orderDate', header: 'TARİH', priority: 2, sortable: true, filter: { type: 'date', label: 'Sipariş tarihi', quick: true },
+      cell: r => <span className="whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{new Date(r.orderDate).toLocaleDateString('tr-TR')}</span> },
+    { key: 'expectedDate', header: 'BEKLENEN', priority: 2, sortable: true, filter: { type: 'date', label: 'Beklenen tarih' },
+      filters: [{ field: 'overdue', label: 'Tarihi geçmiş (kapanmamış)', type: 'boolean' }],
+      cell: r => <span className="whitespace-nowrap" style={{ color: 'var(--text-m)' }}>
+        {r.expectedDate ? new Date(r.expectedDate).toLocaleDateString('tr-TR') : '—'}</span> },
+    { key: 'itemCount', header: 'KALEM', priority: 2, align: 'right', sortable: true, filter: { type: 'number', label: 'Kalem sayısı' },
+      cell: r => <span style={{ color: 'var(--text-m)' }}>{r.itemCount}</span> },
+    { key: 'totalQuantity', header: 'ADET', priority: 2, align: 'right', sortable: true, filter: { type: 'number', label: 'Toplam adet' },
+      cell: r => <span style={{ color: 'var(--text-m)' }}>{r.totalQuantity}</span> },
+    { key: 'totalAmount', header: 'TUTAR', priority: 1, align: 'right', sortable: true, filter: { type: 'number', label: 'Toplam tutar' },
+      cell: r => <span className="whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{tl(r.totalAmount)} ₺</span> },
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(PO_STATUS).map(([value, v]) => ({ value, label: v.label })) },
+      filters: [{ field: 'open', label: 'Açık (kapanmamış)', type: 'boolean' }, { field: 'createdAt', label: 'Oluşturma', type: 'date' }],
+      cell: r => { const st = PO_STATUS[r.status] ?? { label: r.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
+  ]
 
   return (
     <div className="p-6">
@@ -72,64 +96,35 @@ export function PurchaseOrdersPage() {
         <Button size="sm" onClick={() => { setNewSupplier(''); setNewNotes(''); setCreateOpen(true) }}><Plus size={14} /> Yeni Satın Alma</Button>
       </div>
 
-      <div className="card mb-4 flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[220px]">
-          <label className="flbl mb-1.5">Ara (kod / model)</label>
-          <div className="flex gap-2">
-            <input className="inp flex-1" value={searchInput} onChange={e => setSearchInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && (setPage(1), setSearch(searchInput.trim()))} placeholder="SA-… ya da model adı" />
-            <Button variant="secondary" onClick={() => { setPage(1); setSearch(searchInput.trim()) }}><Search size={14} /> Ara</Button>
+      <DataGrid<PoRow>
+        gridId="purchase-orders"
+        views
+        grid={grid}
+        columns={columns}
+        rows={rows}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        onRowClick={r => navigate(`/procurement/purchase-orders/${r.id}`)}
+        empty="Henüz satın alma kaydı yok."
+        search={{ placeholder: 'SA-… ya da model adı' }}
+        minWidth={1040}
+        filterLeading={
+          <div style={{ minWidth: 200 }}>
+            <SearchableSelect value={supplierId} onChange={v => setNamed('supplierId', v ?? '')}
+              options={[{ value: '', label: 'Tedarikçi: Tümü' }, ...suppliers.map(s => ({ value: s.id, label: s.title }))]}
+              placeholder="Tedarikçi: Tümü" hasValue={!!supplierId} />
           </div>
-        </div>
-        <div className="min-w-[220px]">
-          <label className="flbl mb-1.5">Tedarikçi</label>
-          <SearchableSelect value={supplierId} onChange={v => { setPage(1); setSupplierId(v ?? '') }}
-            options={[{ value: '', label: 'Tümü' }, ...suppliers.map(s => ({ value: s.id, label: s.title }))]}
-            placeholder="Tümü" hasValue={!!supplierId} />
-        </div>
-        <div className="min-w-[170px]">
-          <label className="flbl mb-1.5">Durum</label>
-          <select className="inp" value={status} onChange={e => { setPage(1); setStatus(e.target.value) }}>
-            <option value="">Tümü</option>
-            {Object.entries(PO_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
-        </div>
-      </div>
-
-      <div className="card p-0 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'TEDARİKÇİ', 'TARİH', 'BEKLENEN', 'KALEM', 'ADET', 'TUTAR', 'DURUM'].map(h =>
-                <th key={h} className="px-4 py-3 font-semibold">{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center" style={{ color: 'var(--text-s)' }}>
-                {search || status || supplierId ? 'Filtreye uyan kayıt yok.' : 'Henüz satın alma kaydı yok.'}
-              </td></tr>
-            )}
-            {rows.map(r => {
-              const st = PO_STATUS[r.status] ?? { label: r.status, variant: 'neutral' as const }
-              return (
-                <tr key={r.id} className="cursor-pointer hover:opacity-90" style={{ borderBottom: '1px solid var(--border)' }}
-                  onClick={() => navigate(`/procurement/purchase-orders/${r.id}`)}>
-                  <td className="px-4 py-2.5 font-mono text-xs" style={{ color: 'var(--text)' }}>{r.code}</td>
-                  <td className="px-4 py-2.5" style={{ color: 'var(--text)' }}>{supplierName(r.supplierId)}</td>
-                  <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{new Date(r.orderDate).toLocaleDateString('tr-TR')}</td>
-                  <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{r.expectedDate ? new Date(r.expectedDate).toLocaleDateString('tr-TR') : '—'}</td>
-                  <td className="px-4 py-2.5" style={{ color: 'var(--text-m)' }}>{r.itemCount}</td>
-                  <td className="px-4 py-2.5" style={{ color: 'var(--text-m)' }}>{r.totalQuantity}</td>
-                  <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{tl(r.totalAmount)} ₺</td>
-                  <td className="px-4 py-2.5"><Badge variant={st.variant}>{st.label}</Badge></td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        <Pagination page={page} totalPages={totalPages} totalCount={data?.totalCount ?? 0} pageSize={PAGE_SIZE} onChange={setPage} />
-      </div>
+        }
+        export={{ endpoint: '/procurement/purchase-orders/export', named, fallbackFileName: 'satin-alma.xlsx' }}
+        compact={{
+          title: r => r.code,
+          subtitle: r => `${supplierName(r.supplierId)} · ${new Date(r.orderDate).toLocaleDateString('tr-TR')}`,
+          right: r => `${tl(r.totalAmount)} ₺`,
+          badge: r => { const st = PO_STATUS[r.status] ?? { label: r.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> },
+        }}
+      />
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Yeni Satın Alma">
         <div className="space-y-4">

@@ -1,3 +1,4 @@
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Shared.Kernel.Authorization;
 using ECSPros.Api.Authorization;
 using ECSPros.Crm.Application.Commands.AddMemberAddress;
@@ -218,11 +219,40 @@ public class CrmController : ControllerBase
     // ─── Member Groups ─────────────────────────────────────────────────────────
 
     /// <summary>Üye gruplarını listeler.</summary>
+    /// <summary>Üye gruplarını TAM liste olarak döner — kupon hedef seçicisi ve üye formu bunu bekler.
+    /// ⚠ Sayfalanmaz; liste EKRANI için /member-groups/grid kullanın.</summary>
     [HttpGet("member-groups")]
     public async Task<IActionResult> GetMemberGroups([FromQuery] bool activeOnly = true, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new GetMemberGroupsQuery(activeOnly), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Üye grupları liste ekranı (DataGrid): sayfalı + f.* filtreleri + sort/dir.</summary>
+    [HttpGet("member-groups/grid")]
+    public async Task<IActionResult> GetMemberGroupsGrid([FromQuery] bool activeOnly = false, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        // Üye grubu kanaldan bağımsız bir tanım kaydıdır → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetMemberGroupsGridQuery(
+            new MemberGroupFilters(activeOnly, search), grid.Page, grid.PageSize, grid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Üye gruplarını Excel'e aktarır (DataGrid).</summary>
+    [HttpPost("member-groups/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportMemberGroups(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<CrmController> logger, CancellationToken ct)
+    {
+        var filters = new MemberGroupFilters(body.NamedValue("activeOnly") == "true", body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "member-groups", "uye-gruplari", "Üye Grupları",
+            ECSPros.Api.Grid.MemberGroupExportColumns.All,
+            max => _mediator.Send(new ExportMemberGroupsQuery(filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Üyenin oturumlarını listeler (P4 — OTP/oturum görünümü).</summary>

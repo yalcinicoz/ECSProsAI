@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Api.Authorization;
 using ECSPros.Api.Services.Store;
 using ECSPros.Storefront.Application.Queries.GetNewsletterSubscriptions;
@@ -35,49 +36,115 @@ public class StoreNotificationsController(
         return Ok(new { success = true, data = new { sent = gonderilen } });
     }
 
+    /// <summary>Stok alarmları (DataGrid: f.* filtreleri + sort/dir + arama). Y3: kanal kapsamı uygulanır.</summary>
     [HttpGet("stock-alerts")]
     public async Task<IActionResult> GetStockAlerts(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
         [FromQuery] string? status = null,
         [FromQuery] Guid? firmPlatformId = null,
         [FromQuery] string? search = null,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
+        var kapsam = await kanalKapsami.KanallarAsync(Permissions.StorefrontNotificationsView, ct);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, kapsam, defaultPageSize: 20);
         var result = await mediator.Send(
-            new GetStockAlertsForAdminQuery(status, firmPlatformId, search, page, pageSize), ct);
+            new GetStockAlertsForAdminQuery(status, firmPlatformId, search, grid.Page, grid.PageSize, kapsam, grid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Stok alarmlarını Excel'e aktarır (DataGrid). Y3: kapsam kullanıcının yetkisinden.</summary>
+    [HttpPost("stock-alerts/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportStockAlerts(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<StoreNotificationsController> logger, CancellationToken ct)
+    {
+        var kapsam = await kanalKapsami.KanallarAsync(Permissions.StorefrontNotificationsView, ct);
+        var filters = new ECSPros.Storefront.Application.Queries.GetStockAlertsForAdmin.StockAlertFilters(
+            body.NamedValue("status"), null, body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "stock-alerts", "stok-alarmlari", "Stok Alarmları",
+            ECSPros.Api.Grid.StockAlertExportColumns.All,
+            max => mediator.Send(new ECSPros.Storefront.Application.Queries.GetStockAlertsForAdmin.ExportStockAlertsQuery(
+                filters, body.ToGridRequest(kapsam), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
+    }
+
+    /// <summary>Kayıtlı aramaları Excel'e aktarır (DataGrid). Y3: kapsam kullanıcının yetkisinden.</summary>
+    [HttpPost("saved-searches/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportSavedSearches(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<StoreNotificationsController> logger, CancellationToken ct)
+    {
+        var kapsam = await kanalKapsami.KanallarAsync(Permissions.StorefrontNotificationsView, ct);
+        var aktif = body.NamedValue("notifyEnabled");
+        var filters = new ECSPros.Storefront.Application.Queries.GetSavedSearchesForAdmin.SavedSearchFilters(
+            string.IsNullOrWhiteSpace(aktif) ? null : aktif == "true", null, body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "saved-searches", "kayitli-aramalar", "Kayıtlı Aramalar",
+            ECSPros.Api.Grid.SavedSearchExportColumns.All,
+            max => mediator.Send(new ECSPros.Storefront.Application.Queries.GetSavedSearchesForAdmin.ExportSavedSearchesQuery(
+                filters, body.ToGridRequest(kapsam), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
+    }
+
+    /// <summary>Kayıtlı aramalar (DataGrid: f.* filtreleri + sort/dir + arama). Y3: kanal kapsamı uygulanır.</summary>
     [HttpGet("saved-searches")]
     public async Task<IActionResult> GetSavedSearches(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
         [FromQuery] bool? notifyEnabled = null,
         [FromQuery] Guid? firmPlatformId = null,
         [FromQuery] string? search = null,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
+        var kapsam = await kanalKapsami.KanallarAsync(Permissions.StorefrontNotificationsView, ct);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, kapsam, defaultPageSize: 20);
         var result = await mediator.Send(
-            new GetSavedSearchesForAdminQuery(notifyEnabled, firmPlatformId, search, page, pageSize), ct);
+            new GetSavedSearchesForAdminQuery(notifyEnabled, firmPlatformId, search, grid.Page, grid.PageSize, kapsam, grid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Bülten aboneleri (DataGrid: f.* filtreleri + sort/dir + arama).
+    /// Y3 (2026-09-09): kanal kapsamı LİSTEYE de uygulanıyor.</summary>
     [HttpGet("newsletter-subscriptions")]
     public async Task<IActionResult> GetNewsletterSubscriptions(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
         [FromQuery] bool? isActive = null,
         [FromQuery] Guid? firmPlatformId = null,
         [FromQuery] string? search = null,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
+        var kapsam = await kanalKapsami.KanallarAsync(Permissions.StorefrontNotificationsView, ct);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, kapsam, defaultPageSize: 20);
         var result = await mediator.Send(
-            new GetNewsletterSubscriptionsQuery(isActive, firmPlatformId, search, page, pageSize), ct);
+            new GetNewsletterSubscriptionsQuery(isActive, firmPlatformId, search, grid.Page, grid.PageSize, kapsam, grid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Bülten abonelerini Excel'e aktarır (DataGrid). Y3: kapsam kullanıcının yetkisinden.</summary>
+    [HttpPost("newsletter-subscriptions/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportNewsletterSubscriptions(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<StoreNotificationsController> logger, CancellationToken ct)
+    {
+        var kapsam = await kanalKapsami.KanallarAsync(Permissions.StorefrontNotificationsView, ct);
+        var aktif = body.NamedValue("isActive");
+        var filters = new ECSPros.Storefront.Application.Queries.GetNewsletterSubscriptions.NewsletterFilters(
+            string.IsNullOrWhiteSpace(aktif) ? null : aktif == "true", null, body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "newsletter", "bulten-aboneleri", "Bülten Aboneleri",
+            ECSPros.Api.Grid.NewsletterExportColumns.All,
+            max => mediator.Send(new ECSPros.Storefront.Application.Queries.GetNewsletterSubscriptions.ExportNewsletterSubscriptionsQuery(
+                filters, body.ToGridRequest(kapsam), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Mobil push cihaz kayıtları (2026-09-05) — bildirim gönderim/izleme

@@ -1,3 +1,4 @@
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Api.Authorization;
 using ECSPros.Procurement.Application.Commands.CreatePurchaseOrder;
 using ECSPros.Procurement.Application.Commands.DeletePurchaseOrderItem;
@@ -44,13 +45,34 @@ namespace ECSPros.Api.Controllers;
 public class ProcurementController(IMediator mediator) : ControllerBase
 {
     /// <summary>Satın alma listesi (tedarikçi/durum/arama filtreli, sayfalı).</summary>
+    /// <summary>Satın alma siparişleri (DataGrid: f.* filtreleri + sort/dir + arama).</summary>
     [HttpGet("purchase-orders")]
     public async Task<IActionResult> GetPurchaseOrders(
         [FromQuery] Guid? supplierId, [FromQuery] string? status, [FromQuery] string? search,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetPurchaseOrdersQuery(supplierId, status, search, page, pageSize), ct);
+        // Satın alma tedarikçiye bağlıdır, kanala değil → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
+        var result = await mediator.Send(new GetPurchaseOrdersQuery(
+            supplierId, status, search, grid.Page, grid.PageSize, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Satın alma siparişlerini Excel'e aktarır (DataGrid): named: status/supplierId.</summary>
+    [HttpPost("purchase-orders/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportPurchaseOrders(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<ProcurementController> logger, CancellationToken ct)
+    {
+        var tedarikci = body.NamedValue("supplierId");
+        var filters = new PurchaseOrderFilters(
+            Guid.TryParse(tedarikci, out var sid) ? sid : null, body.NamedValue("status"), body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "purchase-orders", "satin-alma", "Satın Alma",
+            ECSPros.Api.Grid.PurchaseOrderExportColumns.All,
+            max => mediator.Send(new ExportPurchaseOrdersQuery(filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Satın alma detayı (kalemlerle).</summary>
@@ -115,13 +137,34 @@ public class ProcurementController(IMediator mediator) : ControllerBase
     // ─── T2 Mal Kabul (docs/urun-tedarik-is-akisi.md §2.2) ───────────────────────
 
     /// <summary>Mal kabul partileri (tedarikçi/durum/arama filtreli, sayfalı).</summary>
+    /// <summary>Mal kabul partileri (DataGrid: f.* filtreleri + sort/dir + arama).</summary>
     [HttpGet("receipts")]
     public async Task<IActionResult> GetReceiptBatches(
         [FromQuery] Guid? supplierId, [FromQuery] string? status, [FromQuery] string? search,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetReceiptBatchesQuery(supplierId, status, search, page, pageSize), ct);
+        // Mal kabul tedarikçi/depoya bağlıdır, kanala değil → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
+        var result = await mediator.Send(new GetReceiptBatchesQuery(
+            supplierId, status, search, grid.Page, grid.PageSize, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Mal kabul partilerini Excel'e aktarır (DataGrid): named: status/supplierId.</summary>
+    [HttpPost("receipts/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportReceiptBatches(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<ProcurementController> logger, CancellationToken ct)
+    {
+        var tedarikci = body.NamedValue("supplierId");
+        var filters = new ReceiptBatchFilters(
+            Guid.TryParse(tedarikci, out var sid) ? sid : null, body.NamedValue("status"), body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "receipts", "mal-kabul", "Mal Kabul",
+            ECSPros.Api.Grid.ReceiptBatchExportColumns.All,
+            max => mediator.Send(new ExportReceiptBatchesQuery(filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Parti detayı (kaba kalemler + bağlı satın almalar).</summary>

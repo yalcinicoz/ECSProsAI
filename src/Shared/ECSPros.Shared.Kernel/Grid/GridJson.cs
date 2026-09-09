@@ -12,4 +12,5 @@ public static class GridJson
 
     public static readonly System.Reflection.MethodInfo TextMethod =
         typeof(GridJson).GetMethod(nameof(Text), new[] { typeof(Dictionary<string, string>), typeof(string) })!;
+
 }

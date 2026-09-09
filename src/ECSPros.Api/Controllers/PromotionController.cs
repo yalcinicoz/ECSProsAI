@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Api.Authorization;
 using ECSPros.Promotion.Application.Commands.CopyCampaign;
 using ECSPros.Promotion.Application.Commands.CreateCampaign;
@@ -154,6 +155,8 @@ public class PromotionController : ControllerBase
     }
 
     /// <summary>Kampanya tipleri (P3 — oluşturma formunun tip seçicisi).</summary>
+    /// <summary>Kampanya tiplerini TAM liste olarak (ayar şemasıyla) döner — kampanya listesi ve
+    /// kampanya detayı bunu bekler. ⚠ Sayfalanmaz; liste EKRANI için /campaign-types/grid kullanın.</summary>
     [HttpGet("campaign-types")]
     public async Task<IActionResult> GetCampaignTypes([FromQuery] bool activeOnly = true, CancellationToken ct = default)
     {
@@ -161,19 +164,69 @@ public class PromotionController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Kampanya tipleri liste ekranı (DataGrid): sayfalı + f.* filtreleri + sort/dir.</summary>
+    [HttpGet("campaign-types/grid")]
+    public async Task<IActionResult> GetCampaignTypesGrid(
+        [FromQuery] bool activeOnly = false, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        // Kampanya TİPİ kanaldan bağımsız bir tanım kaydıdır (kampanyanın kendisi kanala bağlı) → kısıt null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 30);
+        var result = await _mediator.Send(new ECSPros.Promotion.Application.Queries.GetCampaignTypes.GetCampaignTypesGridQuery(
+            new ECSPros.Promotion.Application.Queries.GetCampaignTypes.CampaignTypeFilters(activeOnly, search),
+            grid.Page, grid.PageSize, grid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kampanya tiplerini Excel'e aktarır (DataGrid).</summary>
+    [HttpPost("campaign-types/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportCampaignTypes(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<PromotionController> logger, CancellationToken ct)
+    {
+        var filters = new ECSPros.Promotion.Application.Queries.GetCampaignTypes.CampaignTypeFilters(
+            body.NamedValue("activeOnly") == "true", body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "campaign-types", "kampanya-tipleri", "Kampanya Tipleri",
+            ECSPros.Api.Grid.CampaignTypeExportColumns.All,
+            max => _mediator.Send(new ECSPros.Promotion.Application.Queries.GetCampaignTypes.ExportCampaignTypesQuery(
+                filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
+    }
+
     // ─── P3: kupon yönetimi ────────────────────────────────────────────────────
 
-    /// <summary>Kuponları sayfalı listeler (P3).</summary>
+    /// <summary>Kuponları sayfalı listeler (P3; 2026-09-09 DataGrid: f.* filtreleri + sort/dir).</summary>
     [HttpGet("coupons")]
     public async Task<IActionResult> GetCoupons(
         [FromQuery] string? search, [FromQuery] bool? isActive,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
         [FromQuery] Guid? memberId = null, [FromQuery] Guid? memberGroupId = null,
         CancellationToken ct = default)
     {
+        // Kupon kanaldan bağımsızdır (hedef kuralı üye/grup üzerinden işler) → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
         var result = await _mediator.Send(
-            new GetCouponsQuery(search, isActive, page, pageSize, memberId, memberGroupId), ct);
+            new GetCouponsQuery(search, isActive, grid.Page, grid.PageSize, memberId, memberGroupId, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kuponları Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: isActive.</summary>
+    [HttpPost("coupons/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportCoupons(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<PromotionController> logger, CancellationToken ct)
+    {
+        var aktif = body.NamedValue("isActive");
+        var filters = new ECSPros.Promotion.Application.Queries.GetCoupons.CouponListFilters(
+            body.Search, string.IsNullOrWhiteSpace(aktif) ? null : aktif == "true");
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "coupons", "kuponlar", "Kuponlar",
+            ECSPros.Api.Grid.CouponExportColumns.All,
+            max => _mediator.Send(new ECSPros.Promotion.Application.Queries.GetCoupons.ExportCouponsQuery(
+                filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Yeni kupon tanımlar (P3).</summary>

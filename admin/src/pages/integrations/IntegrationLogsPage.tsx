@@ -65,7 +65,7 @@ export function IntegrationLogsPage() {
       filters: [{ field: 'httpStatus', label: 'HTTP kodu', type: 'number' }],
       cell: l => { const [t, v] = DURUM[l.status] ?? [l.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{t}</Badge> } },
     {
-      key: 'error', header: 'HATA', priority: 2, className: 'max-w-md', filter: { type: 'text', label: 'Hata metni', ops: ['contains', 'startswith'] },
+      key: 'error', header: 'HATA', sortable: true, priority: 2, className: 'max-w-md', filter: { type: 'text', label: 'Hata metni', ops: ['contains', 'startswith'] },
       filters: [{ field: 'hasError', label: 'Hatası var', type: 'boolean' }],
       cell: l => (
         l.errorMessage
@@ -104,6 +104,12 @@ export function IntegrationLogsPage() {
         fetching={isFetching}
         error={error ? errText(error) : null}
         empty="Entegrasyon logu yok — dış servis çağrısı yapıldıkça burada listelenir."
+        compact={{
+          title: l => l.operationType,
+          subtitle: l => `${l.serviceType} · ${new Date(l.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}`,
+          right: l => `${l.durationMs} ms`,
+          badge: l => { const [t, v] = DURUM[l.status] ?? [l.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{t}</Badge> },
+        }}
       />
     </div>
   )

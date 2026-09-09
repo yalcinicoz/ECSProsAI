@@ -1,5 +1,6 @@
 using ECSPros.Requests.Application.Services;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,7 +14,9 @@ public record GetRequestsQuery(
     string? Priority = null,
     Guid? AssignedTo = null,
     Guid? RequestedBy = null,
-    string? Search = null) : IRequest<Result<RequestListResponse>>;
+    string? Search = null,
+    GridRequest? Grid = null) : IRequest<Result<RequestListResponse>>;
+    // Grid (2026-09-09, DataGrid): beyaz listeli f.* filtreleri + sort/dir (RequestGrid.Schema); null → eski davranış
 
 public record RequestListResponse(
     PagedResult<RequestListDto> Requests,
@@ -38,33 +41,16 @@ public class GetRequestsQueryHandler(IRequestsDbContext db)
 {
     public async Task<Result<RequestListResponse>> Handle(GetRequestsQuery request, CancellationToken ct)
     {
-        var sorgu = db.ProjectRequests.AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(request.Status))
-            sorgu = sorgu.Where(r => r.Status == request.Status);
-        if (!string.IsNullOrWhiteSpace(request.Category))
-            sorgu = sorgu.Where(r => r.Category == request.Category);
-        if (!string.IsNullOrWhiteSpace(request.Priority))
-            sorgu = sorgu.Where(r => r.Priority == request.Priority);
-        if (request.AssignedTo is { } atanan)
-            sorgu = sorgu.Where(r => r.AssignedTo == atanan);
-        if (request.RequestedBy is { } eden)
-            sorgu = sorgu.Where(r => r.RequestedBy == eden);
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var arama = request.Search.Trim().ToLowerInvariant();
-            sorgu = sorgu.Where(r =>
-                r.Title.ToLower().Contains(arama) ||
-                r.Code.ToLower().Contains(arama) ||
-                r.Description.ToLower().Contains(arama));
-        }
+        // Adlandırılmış + grid filtreleri TEK yerden (liste, sekme sayaçları ve Excel aynı modeli kullanır).
+        var filtreler = new RequestListFilters(
+            request.Status, request.Category, request.Priority, request.AssignedTo, request.RequestedBy, request.Search);
+        var sorgu = RequestGrid.ApplyAll(db.ProjectRequests.AsNoTracking(), filtreler, request.Grid);
 
         var toplam = await sorgu.CountAsync(ct);
         var sayfa = Math.Max(1, request.Page);
         var boyut = Math.Clamp(request.PageSize, 1, 100);
 
-        var kayitlar = await sorgu
-            .OrderByDescending(r => r.CreatedAt)
+        var kayitlar = await RequestGrid.Schema.ApplySort(sorgu, request.Grid)
             .Skip((sayfa - 1) * boyut)
             .Take(boyut)
             .Select(r => new RequestListDto(
@@ -74,15 +60,8 @@ public class GetRequestsQueryHandler(IRequestsDbContext db)
             .ToListAsync(ct);
 
         // Sekme sayaçları: durum filtresi HARİÇ diğer filtrelerle (sekmeler arası tutarlılık)
-        var sayacSorgu = db.ProjectRequests.AsNoTracking();
-        if (!string.IsNullOrWhiteSpace(request.Category))
-            sayacSorgu = sayacSorgu.Where(r => r.Category == request.Category);
-        if (!string.IsNullOrWhiteSpace(request.Priority))
-            sayacSorgu = sayacSorgu.Where(r => r.Priority == request.Priority);
-        if (request.AssignedTo is { } a2)
-            sayacSorgu = sayacSorgu.Where(r => r.AssignedTo == a2);
-        if (request.RequestedBy is { } e2)
-            sayacSorgu = sayacSorgu.Where(r => r.RequestedBy == e2);
+        var sayacSorgu = RequestGrid.ApplyAll(
+            db.ProjectRequests.AsNoTracking(), filtreler, request.Grid, includeStatus: false);
         var sayaclar = await sayacSorgu
             .GroupBy(r => r.Status)
             .Select(g => new { Durum = g.Key, Adet = g.Count() })

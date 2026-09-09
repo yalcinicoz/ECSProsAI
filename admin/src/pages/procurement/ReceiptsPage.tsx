@@ -3,16 +3,16 @@
  * Parti = "koli geldi" kaydı: kalemsiz açılır (İ2), ayrıştırma hemen başlayabilir.
  */
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
-import { Pagination } from '@/components/ui/Pagination'
-import { PageSpinner } from '@/components/ui/Spinner'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { RB_STATUS, apiErrorMessage, useSuppliers, useWarehouses, whName } from './procurementHelpers'
 
 interface RbRow {
@@ -21,16 +21,17 @@ interface RbRow {
   itemCount: number; linkedPoCount: number; hasInvoice: boolean; notes: string | null
 }
 interface Paged { items: RbRow[]; totalCount: number; page: number; pageSize: number }
-const PAGE_SIZE = 20
 
 export function ReceiptsPage() {
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (ReceiptBatchGrid.Schema) + Excel + görünümler.
+  // Tedarikçi/depo ADLARI başka modüllerde çözülüyor → o kolonlar sıralanamaz; süzgeçleri kimlikle.
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const [status, setStatus] = useState('')
-  const [supplierId, setSupplierId] = useState('')
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1)
+  const [sp] = useSearchParams()
+  const status = sp.get('status') ?? ''
+  const supplierId = sp.get('supplierId') ?? ''
+  const grid = useGridState('receipts', { defaultPageSize: 20, defaultSort: 'code', defaultDir: 'desc' })
+  const setNamed = (k: string, v: string) => grid.mutate(n => { if (v) n.set(k, v); else n.delete(k) })
   const [createOpen, setCreateOpen] = useState(false)
   const [form, setForm] = useState({ supplierId: '', warehouseId: '', packageCount: '', deliveryNoteNumber: '', notes: '' })
 
@@ -38,15 +39,13 @@ export function ReceiptsPage() {
   const { data: warehouses = [] } = useWarehouses()
   const supplierName = (id: string) => suppliers.find(s => s.id === id)?.title ?? '—'
 
-  const { data, isLoading } = useQuery<Paged>({
-    queryKey: ['receipt-batches', status, supplierId, search, page],
-    queryFn: async () => {
-      const p = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) })
-      if (status) p.set('status', status)
-      if (supplierId) p.set('supplierId', supplierId)
-      if (search) p.set('search', search)
-      return (await api.get(`/procurement/receipts?${p}`)).data.data
-    },
+  const named = () => ({ status: status || undefined, supplierId: supplierId || undefined })
+
+  const { data, isLoading, isFetching, error: listError } = useQuery<Paged>({
+    queryKey: ['receipt-batches', status, supplierId, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/procurement/receipts?${grid.toParams(named())}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const createMut = useMutation({
@@ -59,8 +58,36 @@ export function ReceiptsPage() {
   })
 
   const rows = data?.items ?? []
-  const totalPages = Math.max(1, Math.ceil((data?.totalCount ?? 0) / PAGE_SIZE))
-  if (isLoading && !data) return <PageSpinner />
+
+  const columns: GridColumn<RbRow>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 150,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      filters: [{ field: 'notes', label: 'Not', type: 'text' }],
+      cell: r => <span className="font-mono text-xs" style={{ color: 'var(--text)' }}>{r.code}</span> },
+    // Tedarikçi adı Accounts modülünde → sıralama YOK; süzgeç adlandırılmış supplierId ile.
+    { key: 'supplier', header: 'TEDARİKÇİ', priority: 1, frozen: true, minWidth: 200,
+      filter: { type: 'enum', label: 'Tedarikçi', field: 'supplierId', options: suppliers.map(s => ({ value: s.id, label: s.title })) },
+      cell: r => <span style={{ color: 'var(--text)' }}>{supplierName(r.supplierId)}</span> },
+    // Depo adı Inventory modülünde → sıralama YOK; süzgeç warehouseId ile.
+    { key: 'warehouse', header: 'DEPO', priority: 2, minWidth: 160,
+      filter: { type: 'enum', label: 'Depo', field: 'warehouseId', options: warehouses.map(w => ({ value: w.id, label: whName(w) })) },
+      cell: r => <span style={{ color: 'var(--text-m)' }}>{whName(warehouses.find(w => w.id === r.warehouseId))}</span> },
+    { key: 'receivedAt', header: 'TARİH', priority: 1, sortable: true, filter: { type: 'date', label: 'Teslim tarihi', quick: true },
+      cell: r => <span className="whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{new Date(r.receivedAt).toLocaleDateString('tr-TR')}</span> },
+    { key: 'packageCount', header: 'KOLİ', priority: 2, align: 'right', sortable: true, filter: { type: 'number', label: 'Koli sayısı' },
+      filters: [{ field: 'itemCount', label: 'Kalem sayısı', type: 'number' }],
+      cell: r => <span style={{ color: 'var(--text-m)' }}>{r.packageCount ?? '—'}</span> },
+    { key: 'deliveryNoteNumber', header: 'İRSALİYE', priority: 2, sortable: true, filter: { type: 'text', label: 'İrsaliye no' },
+      cell: r => <span style={{ color: 'var(--text-m)' }}>{r.deliveryNoteNumber ?? '—'}</span> },
+    { key: 'linkedPoCount', header: 'SA BAĞI', priority: 3, align: 'right', sortable: true, filter: { type: 'number', label: 'Bağlı satın alma' },
+      cell: r => <span style={{ color: 'var(--text-m)' }}>{r.linkedPoCount > 0 ? `${r.linkedPoCount} SA` : '—'}</span> },
+    { key: 'hasInvoice', header: 'FATURA', priority: 3, align: 'center', sortable: true, filter: { type: 'boolean', label: 'Faturalı' },
+      cell: r => <span style={{ color: 'var(--text-m)' }}>{r.hasInvoice ? '✓' : '—'}</span> },
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(RB_STATUS).map(([value, v]) => ({ value, label: v.label })) },
+      filters: [{ field: 'open', label: 'Açık (tamamlanmamış)', type: 'boolean' }],
+      cell: r => { const st = RB_STATUS[r.status] ?? { label: r.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
+  ]
 
   return (
     <div className="p-6">
@@ -77,65 +104,35 @@ export function ReceiptsPage() {
         </Button>
       </div>
 
-      <div className="card mb-4 flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[220px]">
-          <label className="flbl mb-1.5">Ara (kod / irsaliye no)</label>
-          <div className="flex gap-2">
-            <input className="inp flex-1" value={searchInput} onChange={e => setSearchInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && (setPage(1), setSearch(searchInput.trim()))} placeholder="MK-… ya da irsaliye no" />
-            <Button variant="secondary" onClick={() => { setPage(1); setSearch(searchInput.trim()) }}><Search size={14} /> Ara</Button>
+      <DataGrid<RbRow>
+        gridId="receipts"
+        views
+        grid={grid}
+        columns={columns}
+        rows={rows}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        onRowClick={r => navigate(`/procurement/receipts/${r.id}`)}
+        empty="Henüz mal kabul partisi yok."
+        search={{ placeholder: 'MK-… ya da irsaliye no' }}
+        minWidth={1120}
+        filterLeading={
+          <div style={{ minWidth: 200 }}>
+            <SearchableSelect value={supplierId} onChange={v => setNamed('supplierId', v ?? '')}
+              options={[{ value: '', label: 'Tedarikçi: Tümü' }, ...suppliers.map(s => ({ value: s.id, label: s.title }))]}
+              placeholder="Tedarikçi: Tümü" hasValue={!!supplierId} />
           </div>
-        </div>
-        <div className="min-w-[220px]">
-          <label className="flbl mb-1.5">Tedarikçi</label>
-          <SearchableSelect value={supplierId} onChange={v => { setPage(1); setSupplierId(v ?? '') }}
-            options={[{ value: '', label: 'Tümü' }, ...suppliers.map(s => ({ value: s.id, label: s.title }))]}
-            placeholder="Tümü" hasValue={!!supplierId} />
-        </div>
-        <div className="min-w-[170px]">
-          <label className="flbl mb-1.5">Durum</label>
-          <select className="inp" value={status} onChange={e => { setPage(1); setStatus(e.target.value) }}>
-            <option value="">Tümü</option>
-            {Object.entries(RB_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
-        </div>
-      </div>
-
-      <div className="card p-0 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'TEDARİKÇİ', 'DEPO', 'TARİH', 'KOLİ', 'İRSALİYE', 'SA BAĞI', 'FATURA', 'DURUM'].map(h =>
-                <th key={h} className="px-4 py-3 font-semibold">{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr><td colSpan={9} className="px-4 py-10 text-center" style={{ color: 'var(--text-s)' }}>
-                {search || status || supplierId ? 'Filtreye uyan kayıt yok.' : 'Henüz mal kabul partisi yok.'}
-              </td></tr>
-            )}
-            {rows.map(r => {
-              const st = RB_STATUS[r.status] ?? { label: r.status, variant: 'neutral' as const }
-              return (
-                <tr key={r.id} className="cursor-pointer hover:opacity-90" style={{ borderBottom: '1px solid var(--border)' }}
-                  onClick={() => navigate(`/procurement/receipts/${r.id}`)}>
-                  <td className="px-4 py-2.5 font-mono text-xs" style={{ color: 'var(--text)' }}>{r.code}</td>
-                  <td className="px-4 py-2.5" style={{ color: 'var(--text)' }}>{supplierName(r.supplierId)}</td>
-                  <td className="px-4 py-2.5" style={{ color: 'var(--text-m)' }}>{whName(warehouses.find(w => w.id === r.warehouseId))}</td>
-                  <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{new Date(r.receivedAt).toLocaleDateString('tr-TR')}</td>
-                  <td className="px-4 py-2.5" style={{ color: 'var(--text-m)' }}>{r.packageCount ?? '—'}</td>
-                  <td className="px-4 py-2.5" style={{ color: 'var(--text-m)' }}>{r.deliveryNoteNumber ?? '—'}</td>
-                  <td className="px-4 py-2.5" style={{ color: 'var(--text-m)' }}>{r.linkedPoCount > 0 ? `${r.linkedPoCount} SA` : '—'}</td>
-                  <td className="px-4 py-2.5" style={{ color: 'var(--text-m)' }}>{r.hasInvoice ? '✓' : '—'}</td>
-                  <td className="px-4 py-2.5"><Badge variant={st.variant}>{st.label}</Badge></td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        <Pagination page={page} totalPages={totalPages} totalCount={data?.totalCount ?? 0} pageSize={PAGE_SIZE} onChange={setPage} />
-      </div>
+        }
+        export={{ endpoint: '/procurement/receipts/export', named, fallbackFileName: 'mal-kabul.xlsx' }}
+        compact={{
+          title: r => r.code,
+          subtitle: r => `${supplierName(r.supplierId)} · ${new Date(r.receivedAt).toLocaleDateString('tr-TR')}`,
+          right: r => r.packageCount ? `${r.packageCount} koli` : '',
+          badge: r => { const st = RB_STATUS[r.status] ?? { label: r.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> },
+        }}
+      />
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Yeni Mal Kabul Partisi">
         <div className="space-y-4">

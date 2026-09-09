@@ -39,6 +39,10 @@ public class CoreDbContext : DbContext, ICoreDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // DataGrid (2026-09-09): jsonb sözlük alanlarında filtre/sıralama — Firmalar liste ekranı ad
+        // (NameI18n) üzerinden süzülüp sıralanıyor. Bu kayıt olmadan GridJson.Text SQL'e çevrilemez
+        // ve sorgu InvalidOperationException ile patlar (GridSchemasDbTests bunu yakalar).
+        modelBuilder.HasDbFunction(ECSPros.Shared.Kernel.Grid.GridJson.TextMethod).HasName("jsonb_extract_path_text").IsBuiltIn();
         modelBuilder.HasDefaultSchema("core");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CoreDbContext).Assembly);
 

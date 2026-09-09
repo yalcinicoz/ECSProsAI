@@ -1,6 +1,7 @@
 using ECSPros.Promotion.Application.Services;
 using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,7 +14,9 @@ public record GetCouponsQuery(
     int Page = 1,
     int PageSize = 20,
     Guid? MemberId = null,
-    Guid? MemberGroupId = null) : IRequest<Result<PagedResult<CouponDto>>>;
+    Guid? MemberGroupId = null,
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<CouponDto>>>;
+    // Grid (2026-09-09, DataGrid): beyaz listeli f.* filtreleri + sort/dir (CouponGrid.Schema); null → eski davranış
 
 public record CouponDto(
     Guid Id,
@@ -40,27 +43,15 @@ public class GetCouponsQueryHandler(IPromotionDbContext db, IMemberService membe
 {
     public async Task<Result<PagedResult<CouponDto>>> Handle(GetCouponsQuery request, CancellationToken ct)
     {
-        var query = db.Coupons.AsNoTracking();
-
-        if (request.IsActive.HasValue)
-            query = query.Where(c => c.IsActive == request.IsActive.Value);
-
-        if (request.MemberId.HasValue)
-            query = query.Where(c => c.MemberId == request.MemberId.Value);
-
-        if (request.MemberGroupId.HasValue)
-            query = query.Where(c => c.MemberGroupId == request.MemberGroupId.Value);
-
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var term = request.Search.Trim().ToLower();
-            query = query.Where(c => c.Code.ToLower().Contains(term));
-        }
+        // Adlandırılmış filtreler + grid filtreleri TEK yerden (liste ve Excel aynı sonucu verir).
+        var query = CouponGrid.ApplyAll(
+            db.Coupons.AsNoTracking(),
+            new CouponListFilters(request.Search, request.IsActive, request.MemberId, request.MemberGroupId),
+            request.Grid);
 
         var totalCount = await query.CountAsync(ct);
 
-        var items = await query
-            .OrderByDescending(c => c.CreatedAt)
+        var items = await CouponGrid.Schema.ApplySort(query, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(c => new CouponDto(

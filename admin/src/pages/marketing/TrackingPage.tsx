@@ -143,12 +143,12 @@ export function TrackingPage() {
     { key: 'status', header: 'DURUM', priority: 1, sortable: true,
       filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(DURUM).map(([value, [label]]) => ({ value, label })) },
       cell: r => <Badge variant={DURUM[r.status]?.[1] ?? 'default'}>{DURUM[r.status]?.[0] ?? r.status}</Badge> },
-    { key: 'targets', header: 'HEDEFLER', priority: 3, filter: { type: 'boolean', field: 'hasTargets', label: 'Hedef sonucu var' },
+    { key: 'targets', header: 'HEDEFLER', sortable: true, priority: 3, filter: { type: 'boolean', field: 'hasTargets', label: 'Hedef sonucu var' },
       cell: r => <span className="text-xs font-mono break-all" title={r.targetsJson ?? ''}>{(r.targetsJson ?? '[]').slice(0, 90)}</span> },
     { key: 'attempts', header: 'DENEME', priority: 2, sortable: true, align: 'right', filter: { type: 'number', label: 'Deneme sayısı' },
       filters: [{ field: 'nextAttemptAt', label: 'Sonraki deneme', type: 'date' }],
       cell: r => `${r.attemptCount}${r.nextAttemptAt ? ' → ' + tarihSaat(r.nextAttemptAt) : ''}` },
-    { key: 'lastError', header: 'HATA', priority: 2, filter: { type: 'text', label: 'Hata metni', ops: ['contains', 'startswith'] },
+    { key: 'lastError', header: 'HATA', sortable: true, priority: 2, filter: { type: 'text', label: 'Hata metni', ops: ['contains', 'startswith'] },
       filters: [{ field: 'hasError', label: 'Hatası var', type: 'boolean' }],
       cell: r => <span className="text-xs text-red-600" title={r.lastError ?? ''}>{(r.lastError ?? '').slice(0, 80)}</span> },
     { key: 'actions', header: '', priority: 2, align: 'right', exportable: false, stopRowClick: true, cell: r => (r.status === 'error' || r.status === 'skipped') ? (
@@ -285,6 +285,12 @@ export function TrackingPage() {
         fetching={obFetching}
         error={obError ? errText(obError) : null}
         empty="Kuyrukta kayıt yok"
+        compact={{
+          title: r => r.eventName,
+          subtitle: r => `${r.source} · ${new Date(r.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}`,
+          right: r => `${r.attemptCount} deneme`,
+          badge: r => <Badge variant={DURUM[r.status]?.[1] ?? 'default'}>{DURUM[r.status]?.[0] ?? r.status}</Badge>,
+        }}
       />
       <p className="mt-4 text-xs" style={{ color: 'var(--text-s)' }}>
         <ExternalLink className="inline w-3 h-3 mr-1" />Meta Events Manager → Test Events sekmesinde görmek için kanal Meta kaydına <code>testEventCode</code> girin; canlıda BOŞ bırakın.

@@ -32,6 +32,7 @@ public static class MemberGrid
         .Guid("memberGroupId", m => m.MemberGroupId)
         .Guid("cityId", m => m.CityId)
         .Number("legacyMemberId", m => m.LegacyMemberId)
+        .Sort("name", m => m.FirstName)   // "AD SOYAD" kolonu: ada göre, eşitlikte TieBreaker
         .Sort("firstName", m => m.FirstName)
         .Sort("lastName", m => m.LastName)
         .Sort("email", m => m.Email)

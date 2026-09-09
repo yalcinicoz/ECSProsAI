@@ -245,6 +245,12 @@ export function UsersPage() {
         empty="Kullanıcı yok."
         search={{ placeholder: 'Ad, e-posta, kullanıcı adı, telefon ara…' }}
         export={{ endpoint: '/iam/users/export', fallbackFileName: 'kullanicilar.xlsx' }}
+        compact={{
+          title: u => `${u.firstName} ${u.lastName}`.trim() || u.username,
+          subtitle: u => `${u.email} · ${u.department}`,
+          right: u => u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('tr-TR') : 'Hiç girmedi',
+          badge: u => <Badge variant={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
       />
 
       {editing !== null && <UserModal user={editing} onClose={() => setEditing(null)} />}

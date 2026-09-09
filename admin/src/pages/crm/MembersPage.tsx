@@ -56,7 +56,7 @@ export function MembersPage() {
   const totalCount = data?.totalCount ?? 0
 
   const columns: GridColumn<MemberSummary>[] = [
-    { key: 'name', header: 'AD SOYAD', filters: [{ field: 'firstName', label: 'Ad', type: 'text' }, { field: 'lastName', label: 'Soyad', type: 'text' }, { field: 'gender', label: 'Cinsiyet', type: 'enum', multiple: true, options: GENDER_OPTIONS }, { field: 'companyName', label: 'Şirket', type: 'text' }, { field: 'taxNumber', label: 'Vergi no', type: 'text', ops: ['contains', 'startswith', 'eq'] }], frozen: true, lockVisible: true, priority: 1, minWidth: 160,
+    { key: 'name', header: 'AD SOYAD', sortable: true, filters: [{ field: 'firstName', label: 'Ad', type: 'text' }, { field: 'lastName', label: 'Soyad', type: 'text' }, { field: 'gender', label: 'Cinsiyet', type: 'enum', multiple: true, options: GENDER_OPTIONS }, { field: 'companyName', label: 'Şirket', type: 'text' }, { field: 'taxNumber', label: 'Vergi no', type: 'text', ops: ['contains', 'startswith', 'eq'] }], frozen: true, lockVisible: true, priority: 1, minWidth: 160,
       cell: m => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{m.firstName} {m.lastName}</span> },
     { key: 'email', header: 'E-POSTA', filters: [{ field: 'isEmailVerified', label: 'E-posta doğrulandı', type: 'boolean' }], sortable: true, priority: 1, filter: { type: 'text', label: 'E-posta' },
       cell: m => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{m.email ?? '—'}</span> },
@@ -106,6 +106,12 @@ export function MembersPage() {
         empty="Üye bulunamadı."
         minWidth={760}
         export={{ endpoint: '/crm/members/export', named: () => ({ activeOnly: String(activeOnly) }), fallbackFileName: 'uyeler.xlsx' }}
+        compact={{
+          title: m => `${m.firstName} ${m.lastName}`.trim() || (m.email ?? '—'),
+          subtitle: m => m.phone ?? m.email ?? '—',
+          right: m => new Date(m.createdAt).toLocaleDateString('tr-TR'),
+          badge: m => <Badge variant={m.isActive ? 'success' : 'neutral'}>{m.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
       />
     </div>
   )

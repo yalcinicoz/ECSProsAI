@@ -98,7 +98,7 @@ export function ProductsPage() {
           </div>
         </div>
       ) },
-    { key: 'group', header: 'GRUP', filters: [{ field: 'sourceType', label: 'Kaynak', type: 'enum', multiple: true, options: SOURCE_TYPE_OPTIONS }], priority: 2, cell: (item) => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{groupMap.get(item.productGroupId) ?? '—'}</span> },
+    { key: 'group', header: 'GRUP', sortable: true, filter: { type: 'enum', label: 'Grup', field: 'productGroupId', options: groupOptions }, filters: [{ field: 'sourceType', label: 'Kaynak', type: 'enum', multiple: true, options: SOURCE_TYPE_OPTIONS }], priority: 2, cell: (item) => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{groupMap.get(item.productGroupId) ?? '—'}</span> },
     { key: 'variantCount', header: 'VARYANT', priority: 3, align: 'center', sortable: true, filter: { type: 'number', label: 'Varyant sayısı' }, cell: (item) => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{item.variantCount}</span> },
     { key: 'isSaleOpen', header: 'DURUM', priority: 1, align: 'center', sortable: true, lockVisible: true, filter: { type: 'boolean', label: 'Satışta' },
       cell: (item) => <Badge variant={item.isActive ? 'success' : 'neutral'}>{item.isActive ? 'Satışta' : 'Satış Kapalı'}</Badge> },
@@ -153,6 +153,12 @@ export function ProductsPage() {
         empty={grid.state.search ? `"${grid.state.search}" için ürün bulunamadı` : 'Henüz ürün eklenmemiş'}
         minWidth={640}
         export={{ endpoint: '/catalog/products/export', named: () => ({ activeOnly: String(activeOnly) }), fallbackFileName: 'urunler.xlsx' }}
+        compact={{
+          title: item => item.code,
+          subtitle: item => getName(item),
+          right: item => `${item.variantCount} varyant`,
+          badge: item => <Badge variant={item.isActive ? 'success' : 'neutral'}>{item.isActive ? 'Satışta' : 'Kapalı'}</Badge>,
+        }}
       />
     </div>
   )

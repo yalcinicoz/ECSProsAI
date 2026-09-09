@@ -1,3 +1,4 @@
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Shared.Kernel.Authorization;
 using ECSPros.Api.Authorization;
 using ECSPros.Inventory.Application.Commands.AddTransferItem;
@@ -39,11 +40,41 @@ public class InventoryController : ControllerBase
     }
 
     /// <summary>Depoları listeler.</summary>
+    /// <summary>Depoları TAM liste olarak döner — dropdown kaynağı. ⚠ Sayfalanmaz: stok, transfer,
+    /// paketleme, toplama görevi, iade detayı ve satın alma ekranları bunu bütün hâlinde bekler.
+    /// Liste EKRANI için sayfalı /warehouses/grid ucunu kullanın.</summary>
     [HttpGet("warehouses")]
     public async Task<IActionResult> GetWarehouses([FromQuery] bool activeOnly = true, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new GetWarehousesQuery(activeOnly), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Depolar liste ekranı (DataGrid): sayfalı + f.* filtreleri + sort/dir.</summary>
+    [HttpGet("warehouses/grid")]
+    public async Task<IActionResult> GetWarehousesGrid([FromQuery] bool activeOnly = false, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        // Depo kanaldan bağımsız bir tanım kaydıdır → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetWarehousesGridQuery(
+            new WarehouseListFilters(activeOnly, search), grid.Page, grid.PageSize, grid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Depoları Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: activeOnly.</summary>
+    [HttpPost("warehouses/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportWarehouses(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<InventoryController> logger, CancellationToken ct)
+    {
+        var filters = new WarehouseListFilters(body.NamedValue("activeOnly") == "true", body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "warehouses", "depolar", "Depolar",
+            ECSPros.Api.Grid.WarehouseExportColumns.All,
+            max => _mediator.Send(new ExportWarehousesQuery(filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Yeni depo oluşturur.</summary>
@@ -316,19 +347,37 @@ public class InventoryController : ControllerBase
 
     // ─── Transfers ─────────────────────────────────────────────────────────────
 
-    /// <summary>Transfer taleplerini listeler.</summary>
+    /// <summary>Transfer taleplerini listeler (DataGrid: f.* filtreleri + sort/dir + arama).</summary>
     [HttpGet("transfers")]
     public async Task<IActionResult> GetTransfers(
         [FromQuery] Guid? fromWarehouseId,
         [FromQuery] Guid? toWarehouseId,
         [FromQuery] string? status,
         [FromQuery] string? transferType,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
         CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetTransfersQuery(fromWarehouseId, toWarehouseId, status, transferType, page, pageSize), ct);
+        // Depo transferi kanaldan bağımsızdır (iç depo hareketi) → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetTransfersQuery(
+            fromWarehouseId, toWarehouseId, status, transferType, grid.Page, grid.PageSize, search, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Transferleri Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: status/transferType.</summary>
+    [HttpPost("transfers/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportTransfers(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<InventoryController> logger, CancellationToken ct)
+    {
+        var filters = new TransferListFilters(
+            Status: body.NamedValue("status"), TransferType: body.NamedValue("transferType"), Search: body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "transfers", "transferler", "Transferler",
+            ECSPros.Api.Grid.TransferExportColumns.All,
+            max => _mediator.Send(new ExportTransfersQuery(filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Transfer talebi detayı.</summary>

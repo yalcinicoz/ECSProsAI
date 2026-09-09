@@ -281,11 +281,11 @@ export function InvoicesPage() {
       cell: inv => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{inv.recipientName}</span> },
     { key: 'total', header: 'TUTAR', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Tutar' },
       cell: inv => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{inv.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span> },
-    { key: 'hasPdf', header: 'PDF', filter: { type: 'boolean', label: 'Entegratör PDF' }, priority: 3, align: 'center', exportable: false, cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{inv.hasIntegratorPdf ? '✓' : '—'}</span> },
+    { key: 'hasPdf', header: 'PDF', sortable: true, filter: { type: 'boolean', label: 'Entegratör PDF' }, priority: 3, align: 'center', exportable: false, cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{inv.hasIntegratorPdf ? '✓' : '—'}</span> },
     { key: 'status', header: 'DURUM', lockVisible: true, sortable: true, priority: 1,
       filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(INVOICE_STATUS_MAP).map(([value, v]) => ({ value, label: v.label })) },
       cell: inv => { const st = INVOICE_STATUS_MAP[inv.status] ?? { label: inv.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
-    { key: 'integratorStatus', header: 'ENTEGRATÖR', priority: 3, defaultVisible: false, filter: { type: 'enum', multiple: true, label: 'Entegratör durumu', options: Object.entries(INTEGRATOR_STATUS).map(([value, label]) => ({ value, label })) }, cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{INTEGRATOR_STATUS[inv.integratorStatus] ?? inv.integratorStatus}</span> },
+    { key: 'integratorStatus', header: 'ENTEGRATÖR', sortable: true, priority: 3, defaultVisible: false, filter: { type: 'enum', multiple: true, label: 'Entegratör durumu', options: Object.entries(INTEGRATOR_STATUS).map(([value, label]) => ({ value, label })) }, cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{INTEGRATOR_STATUS[inv.integratorStatus] ?? inv.integratorStatus}</span> },
     { key: 'invoiceDate', header: 'TARİH', filters: [{ field: 'createdAt', label: 'Kayıt tarihi', type: 'date' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Fatura tarihi', quick: true },
       cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(inv.invoiceDate).toLocaleDateString('tr-TR')}</span> },
     { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
@@ -327,6 +327,12 @@ export function InvoicesPage() {
           empty={'Fatura bulunamadı. Fatura, sipariş detayındaki "Fatura Oluştur" ile kesilir.'}
           minWidth={860}
           export={{ endpoint: '/orders/invoices/export', named: () => ({ status: tab && tab !== 'all' ? tab : undefined }), fallbackFileName: 'faturalar.xlsx' }}
+        compact={{
+          title: inv => inv.invoiceNumber,
+          subtitle: inv => `${inv.recipientName} · ${new Date(inv.invoiceDate).toLocaleDateString('tr-TR')}`,
+          right: inv => inv.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺',
+          badge: inv => { const st = INVOICE_STATUS_MAP[inv.status] ?? { label: inv.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> },
+        }}
         />
       )}
 

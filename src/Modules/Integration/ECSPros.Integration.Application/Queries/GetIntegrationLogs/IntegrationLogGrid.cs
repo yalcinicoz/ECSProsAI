@@ -26,6 +26,7 @@ public static class IntegrationLogGrid
         .Text("referenceType", l => l.ReferenceType)
         .Guid("referenceId", l => l.ReferenceId)
         .Guid("integrationId", l => l.FirmIntegrationId)
+        .Sort("error", l => l.ErrorMessage)
         .Sort("createdAt", l => l.CreatedAt)
         .Sort("service", l => l.ServiceType)
         .Sort("operation", l => l.OperationType)

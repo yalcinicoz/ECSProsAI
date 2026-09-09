@@ -194,7 +194,7 @@ export function ReturnsPage() {
   const columns: GridColumn<ReturnSummary>[] = [
     { key: 'returnNumber', header: 'İADE NO', filter: { type: 'text', label: 'İade no', ops: ['startswith', 'contains', 'eq'] }, filters: [{ field: 'trackingNumber', label: 'Kargo takip no', type: 'text' }], frozen: true, lockVisible: true, sortable: true, minWidth: 140,
       cell: r => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{r.returnNumber}</code> },
-    { key: 'returnType', header: 'TİP', priority: 3, filter: { type: 'enum', label: 'Tip', options: RETURN_TYPE_OPTIONS }, cell: r => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{r.returnType === 'refund' ? 'İade' : r.returnType}</span> },
+    { key: 'returnType', header: 'TİP', sortable: true, priority: 3, filter: { type: 'enum', label: 'Tip', options: RETURN_TYPE_OPTIONS }, cell: r => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{r.returnType === 'refund' ? 'İade' : r.returnType}</span> },
     { key: 'refundAmount', header: 'TUTAR', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Tutar' },
       cell: r => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{r.refundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span> },
     { key: 'refundStatus', header: 'GERİ ÖDEME', filter: { type: 'enum', multiple: true, label: 'Geri ödeme durumu', options: REFUND_STATUS_OPTIONS }, filters: [{ field: 'refundMethod', label: 'Geri ödeme yöntemi', type: 'enum', multiple: true, options: REFUND_METHOD_OPTIONS }], sortable: true, priority: 2,
@@ -202,7 +202,7 @@ export function ReturnsPage() {
     { key: 'status', header: 'DURUM', lockVisible: true, sortable: true, priority: 1,
       filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(RETURN_STATUS_MAP).map(([value, v]) => ({ value, label: v.label })) },
       cell: r => { const st = RETURN_STATUS_MAP[r.status] ?? { label: r.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
-    { key: 'cargoReturnCode', header: 'KARGO İADE KODU', priority: 3, defaultVisible: false, filter: { type: 'text', label: 'Kargo iade kodu' }, cell: r => <span className="text-xs font-mono" style={{ color: 'var(--text-s)' }}>{r.cargoReturnCode ?? '—'}</span> },
+    { key: 'cargoReturnCode', header: 'KARGO İADE KODU', sortable: true, priority: 3, defaultVisible: false, filter: { type: 'text', label: 'Kargo iade kodu' }, cell: r => <span className="text-xs font-mono" style={{ color: 'var(--text-s)' }}>{r.cargoReturnCode ?? '—'}</span> },
     { key: 'createdAt', header: 'TARİH', filters: [{ field: 'cargoReceivedAt', label: 'Teslim alınma tarihi', type: 'date' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Tarih', quick: true },
       cell: r => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(r.createdAt).toLocaleDateString('tr-TR')}</span> },
     { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
@@ -243,6 +243,12 @@ export function ReturnsPage() {
         empty="İade bulunamadı."
         minWidth={760}
         export={{ endpoint: '/orders/returns/export', named: () => ({ status: tab !== 'all' ? tab : undefined }), fallbackFileName: 'iadeler.xlsx' }}
+        compact={{
+          title: r => r.returnNumber,
+          subtitle: r => `${new Date(r.createdAt).toLocaleDateString('tr-TR')}${r.cargoReturnCode ? ` · ${r.cargoReturnCode}` : ''}`,
+          right: r => r.refundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺',
+          badge: r => { const st = RETURN_STATUS_MAP[r.status] ?? { label: r.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> },
+        }}
       />
 
       {reasonsOpen && <ReasonsModal onClose={() => setReasonsOpen(false)} />}

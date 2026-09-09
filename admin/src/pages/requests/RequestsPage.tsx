@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import {
@@ -131,37 +133,74 @@ function CreateRequestModal({ onClose, onCreated }: { onClose: () => void; onCre
 }
 
 export function RequestsPage() {
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (RequestGrid.Schema) + Excel export + görünümler.
+  // Sekme ?tab=<durum> (boş = tümü); kategori/öncelik/"benim talepleri" adlandırılmış filtre olarak gider.
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const user = useAuthStore(s => s.user)
+  const [sp] = useSearchParams()
 
-  const [tab, setTab] = useState('')
-  const [category, setCategory] = useState('')
-  const [priority, setPriority] = useState('')
-  const [mineOnly, setMineOnly] = useState<'' | 'requested' | 'assigned'>('')
-  const [search, setSearch] = useState('')
-  const [appliedSearch, setAppliedSearch] = useState('')
-  const [page, setPage] = useState(1)
+  const tab = sp.get('tab') ?? ''
+  const category = sp.get('category') ?? ''
+  const priority = sp.get('priority') ?? ''
+  const mineOnly = (sp.get('mine') ?? '') as '' | 'requested' | 'assigned'
+  const grid = useGridState('requests', { defaultPageSize: 20, defaultSort: 'createdAt', defaultDir: 'desc' })
+  const setNamed = (k: string, v: string) => grid.mutate(n => { if (v) n.set(k, v); else n.delete(k) })
   const [showCreate, setShowCreate] = useState(false)
 
-  const { data, isLoading } = useQuery<ListResponse>({
-    queryKey: ['requests', tab, category, priority, mineOnly, appliedSearch, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: '20' })
-      if (tab) params.set('status', tab)
-      if (category) params.set('category', category)
-      if (priority) params.set('priority', priority)
-      if (mineOnly === 'requested' && user) params.set('requestedBy', user.id)
-      if (mineOnly === 'assigned' && user) params.set('assignedTo', user.id)
-      if (appliedSearch) params.set('search', appliedSearch)
-      return (await api.get(`/requests?${params}`)).data.data
-    },
+  const named = () => ({
+    status: tab || undefined,
+    category: category || undefined,
+    priority: priority || undefined,
+    requestedBy: mineOnly === 'requested' && user ? user.id : undefined,
+    assignedTo: mineOnly === 'assigned' && user ? user.id : undefined,
+  })
+
+  const { data, isLoading, isFetching, error: listError } = useQuery<ListResponse>({
+    queryKey: ['requests', tab, category, priority, mineOnly, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/requests?${grid.toParams(named())}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const rows = data?.requests.items ?? []
-  const totalPages = Math.ceil((data?.requests.totalCount ?? 0) / 20)
   const counts = data?.statusCounts ?? {}
   const allCount = Object.values(counts).reduce((a, b) => a + b, 0)
+
+  const columns: GridColumn<RequestListItem>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 130,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      cell: r => <span className="text-xs font-mono whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{r.code}</span> },
+    { key: 'title', header: 'BAŞLIK', priority: 1, frozen: true, sortable: true, minWidth: 240,
+      filter: { type: 'text', label: 'Başlık' },
+      filters: [{ field: 'description', label: 'Açıklama', type: 'text' }, { field: 'commentCount', label: 'Yorum sayısı', type: 'number' }],
+      cell: r => <span className="text-sm" style={{ color: 'var(--text)' }}>
+        <span className="font-medium">{r.title}</span>
+        {r.commentCount > 0 && <span className="ml-2 text-xs" style={{ color: 'var(--text-s)' }}>💬 {r.commentCount}</span>}
+      </span> },
+    { key: 'category', header: 'KATEGORİ', priority: 2, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Kategori', options: Object.entries(CATEGORY_LABELS).map(([value, label]) => ({ value, label })) },
+      cell: r => <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{CATEGORY_LABELS[r.category] ?? r.category}</span> },
+    { key: 'priority', header: 'ÖNCELİK', priority: 1, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Öncelik', options: Object.entries(PRIORITY_META).map(([value, v]) => ({ value, label: v.label })) },
+      cell: r => <Badge variant={PRIORITY_META[r.priority]?.badge ?? 'neutral'}>{PRIORITY_META[r.priority]?.label ?? r.priority}</Badge> },
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(STATUS_META).map(([value, v]) => ({ value, label: v.label })) },
+      cell: r => <Badge variant={STATUS_META[r.status]?.badge ?? 'neutral'}>{STATUS_META[r.status]?.label ?? r.status}</Badge> },
+    { key: 'requestedByName', header: 'TALEP EDEN', priority: 2, sortable: true, filter: { type: 'text', label: 'Talep eden' },
+      cell: r => <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{r.requestedByName}</span> },
+    { key: 'assignedToName', header: 'ATANAN', priority: 2, sortable: true, filter: { type: 'text', label: 'Atanan' },
+      filters: [{ field: 'assigned', label: 'Atanmış', type: 'boolean' }],
+      cell: r => <span className="text-xs whitespace-nowrap" style={{ color: r.assignedToName ? 'var(--text-m)' : 'var(--text-s)' }}>{r.assignedToName ?? '—'}</span> },
+    { key: 'dueDate', header: 'TERMİN', priority: 2, sortable: true, filter: { type: 'date', label: 'Termin' },
+      filters: [{ field: 'overdue', label: 'Termini geçmiş', type: 'boolean' }],
+      cell: r => <span className="text-xs whitespace-nowrap"
+        style={{ color: isOverdue(r) ? '#dc2626' : 'var(--text-s)', fontWeight: isOverdue(r) ? 600 : 400 }}>
+        {r.dueDate ? new Date(r.dueDate).toLocaleDateString('tr-TR') : '—'}{isOverdue(r) && ' ⚠'}</span> },
+    { key: 'createdAt', header: 'TARİH', priority: 2, sortable: true, filter: { type: 'date', label: 'Oluşturma', quick: true },
+      filters: [{ field: 'completedAt', label: 'Kapanış', type: 'date' }],
+      cell: r => <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-s)' }}>{new Date(r.createdAt).toLocaleDateString('tr-TR')}</span> },
+  ]
 
   return (
     <div className="p-6">
@@ -177,116 +216,55 @@ export function RequestsPage() {
 
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
         {TABS.map(t => (
-          <button key={t} className={cn('stab', tab === t && 'active')}
-            onClick={() => { setTab(t); setPage(1) }}>
+          <button key={t} className={cn('stab', tab === t && 'active')} onClick={() => setNamed('tab', t)}>
             {t === '' ? 'Tümü' : STATUS_META[t].label}
             <span className="ml-1 text-xs opacity-70">({t === '' ? allCount : counts[t] ?? 0})</span>
           </button>
         ))}
       </div>
 
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <select className="inp text-sm py-1.5 px-3 h-auto" value={category}
-          onChange={e => { setCategory(e.target.value); setPage(1) }}>
-          <option value="">Tüm kategoriler</option>
-          {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <select className="inp text-sm py-1.5 px-3 h-auto" value={priority}
-          onChange={e => { setPriority(e.target.value); setPage(1) }}>
-          <option value="">Tüm öncelikler</option>
-          {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
-        <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-          {([['', 'Herkes'], ['requested', 'Benim taleplerim'], ['assigned', 'Bana atananlar']] as const).map(([k, l]) => (
-            <button key={k} onClick={() => { setMineOnly(k); setPage(1) }}
-              className="px-3 py-1.5 text-sm"
-              style={{
-                background: mineOnly === k ? 'var(--brand)' : 'transparent',
-                color: mineOnly === k ? '#fff' : 'var(--text-m)',
-              }}>{l}</button>
-          ))}
-        </div>
-        <input className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 200 }}
-          placeholder="Kod, başlık veya açıklama ara…" value={search}
-          onChange={e => setSearch(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { setAppliedSearch(search.trim()); setPage(1) } }} />
-        <button onClick={() => { setAppliedSearch(search.trim()); setPage(1) }}
-          className="px-3 py-1.5 rounded-lg text-sm"
-          style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Ara</button>
-      </div>
-
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'BAŞLIK', 'KATEGORİ', 'ÖNCELİK', 'DURUM', 'TALEP EDEN', 'ATANAN', 'TERMİN', 'TARİH'].map(h => (
-                <th key={h} className="px-4 py-3 text-xs font-semibold text-left"
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
+      <DataGrid<RequestListItem>
+        gridId="requests"
+        views
+        grid={grid}
+        columns={columns}
+        rows={rows}
+        totalCount={data?.requests.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        onRowClick={r => navigate(`/requests/${r.id}`)}
+        empty="Talep bulunamadı. Sağ üstten yeni talep girebilirsiniz."
+        search={{ placeholder: 'Kod, başlık veya açıklama ara…' }}
+        minWidth={1040}
+        filterLeading={
+          <>
+            <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={category} aria-label="Kategori"
+              onChange={e => setNamed('category', e.target.value)}>
+              <option value="">Tüm kategoriler</option>
+              {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+            <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={priority} aria-label="Öncelik"
+              onChange={e => setNamed('priority', e.target.value)}>
+              <option value="">Tüm öncelikler</option>
+              {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+            <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+              {([['', 'Herkes'], ['requested', 'Benim taleplerim'], ['assigned', 'Bana atananlar']] as const).map(([k, l]) => (
+                <button key={k} onClick={() => setNamed('mine', k)} className="px-3 py-1.5 text-sm"
+                  style={{ background: mineOnly === k ? 'var(--brand)' : 'transparent', color: mineOnly === k ? '#fff' : 'var(--text-m)' }}>{l}</button>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr><td colSpan={9} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
-            )}
-            {!isLoading && rows.length === 0 && (
-              <tr><td colSpan={9} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Talep bulunamadı. Sağ üstten yeni talep girebilirsiniz.
-              </td></tr>
-            )}
-            {rows.map(r => (
-              <tr key={r.id} onClick={() => navigate(`/requests/${r.id}`)}
-                className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3 text-xs font-mono whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{r.code}</td>
-                <td className="px-4 py-3 text-sm max-w-sm" style={{ color: 'var(--text)' }}>
-                  <span className="font-medium">{r.title}</span>
-                  {r.commentCount > 0 && (
-                    <span className="ml-2 text-xs" style={{ color: 'var(--text-s)' }}>💬 {r.commentCount}</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: 'var(--text-m)' }}>
-                  {CATEGORY_LABELS[r.category] ?? r.category}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge variant={PRIORITY_META[r.priority]?.badge ?? 'neutral'}>
-                    {PRIORITY_META[r.priority]?.label ?? r.priority}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3">
-                  <Badge variant={STATUS_META[r.status]?.badge ?? 'neutral'}>
-                    {STATUS_META[r.status]?.label ?? r.status}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{r.requestedByName}</td>
-                <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: r.assignedToName ? 'var(--text-m)' : 'var(--text-s)' }}>
-                  {r.assignedToName ?? '—'}
-                </td>
-                <td className="px-4 py-3 text-xs whitespace-nowrap"
-                  style={{ color: isOverdue(r) ? '#dc2626' : 'var(--text-s)', fontWeight: isOverdue(r) ? 600 : 400 }}>
-                  {r.dueDate ? new Date(r.dueDate).toLocaleDateString('tr-TR') : '—'}
-                  {isOverdue(r) && ' ⚠'}
-                </td>
-                <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: 'var(--text-s)' }}>
-                  {new Date(r.createdAt).toLocaleDateString('tr-TR')}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>← Önceki</button>
-          <span className="text-sm" style={{ color: 'var(--text-s)' }}>{page} / {totalPages}</span>
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Sonraki →</button>
-        </div>
-      )}
+            </div>
+          </>
+        }
+        export={{ endpoint: '/requests/export', named, fallbackFileName: 'talepler.xlsx' }}
+        compact={{
+          title: r => `${r.code} · ${r.title}`,
+          subtitle: r => `${CATEGORY_LABELS[r.category] ?? r.category} · ${r.assignedToName ?? 'atanmadı'}`,
+          right: r => r.dueDate ? new Date(r.dueDate).toLocaleDateString('tr-TR') : '—',
+          badge: r => <Badge variant={STATUS_META[r.status]?.badge ?? 'neutral'}>{STATUS_META[r.status]?.label ?? r.status}</Badge>,
+        }}
+      />
 
       {showCreate && (
         <CreateRequestModal

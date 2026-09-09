@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 
 interface MemberGroup {
   id: string
@@ -19,6 +22,8 @@ interface MemberGroup {
   sortOrder: number
   memberCount: number
 }
+
+interface PagedResult<T> { items: T[]; totalCount: number; page: number; pageSize: number }
 
 function GroupModal({ group, onClose }: { group: MemberGroup | 'new'; onClose: () => void }) {
   const queryClient = useQueryClient()
@@ -125,12 +130,59 @@ function GroupModal({ group, onClose }: { group: MemberGroup | 'new'; onClose: (
 }
 
 export function MemberGroupsPage() {
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (MemberGroupGrid.Schema) + Excel + görünümler.
+  // ★ Ayrı uç: /crm/member-groups TÜM grupları döner (kupon hedefi, üye formu); ekran /member-groups/grid kullanır.
+  const [sp] = useSearchParams()
+  const activeOnly = sp.get('activeOnly') === 'true'
+  const grid = useGridState('member-groups', { defaultPageSize: 20, defaultSort: 'sortOrder', defaultDir: 'asc' })
   const [editing, setEditing] = useState<MemberGroup | 'new' | null>(null)
 
-  const { data: groups = [], isLoading } = useQuery<MemberGroup[]>({
-    queryKey: ['member-groups'],
-    queryFn: async () => (await api.get('/crm/member-groups?activeOnly=false')).data.data,
+  const { data, isLoading, isFetching, error: listError } = useQuery<PagedResult<MemberGroup>>({
+    queryKey: ['member-groups-grid', activeOnly, ...grid.queryKey],
+    queryFn: async () =>
+      (await api.get(`/crm/member-groups/grid?${grid.toParams({ activeOnly: activeOnly ? 'true' : undefined })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
+  const groups = data?.items ?? []
+
+  const ozellikler = (g: MemberGroup) => [
+    g.isWholesale && 'B2B',
+    g.requiresApproval && 'onaylı sipariş',
+    g.minOrderAmount != null && `min ${g.minOrderAmount}₺`,
+    g.paymentTermsDays != null && `${g.paymentTermsDays} gün vade`,
+  ].filter(Boolean).join(' · ') || '—'
+
+  const columns: GridColumn<MemberGroup>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 120,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      cell: g => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{g.code}</code> },
+    { key: 'name', header: 'AD', priority: 1, frozen: true, sortable: true, minWidth: 200,
+      filter: { type: 'text', label: 'Ad' },
+      filters: [{ field: 'isDefault', label: 'Varsayılan grup', type: 'boolean' }],
+      cell: g => <span className="text-sm" style={{ color: 'var(--text)' }}>
+        {g.nameI18n?.['tr'] ?? '—'}{g.isDefault && <Badge variant="neutral">Varsayılan</Badge>}</span> },
+    { key: 'memberCount', header: 'ÜYE', priority: 1, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Üye sayısı' },
+      filters: [{ field: 'hasMembers', label: 'Üyesi olan', type: 'boolean' }],
+      cell: g => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{g.memberCount}</span> },
+    { key: 'isWholesale', header: 'ÖZELLİKLER', priority: 2, sortable: true, minWidth: 240,
+      filter: { type: 'boolean', label: 'Toptan (B2B)' },
+      filters: [
+        { field: 'requiresApproval', label: 'Onaylı sipariş', type: 'boolean' },
+        { field: 'showPricesBeforeLogin', label: 'Girişsiz fiyat gösterir', type: 'boolean' },
+        { field: 'minOrderAmount', label: 'Min. sipariş tutarı', type: 'number' },
+        { field: 'paymentTermsDays', label: 'Vade (gün)', type: 'number' }],
+      cell: g => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{ozellikler(g)}</span> },
+    { key: 'sortOrder', header: 'SIRA', priority: 3, align: 'center', sortable: true, filter: { type: 'number', label: 'Sıra' },
+      cell: g => <span className="text-sm" style={{ color: 'var(--text-s)' }}>{g.sortOrder}</span> },
+    { key: 'isActive', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      filters: [{ field: 'createdAt', label: 'Oluşturma', type: 'date' }],
+      cell: g => <Badge variant={g.isActive ? 'success' : 'neutral'}>{g.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'edit', header: '', priority: 3, align: 'right', exportable: false,
+      cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span> },
+  ]
 
   return (
     <div className="p-6">
@@ -138,57 +190,34 @@ export function MemberGroupsPage() {
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Üye Grupları</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
-            {groups.length} grup — G9 kişiselleştirme segmentleri de üye grubuna bakar
+            {(data?.totalCount ?? 0).toLocaleString('tr-TR')} grup{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''} — G9 kişiselleştirme segmentleri de üye grubuna bakar
           </p>
         </div>
         <Button size="sm" onClick={() => setEditing('new')}>+ Yeni Grup</Button>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'AD', 'ÜYE', 'ÖZELLİKLER', 'DURUM', ''].map(h => (
-                <th key={h} className={`px-4 py-3 text-xs font-semibold ${h === '' ? 'w-20' : 'text-left'}`}
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
-            )}
-            {groups.map(g => (
-              <tr key={g.id} onClick={() => setEditing(g)}
-                className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3">
-                  <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{g.code}</code>
-                </td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text)' }}>
-                  {g.nameI18n?.['tr'] ?? '—'}
-                  {g.isDefault && <Badge variant="neutral">Varsayılan</Badge>}
-                </td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>{g.memberCount}</td>
-                <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-s)' }}>
-                  {[
-                    g.isWholesale && 'B2B',
-                    g.requiresApproval && 'onaylı sipariş',
-                    g.minOrderAmount != null && `min ${g.minOrderAmount}₺`,
-                    g.paymentTermsDays != null && `${g.paymentTermsDays} gün vade`,
-                  ].filter(Boolean).join(' · ') || '—'}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge variant={g.isActive ? 'success' : 'neutral'}>{g.isActive ? 'Aktif' : 'Pasif'}</Badge>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid<MemberGroup>
+        gridId="member-groups"
+        views
+        grid={grid}
+        columns={columns}
+        rows={groups}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        onRowClick={g => setEditing(g)}
+        empty="Üye grubu bulunamadı."
+        search={{ placeholder: 'Grup kodu veya adıyla ara…' }}
+        minWidth={900}
+        export={{ endpoint: '/crm/member-groups/export', named: () => ({ activeOnly: activeOnly ? 'true' : undefined }), fallbackFileName: 'uye-gruplari.xlsx' }}
+        compact={{
+          title: g => g.nameI18n?.['tr'] ?? g.code,
+          subtitle: g => `${g.code} · ${ozellikler(g)}`,
+          right: g => `${g.memberCount} üye`,
+          badge: g => <Badge variant={g.isActive ? 'success' : 'neutral'}>{g.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
+      />
 
       {editing !== null && <GroupModal group={editing} onClose={() => setEditing(null)} />}
     </div>

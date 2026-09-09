@@ -46,8 +46,8 @@ export function CampaignsPage() {
     { key: 'code', header: 'KOD', filters: [{ field: 'badgeLabel', label: 'Rozet', type: 'text' }], frozen: true, lockVisible: true, sortable: true, minWidth: 120,
       cell: c => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{c.code}</code> },
     { key: 'name', header: 'AD', priority: 1, exportable: true, sortable: true, filter: { type: 'text', label: 'Ad' }, cell: c => <span className="text-sm" style={{ color: 'var(--text)' }}>{tr(c.nameI18n)}</span> },
-    { key: 'campaignTypeCode', header: 'TİP', priority: 2, filter: { type: 'enum', multiple: true, label: 'Tip', options: types.map(t => ({ value: t.code, label: tr(t.nameI18n) })) }, cell: c => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{typeName(c.campaignTypeId, c.campaignTypeCode)}</span> },
-    { key: 'fillType', header: 'KAPSAM', filters: [{ field: 'fillType', label: 'Kapsam', type: 'enum', multiple: true, options: Object.entries(FILL_LABEL).map(([value, label]) => ({ value, label })) }], priority: 3, cell: c => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{FILL_LABEL[c.fillType] ?? c.fillType}</span> },
+    { key: 'campaignTypeCode', header: 'TİP', sortable: true, priority: 2, filter: { type: 'enum', multiple: true, label: 'Tip', options: types.map(t => ({ value: t.code, label: tr(t.nameI18n) })) }, cell: c => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{typeName(c.campaignTypeId, c.campaignTypeCode)}</span> },
+    { key: 'fillType', header: 'KAPSAM', sortable: true, filters: [{ field: 'fillType', label: 'Kapsam', type: 'enum', multiple: true, options: Object.entries(FILL_LABEL).map(([value, label]) => ({ value, label })) }], priority: 3, cell: c => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{FILL_LABEL[c.fillType] ?? c.fillType}</span> },
     { key: 'startsAt', header: 'TARİH', filters: [{ field: 'endsAt', label: 'Bitiş', type: 'date' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Başlangıç', quick: true },
       cell: c => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(c.startsAt).toLocaleDateString('tr-TR')} → {c.endsAt ? new Date(c.endsAt).toLocaleDateString('tr-TR') : 'süresiz'}</span> },
     { key: 'priority', header: 'ÖNCELİK', filters: [{ field: 'priority', label: 'Öncelik', type: 'number' }], sortable: true, align: 'right', priority: 2, cell: c => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{c.priority}</span> },
@@ -85,6 +85,12 @@ export function CampaignsPage() {
         empty={'Kampanya yok. "+ Yeni Kampanya" ile tanımlayın.'}
         minWidth={820}
         export={{ endpoint: '/promotion/campaigns/export', named: () => ({ activeOnly: String(tab === 'active') }), fallbackFileName: 'kampanyalar.xlsx' }}
+        compact={{
+          title: c => tr(c.nameI18n),
+          subtitle: c => `${c.code} · ${typeName(c.campaignTypeId, c.campaignTypeCode)}`,
+          right: c => new Date(c.startsAt).toLocaleDateString('tr-TR'),
+          badge: c => <Badge variant={c.isActive ? 'success' : 'neutral'}>{c.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
       />
     </div>
   )

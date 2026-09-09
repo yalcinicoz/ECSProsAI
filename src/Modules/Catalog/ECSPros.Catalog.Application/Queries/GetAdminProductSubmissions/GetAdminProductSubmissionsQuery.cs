@@ -1,14 +1,18 @@
 using System.Text.Json;
 using ECSPros.Catalog.Application.Services;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Catalog.Application.Queries.GetAdminProductSubmissions;
 
 /// <summary>Admin (panel): tüm tedarikçi gönderimleri, durum/tedarikçi filtreli. Owner-scoped DEĞİL.</summary>
-public record GetAdminProductSubmissionsQuery(string? Status, Guid? SupplierId, int Page = 1, int PageSize = 20)
+public record GetAdminProductSubmissionsQuery(
+    string? Status, Guid? SupplierId, int Page = 1, int PageSize = 20,
+    string? Search = null, GridRequest? Grid = null)
     : IRequest<Result<PagedResult<AdminSubmissionListDto>>>;
+    // Search/Grid (2026-09-09, DataGrid): global arama + beyaz listeli f.* filtreleri + sort/dir
 
 public record AdminSubmissionListDto(
     Guid Id, Guid SupplierId, string SupplierProductCode, string GroupCode,
@@ -26,12 +30,14 @@ public class GetAdminProductSubmissionsQueryHandler
         var page = request.Page < 1 ? 1 : request.Page;
         var pageSize = request.PageSize is < 1 or > 100 ? 20 : request.PageSize;
 
-        var q = _db.ProductSubmissions.AsQueryable();
-        if (!string.IsNullOrWhiteSpace(request.Status)) q = q.Where(s => s.Status == request.Status);
-        if (request.SupplierId.HasValue) q = q.Where(s => s.SupplierId == request.SupplierId);
+        // Adlandırılmış + grid filtreleri TEK yerden (liste ve Excel aynı sonucu verir).
+        var q = ProductSubmissionGrid.ApplyAll(
+            _db.ProductSubmissions.AsNoTracking(),
+            new ProductSubmissionFilters(request.Status, request.SupplierId, request.Search),
+            request.Grid);
 
         var total = await q.CountAsync(ct);
-        var items = await q.OrderByDescending(s => s.CreatedAt)
+        var items = await ProductSubmissionGrid.Schema.ApplySort(q, request.Grid)
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(s => new AdminSubmissionListDto(
                 s.Id, s.SupplierId, s.SupplierProductCode, s.GroupCode, s.Name, s.VariantCount,

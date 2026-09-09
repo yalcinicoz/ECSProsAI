@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Storefront.Application.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,11 @@ public record GetSavedSearchesForAdminQuery(
     Guid? FirmPlatformId = null,
     string? Search = null,
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedResult<AdminSavedSearchDto>>>;
+    int PageSize = 20,
+    // Y3 (K2): kullanıcının görebileceği kanallar; null = kısıt yok, boş = hiçbir kayıt.
+    IReadOnlyCollection<Guid>? KanalKisiti = null,
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<AdminSavedSearchDto>>>;
+    // Grid (2026-09-09, DataGrid): beyaz listeli f.* filtreleri + sort/dir (SavedSearchGrid.Schema)
 
 public record AdminSavedSearchDto(
     Guid Id,
@@ -30,23 +35,15 @@ public class GetSavedSearchesForAdminQueryHandler(IStorefrontDbContext db)
     public async Task<Result<PagedResult<AdminSavedSearchDto>>> Handle(
         GetSavedSearchesForAdminQuery request, CancellationToken ct)
     {
-        var q = db.SavedSearches.AsNoTracking().AsQueryable();
-
-        if (request.NotifyEnabled.HasValue)
-            q = q.Where(s => s.NotifyEnabled == request.NotifyEnabled.Value);
-        if (request.FirmPlatformId.HasValue)
-            q = q.Where(s => s.FirmPlatformId == request.FirmPlatformId.Value);
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var aranan = request.Search.Trim().ToLower();
-            q = q.Where(s =>
-                s.Query.ToLower().Contains(aranan) ||
-                (s.Name != null && s.Name.ToLower().Contains(aranan)));
-        }
+        // Y3 kanal kapsamı + adlandırılmış + grid filtreleri TEK yerden.
+        var q = SavedSearchGrid.ApplyAll(
+            db.SavedSearches.AsNoTracking(),
+            new SavedSearchFilters(request.NotifyEnabled, request.FirmPlatformId, request.Search),
+            request.Grid,
+            request.KanalKisiti ?? request.Grid?.KanalKisiti);
 
         var toplam = await q.CountAsync(ct);
-        var kayitlar = await q
-            .OrderByDescending(s => s.CreatedAt)
+        var kayitlar = await SavedSearchGrid.Schema.ApplySort(q, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(s => new AdminSavedSearchDto(

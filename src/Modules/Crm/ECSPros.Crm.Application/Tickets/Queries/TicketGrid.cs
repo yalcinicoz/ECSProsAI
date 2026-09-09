@@ -35,6 +35,8 @@ public static class TicketGrid
         .Guid("firmPlatformId", t => t.FirmPlatformId)
         .Kanal(t => t.FirmPlatformId)   // Y3: kanal kapsamı kolonu (K2)
         .Guid("createdBy", t => t.CreatedByUserId)
+        .Sort("order", t => t.OrderNumber)     // istemci kolon anahtarı "order"
+        .Sort("caller", t => t.CallerName)
         .Sort("trackingNo", t => t.TrackingNo)
         .Sort("createdAt", t => t.CreatedAt)
         .Sort("lastActivityAt", t => t.LastActivityAt)

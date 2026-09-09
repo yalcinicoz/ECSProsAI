@@ -1,3 +1,4 @@
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Shared.Kernel.Authorization;
 using ECSPros.Api.Authorization;
 using ECSPros.Storefront.Application.Commands.AddChannelCategoryProduct;
@@ -128,6 +129,8 @@ public class NavigationController(IMediator mediator) : ControllerBase
 
     // ─── Channel Categories ──────────────────────────────────────────────────
 
+    /// <summary>Kanal kategorilerini TAM liste olarak döner — Menü Yerleşimi ve Ürün Kartı ekranları
+    /// bunu bütün hâlinde bekler. ⚠ Sayfalanmaz; liste EKRANI için /channel-categories/grid kullanın.</summary>
     [HttpGet("channel-categories")]
     public async Task<IActionResult> GetChannelCategories(
         [FromQuery] Guid firmPlatformId,
@@ -136,6 +139,44 @@ public class NavigationController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetChannelCategoriesQuery(firmPlatformId, activeOnly), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kanal kategorileri liste ekranı (DataGrid): sayfalı + f.* filtreleri + sort/dir.
+    /// Liste tek kanala kilitlidir (firmPlatformId zorunlu); kanal kapsamı KanalKapsamiKontrol ile denetlenir.</summary>
+    [HttpGet("channel-categories/grid")]
+    public async Task<IActionResult> GetChannelCategoriesGrid(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromQuery] Guid firmPlatformId, [FromQuery] bool activeOnly = false,
+        [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        if (firmPlatformId == Guid.Empty)
+            return BadRequest(new { success = false, error = "firmPlatformId gerekli." });
+        // Y3: parametre denetimi (KanalKapsamiKontrol) YETMEZ — kapsam sorguya da uygulanır.
+        var kapsam = await kanalKapsami.KanallarAsync(Permissions.StorefrontChannelsView, ct);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, kapsam, defaultPageSize: 30);
+        var result = await mediator.Send(new GetChannelCategoriesGridQuery(
+            new ChannelCategoryFilters(firmPlatformId, activeOnly, search), grid.Page, grid.PageSize, grid, kapsam), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kanal kategorilerini Excel'e aktarır (DataGrid): named: firmPlatformId zorunlu.</summary>
+    [HttpPost("channel-categories/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportChannelCategories(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<NavigationController> logger, CancellationToken ct)
+    {
+        if (!Guid.TryParse(body.NamedValue("firmPlatformId"), out var kanal) || kanal == Guid.Empty)
+            return BadRequest(new { success = false, error = "firmPlatformId gerekli." });
+        var kapsam = await kanalKapsami.KanallarAsync(Permissions.StorefrontChannelsView, ct);
+        var filters = new ChannelCategoryFilters(kanal, Search: body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "channel-categories", "kanal-kategorileri", "Kanal Kategorileri",
+            ECSPros.Api.Grid.ChannelCategoryExportColumns.All,
+            max => mediator.Send(new ExportChannelCategoriesQuery(filters, body.ToGridRequest(kapsam), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     [HttpGet("channel-categories/{id:guid}")]
@@ -322,7 +363,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
         Guid firmPlatformId, [FromQuery] string? search, [FromQuery] string? status,
         [FromQuery] string? listing, [FromQuery] string? reason,
         [FromServices] ECSPros.Api.Services.ChannelListingStatusService listingSvc,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 30, CancellationToken ct = default)
+        CancellationToken ct = default)
     {
         // F3: listeleme durumu/sebep filtresi — id kümesi hesaplayıcıdan çözülür, sorguya kısıt olarak geçer.
         HashSet<Guid>? restrict = null;
@@ -331,9 +372,12 @@ public class NavigationController(IMediator mediator) : ControllerBase
                 string.IsNullOrWhiteSpace(listing) ? null : listing,
                 string.IsNullOrWhiteSpace(reason) ? null : reason, ct);
 
+        // Kanal ZATEN yol parametresi (firmPlatformId) ve KanalKapsamiKontrol ile denetleniyor →
+        // grid'e ayrı kanal kısıtı geçilmez (kısıt tek kanala kilitli listede anlamsız).
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 30);
         var result = await mediator.Send(
             new ECSPros.Storefront.Application.Queries.GetChannelProductsAdmin.GetChannelProductsAdminQuery(
-                firmPlatformId, search, status, page, pageSize, restrict), ct);
+                firmPlatformId, search, status, grid.Page, grid.PageSize, restrict, grid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
@@ -351,9 +395,12 @@ public class NavigationController(IMediator mediator) : ControllerBase
                 string.IsNullOrWhiteSpace(listing) ? null : listing,
                 string.IsNullOrWhiteSpace(reason) ? null : reason, ct);
 
+        // ★ Başlık filtreleri de geçer: "tümünü seç" kümesi listede görünenle birebir aynı olmalı,
+        // yoksa toplu işlem filtre dışı ürünlere uygulanır.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 30);
         var result = await mediator.Send(
             new ECSPros.Storefront.Application.Queries.GetChannelProductsAdmin.GetChannelProductIdsAdminQuery(
-                firmPlatformId, search, status, restrict), ct);
+                firmPlatformId, search, status, restrict, grid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }

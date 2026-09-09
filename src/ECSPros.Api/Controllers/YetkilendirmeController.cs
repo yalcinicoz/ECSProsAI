@@ -1,3 +1,4 @@
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Api.Authorization;
 using ECSPros.Iam.Application.Services;
 using ECSPros.Iam.Application.Yetkilendirme;
@@ -53,9 +54,40 @@ public class YetkilendirmeController(
                     : Ok(new { success = true, data = r.Value });
 
     // ── Yetki İçerikleri (katalog) ────────────────────────────────────────────
+    /// <summary>Yetki kataloğunu TAM liste olarak döner — yetki grubu ve kullanıcı yetkisi ekranları
+    /// bunu bekler. ⚠ Sayfalanmaz; liste EKRANI için /permissions/grid kullanın.</summary>
     [HttpGet("permissions")]
     public async Task<IActionResult> Katalog([FromQuery] bool activeOnly = false, CancellationToken ct = default)
         => Sonuc(await mediator.Send(new GetYetkiKataloguQuery(activeOnly), ct));
+
+    /// <summary>Yetki kataloğu liste ekranı (DataGrid): sayfalı + f.* filtreleri + sort/dir.</summary>
+    [HttpGet("permissions/grid")]
+    public async Task<IActionResult> KatalogGrid(
+        [FromQuery] bool activeOnly = false, [FromQuery] string? tur = null,
+        [FromQuery] bool yalnizSorunlu = false, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        // Yetki tanımı kanaldan bağımsızdır (kanal kapsamı yetkinin ÖZELLİĞİ) → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 50);
+        return Sonuc(await mediator.Send(new GetYetkiKataloguGridQuery(
+            new YetkiKatalogFiltreleri(activeOnly, tur, yalnizSorunlu, search), grid.Page, grid.PageSize, grid), ct));
+    }
+
+    /// <summary>Yetki kataloğunu Excel'e aktarır (DataGrid).</summary>
+    [HttpPost("permissions/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> KatalogExport(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<YetkilendirmeController> logger, CancellationToken ct)
+    {
+        var filtreler = new YetkiKatalogFiltreleri(
+            body.NamedValue("activeOnly") == "true", body.NamedValue("tur"),
+            body.NamedValue("yalnizSorunlu") == "true", body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "permission-catalog", "yetki-icerikleri", "Yetki İçerikleri",
+            ECSPros.Api.Grid.YetkiKatalogExportColumns.All,
+            max => mediator.Send(new ExportYetkiKataloguQuery(filtreler, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
+    }
 
     /// <summary>Yalnız GÖSTERİM alanları düzenlenir (K4: teknik key ve tür koda aittir).</summary>
     [HttpPut("permissions/{id:guid}")]
@@ -157,10 +189,13 @@ public class YetkilendirmeController(
     public async Task<IActionResult> YetkiLoglari(
         [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] Guid? actorId,
         [FromQuery] Guid? targetUserId, [FromQuery] Guid? targetGroupId, [FromQuery] string? olay,
-        [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 50,
-        CancellationToken ct = default)
-        => Sonuc(await mediator.Send(new GetYetkiLoglariQuery(
-            from, to, actorId, targetUserId, targetGroupId, olay, search, page, pageSize), ct));
+        [FromQuery] string? search, CancellationToken ct = default)
+    {
+        // Yetki logu kanaldan bağımsızdır (kimin neyi değiştirdiği) → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 50);
+        return Sonuc(await mediator.Send(new GetYetkiLoglariQuery(
+            from, to, actorId, targetUserId, targetGroupId, olay, search, grid.Page, grid.PageSize, grid), ct));
+    }
 
     // ── Kullanıcı Yetkileri ───────────────────────────────────────────────────
     [HttpGet("users/{userId:guid}/permissions")]

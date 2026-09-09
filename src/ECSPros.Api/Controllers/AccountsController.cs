@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Api.Authorization;
 using ECSPros.Accounts.Application.Commands.AddAccountLedger;
 using ECSPros.Accounts.Application.Commands.CreateAccountGroup;
@@ -27,11 +28,39 @@ public class AccountsController : ControllerBase
 
     // ── Groups ────────────────────────────────────────────────────────────────
 
+    /// <summary>Cari gruplarını TAM liste olarak döner — cari listesinin grup süzgeci bunu bekler.
+    /// ⚠ Sayfalanmaz; liste EKRANI için /groups/grid kullanın.</summary>
     [HttpGet("groups")]
     public async Task<IActionResult> GetGroups([FromQuery] bool activeOnly = false, CancellationToken ct = default)
     {
         var r = await _mediator.Send(new GetAccountGroupsQuery(activeOnly), ct);
         return Ok(new { success = true, data = r.Value });
+    }
+
+    /// <summary>Cari grupları liste ekranı (DataGrid): sayfalı + f.* filtreleri + sort/dir.</summary>
+    [HttpGet("groups/grid")]
+    public async Task<IActionResult> GetGroupsGrid([FromQuery] bool activeOnly = false, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
+        var r = await _mediator.Send(new GetAccountGroupsGridQuery(
+            new AccountGroupFilters(activeOnly, search), grid.Page, grid.PageSize, grid), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true, data = r.Value });
+    }
+
+    /// <summary>Cari gruplarını Excel'e aktarır (DataGrid).</summary>
+    [HttpPost("groups/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportGroups(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<AccountsController> logger, CancellationToken ct)
+    {
+        var filters = new AccountGroupFilters(body.NamedValue("activeOnly") == "true", body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "account-groups", "cari-gruplari", "Cari Grupları",
+            ECSPros.Api.Grid.AccountGroupExportColumns.All,
+            max => _mediator.Send(new ExportAccountGroupsQuery(filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     [HttpPost("groups")]
@@ -54,14 +83,37 @@ public class AccountsController : ControllerBase
 
     // ── Current Accounts ──────────────────────────────────────────────────────
 
+    /// <summary>Cari hesapları sayfalı listeler (DataGrid: f.* filtreleri + sort/dir + arama).</summary>
     [HttpGet]
     public async Task<IActionResult> GetAccounts(
         [FromQuery] string? accountType, [FromQuery] Guid? groupId,
         [FromQuery] bool? isActive, [FromQuery] string? search, [FromQuery] string? ownerType,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 30, CancellationToken ct = default)
+        CancellationToken ct = default)
     {
-        var r = await _mediator.Send(new GetCurrentAccountsQuery(accountType, groupId, isActive, search, page, pageSize, ownerType), ct);
+        // Cari hesap kanaldan bağımsızdır (firma geneli muhasebe kaydı) → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 30);
+        var r = await _mediator.Send(new GetCurrentAccountsQuery(
+            accountType, groupId, isActive, search, grid.Page, grid.PageSize, ownerType, grid), ct);
         return Ok(new { success = true, data = r.Value });
+    }
+
+    /// <summary>Cari hesapları Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: accountType/ownerType/isActive.</summary>
+    [HttpPost("export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportAccounts(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<AccountsController> logger, CancellationToken ct)
+    {
+        var aktif = body.NamedValue("isActive");
+        var filters = new CurrentAccountFilters(
+            body.NamedValue("accountType"), null,
+            string.IsNullOrWhiteSpace(aktif) ? null : aktif == "true",
+            body.Search, body.NamedValue("ownerType"));
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "accounts", "cari-hesaplar", "Cari Hesaplar",
+            ECSPros.Api.Grid.CurrentAccountExportColumns.All,
+            max => _mediator.Send(new ExportCurrentAccountsQuery(filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Cari hesabın defterleri + sayfalı hareket dökümü.</summary>

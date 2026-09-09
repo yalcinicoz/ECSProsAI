@@ -29,6 +29,8 @@ public static class CampaignGrid
         .Number("priority", c => c.Priority)
         .Guid("firmPlatformId", c => c.FirmPlatformId)
         .Kanal(c => c.FirmPlatformId)   // Y3: kanal kapsamı kolonu (K2)
+        .Sort("campaignTypeCode", c => c.CampaignType.Code)
+        .Sort("fillType", c => c.FillType)
         .Sort("code", c => c.Code)
         .Sort("name", c => GridJson.Text(c.NameI18n, "tr"))
         .Sort("priority", c => c.Priority)

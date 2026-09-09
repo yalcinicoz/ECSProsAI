@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText as gridErrText } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 
 interface Coupon {
@@ -355,10 +358,12 @@ function UsagesModal({ coupon, onClose }: { coupon: Coupon; onClose: () => void 
 }
 
 export function CouponsPage() {
-  const [tab, setTab] = useState<'active' | 'all'>('active')
-  const [search, setSearch] = useState('')
-  const [appliedSearch, setAppliedSearch] = useState('')
-  const [page, setPage] = useState(1)
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (CouponGrid.Schema) + Excel export + kaydedilmiş görünümler.
+  // Sekme ?tab=all (varsayılan: yalnız aktif) — named "isActive" olarak sunucuya gider.
+  const [sp] = useSearchParams()
+  const tab: 'active' | '' = sp.get('tab') === 'all' ? '' : 'active'
+  const grid = useGridState('coupons', { defaultPageSize: 20, defaultSort: 'createdAt', defaultDir: 'desc' })
+  const switchTab = (v: 'active' | '') => grid.mutate(n => { if (v === '') n.set('tab', 'all'); else n.delete('tab') })
   const [editing, setEditing] = useState<Coupon | 'new' | null>(null)
   const [usagesFor, setUsagesFor] = useState<Coupon | null>(null)
 
@@ -367,18 +372,15 @@ export function CouponsPage() {
     queryFn: async () => (await api.get('/crm/member-groups')).data.data ?? BOS_GRUPLAR,
   })
 
-  const { data, isLoading } = useQuery<PagedResult<Coupon>>({
-    queryKey: ['coupons', tab, appliedSearch, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: '20' })
-      if (tab === 'active') params.set('isActive', 'true')
-      if (appliedSearch) params.set('search', appliedSearch)
-      return (await api.get(`/promotion/coupons?${params}`)).data.data
-    },
+  const { data, isLoading, isFetching, error: listError } = useQuery<PagedResult<Coupon>>({
+    queryKey: ['coupons', tab, ...grid.queryKey],
+    queryFn: async () =>
+      (await api.get(`/promotion/coupons?${grid.toParams({ isActive: tab === 'active' ? 'true' : undefined })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const coupons = data?.items ?? []
-  const totalPages = Math.ceil((data?.totalCount ?? 0) / 20)
 
   const hedefYazisi = (cp: Coupon) => {
     if (cp.memberId) return cp.memberName ?? 'Kişiye özel'
@@ -387,104 +389,95 @@ export function CouponsPage() {
     return 'Herkes'
   }
 
+  const columns: GridColumn<Coupon>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 130,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      cell: cp => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{cp.code}</code> },
+    { key: 'name', header: 'AD', priority: 2, sortable: true, filter: { type: 'text', label: 'Ad' },
+      cell: cp => <span className="text-sm" style={{ color: 'var(--text)' }}>{cp.nameI18n?.['tr'] ?? '—'}</span> },
+    { key: 'hedef', header: 'KİM KULLANABİLİR', priority: 1, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Kime açık', options: [
+        { value: 'all', label: 'Herkes' }, { value: 'member', label: 'Kişiye Özel' }, { value: 'group', label: 'Üye Grubu' }] },
+      cell: cp => <span className="text-sm" style={{ color: cp.memberId || cp.memberGroupId ? 'var(--text)' : 'var(--text-s)' }}>
+        {hedefYazisi(cp)}
+        {cp.memberId != null && cp.memberId !== '' && <span className="text-xs ml-1" style={{ color: 'var(--text-s)' }}>(kişiye özel)</span>}
+      </span> },
+    { key: 'discountValue', header: 'İNDİRİM', priority: 1, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'İndirim değeri' },
+      filters: [
+        { field: 'couponType', label: 'Kupon tipi', type: 'enum', multiple: true, options: [
+          { value: 'percentage', label: 'Yüzde' }, { value: 'amount', label: 'Tutar' }, { value: 'free_shipping', label: 'Ücretsiz Kargo' }] },
+        { field: 'minimumCartTotal', label: 'Alt sepet tutarı', type: 'number' }],
+      cell: cp => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+        {indirimYazisi(cp)}
+        {cp.minimumCartTotal != null && <span className="text-xs ml-1" style={{ color: 'var(--text-s)' }}>
+          (min {cp.minimumCartTotal.toLocaleString('tr-TR')} ₺)</span>}
+      </span> },
+    { key: 'usageCount', header: 'KULLANIM', priority: 2, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Kullanım sayısı' },
+      filters: [
+        { field: 'used', label: 'Kullanılmış', type: 'boolean' },
+        { field: 'usageLimitTotal', label: 'Toplam limit', type: 'number' }],
+      cell: cp => <span className="text-sm" style={{ color: 'var(--text-m)' }}>
+        {cp.usageCount}{cp.usageLimitTotal != null ? ` / ${cp.usageLimitTotal}` : ''}</span> },
+    { key: 'startsAt', header: 'GEÇERLİLİK', priority: 2, sortable: true, filter: { type: 'date', label: 'Başlangıç', quick: true },
+      filters: [
+        { field: 'endsAt', label: 'Bitiş', type: 'date' },
+        { field: 'live', label: 'Bugün geçerli', type: 'boolean' },
+        { field: 'firstOrderOnly', label: 'Yalnız ilk sipariş', type: 'boolean' }],
+      cell: cp => <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+        {new Date(cp.startsAt).toLocaleDateString('tr-TR')} → {cp.endsAt ? new Date(cp.endsAt).toLocaleDateString('tr-TR') : 'süresiz'}</span> },
+    { key: 'isActive', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      filters: [{ field: 'createdAt', label: 'Oluşturma', type: 'date' }],
+      cell: cp => <Badge variant={cp.isActive ? 'success' : 'neutral'}>{cp.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'actions', header: '', priority: 3, align: 'right', exportable: false, stopRowClick: true,
+      cell: cp => <>
+        <button className="text-xs underline mr-2" style={{ color: 'var(--brand)' }}
+          onClick={e => { e.stopPropagation(); setUsagesFor(cp) }}>Kullanımlar</button>
+        <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span>
+      </> },
+  ]
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Kuponlar</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{data?.totalCount ?? 0} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
+            {(data?.totalCount ?? 0).toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}
+          </p>
         </div>
         <Button size="sm" onClick={() => setEditing('new')}>+ Yeni Kupon</Button>
       </div>
 
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <button className={cn('stab', tab === 'active' && 'active')} onClick={() => { setTab('active'); setPage(1) }}>Aktif</button>
-        <button className={cn('stab', tab === 'all' && 'active')} onClick={() => { setTab('all'); setPage(1) }}>Tümü</button>
+        <button className={cn('stab', tab === 'active' && 'active')} onClick={() => switchTab('active')}>Aktif</button>
+        <button className={cn('stab', tab === '' && 'active')} onClick={() => switchTab('')}>Tümü</button>
       </div>
 
-      <div className="flex items-center gap-2 mb-4">
-        <input className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 220 }}
-          placeholder="Kupon kodu ara…" value={search}
-          onChange={e => setSearch(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { setAppliedSearch(search.trim()); setPage(1) } }} />
-        <button onClick={() => { setAppliedSearch(search.trim()); setPage(1) }}
-          className="px-3 py-1.5 rounded-lg text-sm"
-          style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Ara</button>
-      </div>
-
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'AD', 'KİM KULLANABİLİR', 'İNDİRİM', 'KULLANIM', 'GEÇERLİLİK', 'DURUM', ''].map(h => (
-                <th key={h} className={`px-4 py-3 text-xs font-semibold ${h === '' ? 'w-28' : 'text-left'}`}
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
-            )}
-            {!isLoading && coupons.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Kupon yok. "+ Yeni Kupon" ile tanımlayın; müşteriler sepette kodu girerek kullanır.
-              </td></tr>
-            )}
-            {coupons.map(cp => (
-              <tr key={cp.id} onClick={() => setEditing(cp)}
-                className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3">
-                  <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{cp.code}</code>
-                </td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text)' }}>{cp.nameI18n?.['tr'] ?? '—'}</td>
-                <td className="px-4 py-3 text-sm" style={{ color: cp.memberId || cp.memberGroupId ? 'var(--text)' : 'var(--text-s)' }}>
-                  {hedefYazisi(cp)}
-                  {cp.memberId != null && cp.memberId !== '' && (
-                    <span className="text-xs ml-1" style={{ color: 'var(--text-s)' }}>(kişiye özel)</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text)' }}>
-                  {indirimYazisi(cp)}
-                  {cp.minimumCartTotal != null && (
-                    <span className="text-xs ml-1" style={{ color: 'var(--text-s)' }}>
-                      (min {cp.minimumCartTotal.toLocaleString('tr-TR')} ₺)
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>
-                  {cp.usageCount}{cp.usageLimitTotal != null ? ` / ${cp.usageLimitTotal}` : ''}
-                </td>
-                <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-s)' }}>
-                  {new Date(cp.startsAt).toLocaleDateString('tr-TR')}
-                  {' → '}{cp.endsAt ? new Date(cp.endsAt).toLocaleDateString('tr-TR') : 'süresiz'}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge variant={cp.isActive ? 'success' : 'neutral'}>{cp.isActive ? 'Aktif' : 'Pasif'}</Badge>
-                </td>
-                <td className="px-4 py-3 text-right whitespace-nowrap">
-                  <button className="text-xs underline mr-2" style={{ color: 'var(--brand)' }}
-                    onClick={e => { e.stopPropagation(); setUsagesFor(cp) }}>Kullanımlar</button>
-                  <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>← Önceki</button>
-          <span className="text-sm" style={{ color: 'var(--text-s)' }}>{page} / {totalPages}</span>
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Sonraki →</button>
-        </div>
-      )}
+      <DataGrid<Coupon>
+        gridId="coupons"
+        views
+        grid={grid}
+        columns={columns}
+        rows={coupons}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? gridErrText(listError) : null}
+        onRowClick={cp => setEditing(cp)}
+        empty='Kupon yok. "+ Yeni Kupon" ile tanımlayın; müşteriler sepette kodu girerek kullanır.'
+        search={{ placeholder: 'Kupon kodu ara…' }}
+        minWidth={900}
+        export={{ endpoint: '/promotion/coupons/export', named: () => ({ isActive: tab === 'active' ? 'true' : undefined }), fallbackFileName: 'kuponlar.xlsx' }}
+        compact={{
+          title: cp => cp.code,
+          subtitle: cp => `${cp.nameI18n?.['tr'] ?? '—'} · ${hedefYazisi(cp)}`,
+          right: cp => indirimYazisi(cp),
+          badge: cp => <Badge variant={cp.isActive ? 'success' : 'neutral'}>{cp.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
+      />
 
       {editing !== null && <CouponModal coupon={editing} onClose={() => setEditing(null)} />}
       {usagesFor && <UsagesModal coupon={usagesFor} onClose={() => setUsagesFor(null)} />}

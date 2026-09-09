@@ -92,7 +92,7 @@ export function PickingPlansPage() {
     { key: 'orderCount', header: 'SİPARİŞ', priority: 2, sortable: true, align: 'right', filter: { type: 'number', label: 'Sipariş sayısı' },
       cell: p => <span style={{ color: 'var(--text-m)' }}>{p.orderCount || '—'}</span> },
     {
-      key: 'assignment', header: 'DAĞITIM', priority: 2,
+      key: 'assignment', header: 'DAĞITIM', sortable: true, priority: 2,
       filter: { type: 'enum', multiple: true, label: 'Dağıtım', options: DAGITIM_SECENEK },
       cell: p => {
         const d = dagitimDurum(p.assignedLines, p.totalLines)
@@ -161,6 +161,12 @@ export function PickingPlansPage() {
         error={listError ? errText(listError) : null}
         empty="Toplama görevi yok. 'Yeni Görev' ile filtreli görev oluşturabilirsiniz."
         onRowClick={p => navigate(`/fulfillment/tasks/${p.id}`)}
+        compact={{
+          title: p => p.planNumber,
+          subtitle: p => `${p.orderCount} sipariş · ${p.pickedLines}/${p.totalLines} satır`,
+          right: p => new Date(p.plannedAt).toLocaleDateString('tr-TR'),
+          badge: p => { const [l, v] = PLAN_DURUM[p.status] ?? [p.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> },
+        }}
       />
     </div>
   )

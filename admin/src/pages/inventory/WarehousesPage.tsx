@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -9,6 +8,8 @@ import { Modal } from '@/components/ui/Modal'
 import { IntegerInput } from '@/components/ui/IntegerInput'
 import { I18nField } from '@/components/ui/I18nField'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { PermissionGuard, ReadOnlyBadge } from '@/components/ui/PermissionGuard'
 import { useLanguages } from '@/hooks/useLanguages'
 import { FL } from '@/lib/field-labels'
@@ -36,6 +37,17 @@ export interface Warehouse {
   sortOrder: number
 }
 
+/** DataGrid satırı — /inventory/warehouses/grid (kısım sayısı ve ERP kodu da gelir). */
+export interface WarehouseRow extends Warehouse {
+  reservePriority: number
+  isCentral: boolean
+  erpCode: string | null
+  sectionCount: number
+  createdAt: string
+}
+
+interface PagedResult<T> { items: T[]; totalCount: number; page: number; pageSize: number }
+
 type FormState = {
   code: string
   nameI18n: Record<string, string>
@@ -57,18 +69,24 @@ export function WarehousesPage() {
   const queryClient = useQueryClient()
   const { data: languages = [], isLoading: langsLoading } = useLanguages()
 
-  const [activeOnly, setActiveOnly] = useState(false)
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (WarehouseGrid.Schema) + Excel + görünümler.
+  // ★ Ayrı uç: /inventory/warehouses TÜM depoları döner ve yedi ekranın dropdown kaynağıdır; liste
+  // ekranı sayfalı /warehouses/grid ucunu kullanır (bkz. WarehouseGrid açıklaması).
+  const [sp] = useSearchParams()
+  const activeOnly = sp.get('activeOnly') === 'true'
+  const grid = useGridState('warehouses', { defaultPageSize: 20, defaultSort: 'sortOrder', defaultDir: 'asc' })
   const [createOpen, setCreateOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<Warehouse | null>(null)
+  const [editTarget, setEditTarget] = useState<WarehouseRow | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm())
 
-  const { data: warehouses = [], isLoading } = useQuery<Warehouse[]>({
-    queryKey: ['warehouses', activeOnly],
-    queryFn: async () => {
-      const { data } = await api.get(`/inventory/warehouses?activeOnly=${activeOnly}`)
-      return data.data
-    },
+  const { data, isLoading, isFetching, error: listError } = useQuery<PagedResult<WarehouseRow>>({
+    queryKey: ['warehouses-grid', activeOnly, ...grid.queryKey],
+    queryFn: async () =>
+      (await api.get(`/inventory/warehouses/grid?${grid.toParams({ activeOnly: activeOnly ? 'true' : undefined })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
+  const warehouses = data?.items ?? []
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -110,7 +128,7 @@ export function WarehousesPage() {
     setCreateOpen(true)
   }
 
-  function openEdit(w: Warehouse, e: React.MouseEvent) {
+  function openEdit(w: WarehouseRow, e: React.MouseEvent) {
     e.stopPropagation()
     setEditTarget(w)
     setForm({
@@ -125,7 +143,7 @@ export function WarehousesPage() {
     })
   }
 
-  if (isLoading || langsLoading) return <PageSpinner />
+  if (langsLoading) return <PageSpinner />   // liste yüklemesi DataGrid'in kendi göstergesinde
 
   const formFields = (isEdit: boolean) => (
     <div className="space-y-4">
@@ -184,6 +202,41 @@ export function WarehousesPage() {
     </div>
   )
 
+  const columns: GridColumn<WarehouseRow>[] = [
+    { key: 'name', header: 'AD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 200,
+      filter: { type: 'text', label: 'Ad' },
+      cell: w => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{getWarehouseName(w)}</span> },
+    { key: 'code', header: 'KOD', priority: 1, sortable: true, filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      filters: [{ field: 'erpCode', label: 'ERP kodu', type: 'text' }],
+      cell: w => <code className="text-xs px-2 py-0.5 rounded-md font-mono"
+        style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>{w.code}</code> },
+    { key: 'warehouseType', header: 'TİP', priority: 2, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Tip', options: WAREHOUSE_TYPES.map(t => ({ value: t.value, label: t.label })) },
+      filters: [{ field: 'isCentral', label: 'Merkez depo', type: 'boolean' }],
+      cell: w => <span className="text-sm" style={{ color: 'var(--text-m)' }}>
+        {WAREHOUSE_TYPES.find(t => t.value === w.warehouseType)?.label ?? w.warehouseType}</span> },
+    { key: 'isSellableOnline', header: 'ONLİNE', priority: 2, align: 'center', sortable: true,
+      filter: { type: 'boolean', label: 'Online satış' },
+      cell: w => <span className="text-sm">{w.isSellableOnline ? '✓' : '—'}</span> },
+    { key: 'sectionCount', header: 'KISIM', priority: 2, align: 'center', sortable: true, filter: { type: 'number', label: 'Kısım sayısı' },
+      cell: w => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{w.sectionCount}</span> },
+    { key: 'isActive', header: 'DURUM', priority: 1, lockVisible: true, align: 'center', sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      filters: [{ field: 'createdAt', label: 'Oluşturma', type: 'date' }],
+      cell: w => <Badge variant={w.isActive ? 'success' : 'neutral'}>{w.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'address', header: 'ADRES', priority: 3, sortable: true, filter: { type: 'text', label: 'Adres' },
+      cell: w => <span className="text-sm truncate block" style={{ color: 'var(--text-s)', maxWidth: 200 }}>{w.address ?? '—'}</span> },
+    { key: 'sortOrder', header: 'SIRA', priority: 3, align: 'center', sortable: true, filter: { type: 'number', label: 'Sıra' },
+      filters: [{ field: 'reservePriority', label: 'Rezerv önceliği', type: 'number' }],
+      cell: w => <span className="text-sm" style={{ color: 'var(--text-s)' }}>{w.sortOrder}</span> },
+    { key: 'actions', header: '', priority: 3, align: 'right', exportable: false, stopRowClick: true,
+      cell: w => <PermissionGuard permission={PERM}>
+        <button className="text-xs px-2 py-1 rounded-lg transition-colors"
+          style={{ color: 'var(--brand)', background: 'var(--surface2)', border: '1px solid var(--border)' }}
+          onClick={e => openEdit(w, e)}>Düzenle</button>
+      </PermissionGuard> },
+  ]
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -192,13 +245,13 @@ export function WarehousesPage() {
             <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Depolar</h1>
             <PermissionGuard permission={PERM} fallback={<ReadOnlyBadge />} />
           </div>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{warehouses.length} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{(data?.totalCount ?? 0).toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
             {[false, true].map(v => (
               <button key={String(v)}
-                onClick={() => setActiveOnly(v)}
+                onClick={() => grid.mutate(n => { if (v) n.set('activeOnly', 'true'); else n.delete('activeOnly') })}
                 className={cn('px-3 py-1 rounded-lg text-sm font-medium transition-all',
                   activeOnly === v ? 'bg-white shadow-sm' : 'text-[var(--text-s)]')}
                 style={activeOnly === v ? { color: 'var(--text)' } : {}}>
@@ -212,68 +265,28 @@ export function WarehousesPage() {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['AD', 'KOD', 'TİP', 'ONLİNE', 'DURUM', 'ADRES', ''].map(h => (
-                <th key={h} className={cn('px-4 py-3 text-xs font-semibold', h === '' ? 'w-24' : 'text-left')}
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {warehouses.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Depo bulunamadı.
-              </td></tr>
-            )}
-            {warehouses.map(w => (
-              <tr key={w.id}
-                onClick={() => navigate(`/inventory/warehouses/${w.id}`)}
-                className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3">
-                  <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{getWarehouseName(w)}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <code className="text-xs px-2 py-0.5 rounded-md font-mono"
-                    style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>
-                    {w.code}
-                  </code>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm" style={{ color: 'var(--text-m)' }}>
-                    {WAREHOUSE_TYPES.find(t => t.value === w.warehouseType)?.label ?? w.warehouseType}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span className="text-sm">{w.isSellableOnline ? '✓' : '—'}</span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <Badge variant={w.isActive ? 'success' : 'neutral'}>{w.isActive ? 'Aktif' : 'Pasif'}</Badge>
-                </td>
-                <td className="px-4 py-3 max-w-[200px]">
-                  <span className="text-sm truncate block" style={{ color: 'var(--text-s)' }}>{w.address ?? '—'}</span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <PermissionGuard permission={PERM}>
-                      <button
-                        className="text-xs px-2 py-1 rounded-lg transition-colors"
-                        style={{ color: 'var(--brand)', background: 'var(--surface2)', border: '1px solid var(--border)' }}
-                        onClick={e => openEdit(w, e)}>
-                        Düzenle
-                      </button>
-                    </PermissionGuard>
-                    <ChevronRight size={14} style={{ color: 'var(--text-s)' }} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid<WarehouseRow>
+        gridId="warehouses"
+        views
+        grid={grid}
+        columns={columns}
+        rows={warehouses}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        onRowClick={w => navigate(`/inventory/warehouses/${w.id}`)}
+        empty="Depo bulunamadı."
+        search={{ placeholder: 'Depo adı veya koduyla ara…' }}
+        minWidth={900}
+        export={{ endpoint: '/inventory/warehouses/export', named: () => ({ activeOnly: activeOnly ? 'true' : undefined }), fallbackFileName: 'depolar.xlsx' }}
+        compact={{
+          title: w => getWarehouseName(w),
+          subtitle: w => `${w.code} · ${WAREHOUSE_TYPES.find(t => t.value === w.warehouseType)?.label ?? w.warehouseType}`,
+          right: w => `${w.sectionCount} kısım`,
+          badge: w => <Badge variant={w.isActive ? 'success' : 'neutral'}>{w.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
+      />
 
       {/* Create */}
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Yeni Depo">

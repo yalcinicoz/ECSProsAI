@@ -14,11 +14,17 @@ namespace ECSPros.Storefront.Application.Queries.GetChannelProductsAdmin;
 /// Id'lerini döner. Frontend bu id'leri toplu komuta geçirir (28K id'yi sayfa sayfa toplamaya
 /// gerek kalmaz). GetChannelProductsAdminQuery ile aynı filtre semantiği.
 /// </summary>
+/// <summary>
+/// "Filtreye uyan tümünü seç" — toplu işlem hedefi. ★ 2026-09-09: <c>Grid</c> ZORUNLU olarak aynı
+/// başlık filtreleriyle gelmeli; aksi hâlde kullanıcı listeyi 5 ürüne süzüp "tümünü seç" dediğinde
+/// filtre dışı ürünler de seçilir ve TOPLU İŞLEM yanlış ürünlere uygulanır.
+/// </summary>
 public record GetChannelProductIdsAdminQuery(
     Guid FirmPlatformId,
     string? Search = null,
     string? Status = null,
-    IReadOnlyCollection<Guid>? RestrictToProductIds = null) : IRequest<Result<List<Guid>>>;
+    IReadOnlyCollection<Guid>? RestrictToProductIds = null,
+    ECSPros.Shared.Kernel.Grid.GridRequest? Grid = null) : IRequest<Result<List<Guid>>>;
 
 public class GetChannelProductIdsAdminQueryHandler(IStorefrontDbContext sfDb, ICatalogDbContext catDb, IChannelCapabilityResolver capabilityResolver)
     : IRequestHandler<GetChannelProductIdsAdminQuery, Result<List<Guid>>>
@@ -92,6 +98,10 @@ public class GetChannelProductIdsAdminQueryHandler(IStorefrontDbContext sfDb, IC
                 baseQuery = baseQuery.Where(p => !excluded.Contains(p.Id));
             }
         }
+
+        // ★ Liste ekranındaki BAŞLIK FİLTRELERİ de uygulanır — listede görünen küme ile "tümünü seç"
+        // kümesi birebir aynı olmalı (bkz. sorgu açıklaması).
+        baseQuery = ChannelProductGrid.Schema.ApplyFilters(baseQuery, request.Grid);
 
         var ids2 = await baseQuery.Select(p => p.Id).ToListAsync(ct);
         return Result.Success(ids2);

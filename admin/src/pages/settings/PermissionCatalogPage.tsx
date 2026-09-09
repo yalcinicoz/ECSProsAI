@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { cn } from '@/lib/utils'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText as gridErrText } from '@/components/ui/DataTable.utils'
 
 /**
  * Yetki İçerikleri (tasarım §F.1) — KATALOG EKRANI.
@@ -123,39 +125,81 @@ function DuzenleModal({ satir, onClose }: { satir: KatalogSatiri; onClose: () =>
   )
 }
 
+interface Sayfali<T> { items: T[]; totalCount: number; page: number; pageSize: number }
+
 export function PermissionCatalogPage() {
-  const [arama, setArama] = useState('')
-  const [tur, setTur] = useState('')
-  const [yalnizSorunlu, setYalnizSorunlu] = useState(false)
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (YetkiKatalogGrid.Schema) + Excel + görünümler.
+  // ★ Ayrı uç: /iam/permissions TAM liste döner (yetki grubu + kullanıcı yetkisi ekranlarının kaynağı);
+  // bu ekran sayfalı /iam/permissions/grid kullanır.
+  // ★ Eskiden satırlar MODÜLE göre gruplanıp ayrı kartlarda gösteriliyordu; DataGrid düz tablo olduğu
+  // için gruplama "MODÜL" sütunu + filtresi olarak korundu (varsayılan sıra: modül, sonra kod).
+  const [sp] = useSearchParams()
+  const tur = sp.get('tur') ?? ''
+  const yalnizSorunlu = sp.get('yalnizSorunlu') === 'true'
+  const grid = useGridState('permission-catalog', { defaultPageSize: 50, defaultSort: 'modul', defaultDir: 'asc' })
+  const setNamed = (k: string, v: string) => grid.mutate(n => { if (v) n.set(k, v); else n.delete(k) })
   const [duzenle, setDuzenle] = useState<KatalogSatiri | null>(null)
 
-  const { data: satirlar = [], isLoading } = useQuery<KatalogSatiri[]>({
-    queryKey: ['yetki-katalogu'],
-    queryFn: async () => (await api.get('/iam/permissions')).data.data,
+  const named = () => ({ tur: tur || undefined, yalnizSorunlu: yalnizSorunlu ? 'true' : undefined })
+
+  const { data, isLoading, isFetching, error: listError } = useQuery<Sayfali<KatalogSatiri>>({
+    queryKey: ['yetki-katalogu-grid', tur, yalnizSorunlu, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/iam/permissions/grid?${grid.toParams(named())}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
-  const gruplu = useMemo(() => {
-    const f = arama.trim().toLowerCase()
-    const uygun = satirlar.filter(s =>
-      (!f || s.ad.toLowerCase().includes(f) || s.code.toLowerCase().includes(f)) &&
-      (!tur || s.tur === tur) &&
-      (!yalnizSorunlu || !s.koddaTanimli || !s.aktif))
-    const m = new Map<string, KatalogSatiri[]>()
-    for (const s of uygun) {
-      const l = m.get(s.modul) ?? []
-      l.push(s); m.set(s.modul, l)
-    }
-    return [...m.entries()]
-  }, [satirlar, arama, tur, yalnizSorunlu])
+  const satirlar = data?.items ?? []
 
-  const sorunlu = satirlar.filter(s => !s.koddaTanimli).length
+  const columns: GridColumn<KatalogSatiri>[] = [
+    { key: 'ad', header: 'AD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 260,
+      filter: { type: 'text', label: 'Ad' },
+      filters: [{ field: 'aciklama', label: 'Açıklama', type: 'text' }],
+      cell: s => <div>
+        <span className="text-sm" style={{ color: 'var(--text)' }}>{s.ad}</span>
+        {s.aciklama && <span className="text-xs block" style={{ color: 'var(--text-s)' }}>{s.aciklama}</span>}
+      </div> },
+    { key: 'code', header: 'ANAHTAR', priority: 1, frozen: true, sortable: true, minWidth: 200,
+      filter: { type: 'text', label: 'Anahtar', ops: ['startswith', 'contains', 'eq'] },
+      cell: s => <code className="text-xs" style={{ color: 'var(--text-s)' }}>{s.code}</code> },
+    { key: 'modul', header: 'MODÜL', priority: 1, sortable: true, filter: { type: 'enum', label: 'Modül' },
+      filters: [{ field: 'sayfa', label: 'Sayfa grubu', type: 'text' }],
+      cell: s => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{s.modul}</span> },
+    { key: 'tur', header: 'TÜR', priority: 1, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Tür', options: [
+        { value: 'page', label: 'Sayfa' }, { value: 'action', label: 'İşlem' }, { value: 'field', label: 'Alan' }] },
+      cell: s => <Badge variant={turRengi(s.tur)}>{turEtiketi(s.tur)}</Badge> },
+    { key: 'kanalKapsamli', header: 'KAPSAM', priority: 2, sortable: true,
+      filter: { type: 'boolean', label: 'Kanal bazlı' },
+      cell: s => <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+        {s.kanalKapsamli ? 'kanal bazlı' : 'kanaldan bağımsız'}</span> },
+    { key: 'grupSayisi', header: 'KULLANIM', priority: 2, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Grup sayısı' },
+      filters: [
+        { field: 'kullaniciSayisi', label: 'İstisna sayısı', type: 'number' },
+        { field: 'kullanimda', label: 'Kullanımda', type: 'boolean' }],
+      cell: s => <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+        {s.grupSayisi} grup{s.kullaniciSayisi > 0 ? ` · ${s.kullaniciSayisi} istisna` : ''}</span> },
+    { key: 'aktif', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      filters: [
+        { field: 'koddaTanimli', label: 'Uygulamada var', type: 'boolean' },
+        { field: 'sorunlu', label: 'Pasif / karşılığı yok', type: 'boolean' }],
+      cell: s => !s.koddaTanimli
+        ? <Badge variant="warning">uygulamada yok</Badge>
+        : <Badge variant={s.aktif ? 'success' : 'neutral'}>{s.aktif ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'sira', header: 'SIRA', priority: 3, align: 'center', sortable: true, filter: { type: 'number', label: 'Sıra' },
+      cell: s => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{s.sira}</span> },
+    { key: 'duzenle', header: '', priority: 3, align: 'right', exportable: false,
+      cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span> },
+  ]
 
   return (
     <div className="p-6">
       <div className="mb-4">
         <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Yetki İçerikleri</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
-          {satirlar.length} yetki — adlandırma, gruplama ve aktiflik buradan yönetilir
+          {(data?.totalCount ?? 0).toLocaleString('tr-TR')} yetki{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''} — adlandırma, gruplama ve aktiflik buradan yönetilir
         </p>
       </div>
 
@@ -167,67 +211,47 @@ export function PermissionCatalogPage() {
         korumaz, yalnız yanlış güven verir.
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <input className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 240 }}
-          placeholder="Yetki adı veya anahtarı ara…" value={arama} onChange={e => setArama(e.target.value)} />
-        <select className="inp text-sm py-1.5 px-3 h-auto" value={tur} onChange={e => setTur(e.target.value)}>
-          <option value="">Tüm türler</option>
-          <option value="page">Sayfa</option>
-          <option value="action">İşlem</option>
-          <option value="field">Alan</option>
-        </select>
-        <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--text)' }}>
-          <input type="checkbox" checked={yalnizSorunlu} onChange={e => setYalnizSorunlu(e.target.checked)} />
-          Yalnız pasif / karşılığı olmayanlar {sorunlu > 0 && <Badge variant="warning">{sorunlu}</Badge>}
-        </label>
-      </div>
-
-      {isLoading && <p className="text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor…</p>}
-
-      {gruplu.map(([modul, liste]) => (
-        <div key={modul} className="card overflow-hidden mb-4">
-          <div className="px-4 py-2 text-xs font-semibold"
-            style={{ background: 'var(--surface2)', color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>
-            {modul} ({liste.length})
-          </div>
-          <table className="w-full">
-            <tbody>
-              {liste.map(s => (
-                <tr key={s.id} onClick={() => setDuzenle(s)}
-                  className={cn('cursor-pointer hover:bg-[var(--surface2)] transition-colors')}
-                  style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--text)' }}>
-                    {s.ad}
-                    {s.aciklama && (
-                      <span className="text-xs block" style={{ color: 'var(--text-s)' }}>{s.aciklama}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <code className="text-xs" style={{ color: 'var(--text-s)' }}>{s.code}</code>
-                  </td>
-                  <td className="px-4 py-2.5"><Badge variant={turRengi(s.tur)}>{turEtiketi(s.tur)}</Badge></td>
-                  <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-s)' }}>
-                    {s.kanalKapsamli ? 'kanal bazlı' : 'kanaldan bağımsız'}
-                  </td>
-                  <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-s)' }}>
-                    {s.grupSayisi} grup{s.kullaniciSayisi > 0 ? ` · ${s.kullaniciSayisi} istisna` : ''}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {!s.koddaTanimli
-                      ? <Badge variant="warning">uygulamada yok</Badge>
-                      : <Badge variant={s.aktif ? 'success' : 'neutral'}>{s.aktif ? 'Aktif' : 'Pasif'}</Badge>}
-                  </td>
-                  <td className="px-4 py-2.5 text-right text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))}
-
-      {!isLoading && gruplu.length === 0 && (
-        <p className="text-sm" style={{ color: 'var(--text-s)' }}>Ölçütlere uyan yetki yok.</p>
-      )}
+      <DataGrid<KatalogSatiri>
+        gridId="permission-catalog"
+        views
+        grid={grid}
+        columns={columns}
+        rows={satirlar}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? gridErrText(listError) : null}
+        onRowClick={s => setDuzenle(s)}
+        empty="Ölçütlere uyan yetki yok."
+        search={{ placeholder: 'Yetki adı veya anahtarı ara…' }}
+        minWidth={1120}
+        pageSizes={[50, 100, 200]}
+        filterLeading={
+          <>
+            <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={tur} aria-label="Tür"
+              onChange={e => setNamed('tur', e.target.value)}>
+              <option value="">Tüm türler</option>
+              <option value="page">Sayfa</option>
+              <option value="action">İşlem</option>
+              <option value="field">Alan</option>
+            </select>
+            <label className="flex items-center gap-1.5 text-sm whitespace-nowrap" style={{ color: 'var(--text)' }}>
+              <input type="checkbox" checked={yalnizSorunlu}
+                onChange={e => setNamed('yalnizSorunlu', e.target.checked ? 'true' : '')} />
+              Yalnız pasif / karşılığı olmayanlar
+            </label>
+          </>
+        }
+        export={{ endpoint: '/iam/permissions/export', named, fallbackFileName: 'yetki-icerikleri.xlsx' }}
+        compact={{
+          title: s => s.ad,
+          subtitle: s => `${s.code} · ${s.modul}`,
+          right: s => `${s.grupSayisi} grup`,
+          badge: s => !s.koddaTanimli
+            ? <Badge variant="warning">uygulamada yok</Badge>
+            : <Badge variant={s.aktif ? 'success' : 'neutral'}>{s.aktif ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
+      />
 
       {duzenle && <DuzenleModal satir={duzenle} onClose={() => setDuzenle(null)} />}
     </div>

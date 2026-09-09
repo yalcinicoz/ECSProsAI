@@ -21,6 +21,7 @@ public static class AuditLogGrid
         .Text("ip", l => l.IpAddress)
         .Date("createdAt", l => l.CreatedAt)
         .Guid("userId", l => l.UserId)
+        .Sort("entityId", l => l.EntityId.ToString())
         .Sort("createdAt", l => l.CreatedAt)
         .Sort("action", l => l.Action)
         .Sort("entityType", l => l.EntityType)

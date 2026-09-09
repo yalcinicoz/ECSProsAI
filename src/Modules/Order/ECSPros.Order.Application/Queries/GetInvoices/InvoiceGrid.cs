@@ -29,6 +29,8 @@ public static class InvoiceGrid
         .Number("total", i => i.GrandTotal)
         .Bool("hasPdf", i => i.IntegratorInvoiceUrl != null && i.IntegratorInvoiceUrl != "")
         .Guid("orderId", i => i.OrderId)
+        .Sort("integratorStatus", i => i.IntegratorStatus)
+        .Sort("hasPdf", i => i.IntegratorInvoiceUrl != null && i.IntegratorInvoiceUrl != "")
         .Sort("invoiceNumber", i => i.InvoiceNumber)
         .Sort("recipient", i => i.RecipientName)
         .Sort("total", i => i.GrandTotal)

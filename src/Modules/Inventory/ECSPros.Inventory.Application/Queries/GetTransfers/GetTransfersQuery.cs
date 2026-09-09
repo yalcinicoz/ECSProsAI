@@ -1,5 +1,6 @@
 using ECSPros.Inventory.Application.Services;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,8 +12,11 @@ public record GetTransfersQuery(
     string? Status,
     string? TransferType,
     int Page = 1,
-    int PageSize = 20
+    int PageSize = 20,
+    string? Search = null,
+    GridRequest? Grid = null
 ) : IRequest<Result<PagedResult<TransferSummaryDto>>>;
+    // Search/Grid (2026-09-09, DataGrid): global arama + beyaz listeli f.* filtreleri + sort/dir (TransferGrid.Schema)
 
 public record TransferSummaryDto(
     Guid Id,
@@ -35,24 +39,15 @@ public class GetTransfersQueryHandler : IRequestHandler<GetTransfersQuery, Resul
 
     public async Task<Result<PagedResult<TransferSummaryDto>>> Handle(GetTransfersQuery request, CancellationToken ct)
     {
-        var query = _db.TransferRequests.AsQueryable();
-
-        if (request.FromWarehouseId.HasValue)
-            query = query.Where(t => t.FromWarehouseId == request.FromWarehouseId.Value);
-
-        if (request.ToWarehouseId.HasValue)
-            query = query.Where(t => t.ToWarehouseId == request.ToWarehouseId.Value);
-
-        if (!string.IsNullOrWhiteSpace(request.Status))
-            query = query.Where(t => t.Status == request.Status);
-
-        if (!string.IsNullOrWhiteSpace(request.TransferType))
-            query = query.Where(t => t.TransferType == request.TransferType);
+        // Adlandırılmış + grid filtreleri TEK yerden (liste ve Excel aynı sonucu verir).
+        var query = TransferGrid.ApplyAll(
+            _db.TransferRequests.AsNoTracking(),
+            new TransferListFilters(request.FromWarehouseId, request.ToWarehouseId, request.Status, request.TransferType, request.Search),
+            request.Grid);
 
         var total = await query.CountAsync(ct);
 
-        var items = await query
-            .OrderByDescending(t => t.CreatedAt)
+        var items = await TransferGrid.Schema.ApplySort(query, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(t => new TransferSummaryDto(

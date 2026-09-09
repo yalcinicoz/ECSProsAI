@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Api.Authorization;
 using System.Security.Claims;
 using ECSPros.Requests.Application.Commands.AddRequestComment;
@@ -34,16 +35,34 @@ public class RequestsController(IMediator mediator) : ControllerBase
 
     [HttpGet]
     public async Task<IActionResult> List(
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
         [FromQuery] string? status = null, [FromQuery] string? category = null,
         [FromQuery] string? priority = null, [FromQuery] Guid? assignedTo = null,
         [FromQuery] Guid? requestedBy = null, [FromQuery] string? search = null,
         CancellationToken ct = default)
     {
+        // Proje talebi kanaldan bağımsızdır (iç iş takibi) → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
         var result = await mediator.Send(new GetRequestsQuery(
-            page, pageSize, status, category, priority, assignedTo, requestedBy, search), ct);
+            grid.Page, grid.PageSize, status, category, priority, assignedTo, requestedBy, search, grid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Talepleri Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: status/category/priority.</summary>
+    [HttpPost("export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> Export(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<RequestsController> logger, CancellationToken ct)
+    {
+        var filters = new RequestListFilters(
+            body.NamedValue("status"), body.NamedValue("category"), body.NamedValue("priority"),
+            Search: body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "requests", "talepler", "Talepler",
+            ECSPros.Api.Grid.RequestExportColumns.All,
+            max => mediator.Send(new ExportRequestsQuery(filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     [HttpGet("{id:guid}")]

@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Storefront.Application.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,12 @@ namespace ECSPros.Storefront.Application.Queries.GetCollectionsForModeration;
 public record GetCollectionsForModerationQuery(
     string? Status = "pending",
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedResult<ModerationCollectionDto>>>;
+    int PageSize = 20,
+    string? Search = null,
+    // Y3 (K2): kullanıcının görebileceği kanallar; null = kısıt yok, boş = hiçbir kayıt.
+    IReadOnlyCollection<Guid>? KanalKisiti = null,
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<ModerationCollectionDto>>>;
+    // Search/Grid (2026-09-09, DataGrid): global arama + beyaz listeli f.* filtreleri + sort/dir
 
 public record ModerationCollectionDto(
     Guid Id,
@@ -31,13 +37,16 @@ public class GetCollectionsForModerationQueryHandler(IStorefrontDbContext db)
     public async Task<Result<PagedResult<ModerationCollectionDto>>> Handle(
         GetCollectionsForModerationQuery request, CancellationToken ct)
     {
-        var q = db.Collections.AsNoTracking().AsQueryable();
-        if (!string.IsNullOrWhiteSpace(request.Status))
-            q = q.Where(c => c.Status == request.Status);
+        // Y3 kanal kapsamı + adlandırılmış + grid filtreleri TEK yerden (liste ve Excel aynı sonucu verir).
+        var q = CollectionModerationGrid.ApplyAll(
+            db.Collections.AsNoTracking(),
+            new CollectionModerationFilters(request.Status, request.Search),
+            request.Grid,
+            request.KanalKisiti ?? request.Grid?.KanalKisiti);
 
         var toplam = await q.CountAsync(ct);
-        var kayitlar = await q
-            .OrderBy(c => c.CreatedAt)
+        // Sıralama şemadan (varsayılan: en ESKİ önce — moderasyon kuyruğu sırası).
+        var kayitlar = await CollectionModerationGrid.Schema.ApplySort(q, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(c => new ModerationCollectionDto(

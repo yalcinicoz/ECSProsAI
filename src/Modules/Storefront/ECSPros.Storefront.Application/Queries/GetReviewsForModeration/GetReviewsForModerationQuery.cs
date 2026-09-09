@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Storefront.Application.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,10 @@ public record GetReviewsForModerationQuery(
     int Page = 1,
     int PageSize = 20,
     // Y3 (K2): kullanıcının görebileceği kanallar; null = kısıt yok, boş = hiçbir kayıt.
-    IReadOnlyCollection<Guid>? KanalKisiti = null) : IRequest<Result<PagedResult<ModerationReviewDto>>>;
+    IReadOnlyCollection<Guid>? KanalKisiti = null,
+    string? Search = null,
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<ModerationReviewDto>>>;
+    // Search/Grid (2026-09-09, DataGrid): global arama + beyaz listeli f.* filtreleri + sort/dir (ReviewModerationGrid.Schema)
 
 public record ModerationReviewDto(
     Guid Id,
@@ -34,20 +38,17 @@ public class GetReviewsForModerationQueryHandler(IStorefrontDbContext db)
     public async Task<Result<PagedResult<ModerationReviewDto>>> Handle(
         GetReviewsForModerationQuery request, CancellationToken ct)
     {
-        var q = db.ProductReviews.AsNoTracking().AsQueryable();
-        // Y3 (K2): kanal kapsamı — kapsam dışı kanalın yorumu moderasyon listesinde görünmez.
-        if (request.KanalKisiti is not null)
-        {
-            var izinli = request.KanalKisiti.ToList();
-            q = q.Where(x => izinli.Contains(x.FirmPlatformId));
-        }
-        if (!string.IsNullOrWhiteSpace(request.Status))
-            q = q.Where(r => r.Status == request.Status);
+        // Y3 kanal kapsamı + adlandırılmış + grid filtreleri TEK yerden (liste ve Excel aynı sonucu verir).
+        // Kapsam açık parametreyle geçer: eski çağrılar Grid'siz, yalnız KanalKisiti ile gelir.
+        var q = ReviewModerationGrid.ApplyAll(
+            db.ProductReviews.AsNoTracking(),
+            new ReviewModerationFilters(request.Status, request.Search),
+            request.Grid,
+            request.KanalKisiti ?? request.Grid?.KanalKisiti);
 
         var toplam = await q.CountAsync(ct);
-        // En yeni yorum önce; aynı tarihli kayıtlarda sayfalama sırası sabit kalsın.
-        var kayitlar = await q.OrderByDescending(r => r.CreatedAt)
-            .ThenByDescending(r => r.Id)
+        // Sıralama şemadan (varsayılan: en yeni önce, TieBreaker Id ile sayfalama sırası sabit).
+        var kayitlar = await ReviewModerationGrid.Schema.ApplySort(q, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(r => new ModerationReviewDto(

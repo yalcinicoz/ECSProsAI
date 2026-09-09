@@ -198,6 +198,12 @@ export function PosSalesPage() {
         error={error ? errText(error) : null}
         empty="POS satışı yok."
         onRowClick={s => setDetail(s.id)}
+        compact={{
+          title: s => s.saleNumber,
+          subtitle: s => `${s.registerName ?? '—'} · ${new Date(s.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}`,
+          right: s => s.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺',
+          badge: s => { const [l, v] = DURUM[s.status] ?? [s.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> },
+        }}
       />
       {detail && <DetayModal saleId={detail} onClose={() => setDetail(null)} />}
     </div>

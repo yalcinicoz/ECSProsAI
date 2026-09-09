@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, CheckCircle } from 'lucide-react'
 import { cn, toSnakeCase } from '@/lib/utils'
@@ -8,6 +9,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { I18nField } from '@/components/ui/I18nField'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { useLanguages } from '@/hooks/useLanguages'
 import { FL } from '@/lib/field-labels'
 import { CapabilitiesEditor, CapabilityBadges } from '@/components/channels/ChannelCapabilities'
@@ -15,6 +18,20 @@ import { DEFAULT_CAPABILITIES, MARKETPLACE_CAPABILITIES, type ChannelCapabilitie
 import { buildI18nValues } from '@/lib/i18n-helper'
 import { getFieldLabel, type SchemaField } from './platformTypeFields'
 import { apiErrorMessage } from '@/lib/api-error'
+
+/** DataGrid satırı — /core/platform-types/grid: şema/yetenek JSON'u YOK, yalnız bayrak + sayı. */
+interface PlatformTypeGridRow {
+  id: string
+  code: string
+  nameI18n: Record<string, string>
+  isMarketplace: boolean
+  isActive: boolean
+  hasSchema: boolean
+  channelCount: number
+  createdAt: string
+}
+
+interface Sayfali<T> { items: T[]; totalCount: number; page: number; pageSize: number }
 
 export type { SchemaField } from './platformTypeFields'
 
@@ -223,19 +240,33 @@ export function PlatformTypesPage() {
   const queryClient = useQueryClient()
   const { data: languages = [], isLoading: langsLoading } = useLanguages()
 
-  const [activeOnly, setActiveOnly] = useState(false)
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (PlatformTypeGrid.Schema) + Excel + görünümler.
+  // ★ Ayrı uç: /core/platform-types TAM liste + şema + yetenekler döner (Kanallar, Firma detayı,
+  // Pazaryerleri bunu bekler); liste ekranı sayfalı /platform-types/grid kullanır.
+  // ★ Yetenek rozetleri ve şema çipleri ile düzenleme modalı TAM tanıma ihtiyaç duyar → tam liste
+  // ÖNBELLEKLİ olarak ayrıca çekilir (panelin başka yerlerinde de istenen, paylaşılan sorgu).
+  const [sp] = useSearchParams()
+  const activeOnly = sp.get('activeOnly') === 'true'
+  const grid = useGridState('platform-types', { defaultPageSize: 30, defaultSort: 'code', defaultDir: 'asc' })
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<PlatformType | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm())
   const [savedOk, setSavedOk] = useState(false)
 
-  const { data: platformTypes = [], isLoading } = useQuery<PlatformType[]>({
-    queryKey: ['platform-types', activeOnly],
-    queryFn: async () => {
-      const { data } = await api.get(`/core/platform-types?activeOnly=${activeOnly}`)
-      return data.data
-    },
+  const { data, isLoading, isFetching, error: listError } = useQuery<Sayfali<PlatformTypeGridRow>>({
+    queryKey: ['platform-types-grid', activeOnly, ...grid.queryKey],
+    queryFn: async () =>
+      (await api.get(`/core/platform-types/grid?${grid.toParams({ activeOnly: activeOnly ? 'true' : undefined })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
+
+  const { data: platformTypes = [] } = useQuery<PlatformType[]>({
+    queryKey: ['platform-types', false],
+    queryFn: async () => (await api.get('/core/platform-types?activeOnly=false')).data.data,
+    staleTime: 5 * 60_000,
+  })
+  const tamTanim = (code: string) => platformTypes.find(x => x.code === code)
 
   const sourceLang = languages.find(l => l.isDefault)?.code ?? 'tr'
   const i18nValues = useMemo(() => buildI18nValues(form.nameI18n, languages), [form.nameI18n, languages])
@@ -303,7 +334,52 @@ export function PlatformTypesPage() {
     setSavedOk(false)
   }
 
-  if (isLoading || langsLoading) return <PageSpinner />
+  const columns: GridColumn<PlatformTypeGridRow>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 160,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      cell: p => <code className="text-xs px-2 py-0.5 rounded-md font-mono"
+        style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>{p.code}</code> },
+    { key: 'name', header: 'AD', priority: 1, frozen: true, sortable: true, minWidth: 200,
+      filter: { type: 'text', label: 'Ad' },
+      cell: p => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{getName(p)}</span> },
+    // Yetenek rozetleri önbellekli TAM tanımdan (yetenek JSON'u grid satırında taşınmaz).
+    { key: 'isMarketplace', header: 'TİP', priority: 1, sortable: true,
+      filter: { type: 'boolean', label: 'Pazaryeri' },
+      cell: p => { const tam = tamTanim(p.code); return <CapabilityBadges
+        caps={tam?.capabilities ?? (p.isMarketplace ? MARKETPLACE_CAPABILITIES : DEFAULT_CAPABILITIES)} /> } },
+    { key: 'hasSchema', header: 'ŞEMA ALANLARI', priority: 2, minWidth: 240,
+      filter: { type: 'boolean', label: 'Ayar şeması var' },
+      cell: p => {
+        const alanlar = tamTanim(p.code)?.settingsSchema ?? null
+        if (!alanlar || alanlar.length === 0)
+          return <span className="text-xs" style={{ color: 'var(--text-s)' }}>{p.hasSchema ? 'Var' : '—'}</span>
+        return <div className="flex flex-wrap gap-1">
+          {alanlar.slice(0, 3).map(f => (
+            <span key={f.key} className="text-xs px-1.5 py-0.5 rounded"
+              style={{
+                background: f.section === 'credentials' ? '#fef3c7' : 'var(--surface2)',
+                color: f.section === 'credentials' ? '#92400e' : 'var(--text-s)',
+                border: '1px solid var(--border)',
+              }}>{getFieldLabel(f)}</span>
+          ))}
+          {alanlar.length > 3 && <span className="text-xs" style={{ color: 'var(--text-s)' }}>+{alanlar.length - 3}</span>}
+        </div>
+      } },
+    { key: 'channelCount', header: 'KANAL', priority: 2, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Kanal sayısı' },
+      filters: [{ field: 'kullanimda', label: 'Kullanımda', type: 'boolean' }],
+      cell: p => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{p.channelCount}</span> },
+    { key: 'isActive', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      filters: [{ field: 'createdAt', label: 'Oluşturma', type: 'date' }],
+      cell: p => <Badge variant={p.isActive ? 'success' : 'neutral'}>{p.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'actions', header: '', priority: 3, align: 'right', exportable: false, stopRowClick: true,
+      cell: p => <button className="text-xs px-2 py-1 rounded-lg transition-colors"
+        style={{ color: 'var(--brand)', background: 'var(--surface2)', border: '1px solid var(--border)' }}
+        onClick={e => { const tam = tamTanim(p.code); if (tam) openEdit(tam, e) }}>Düzenle</button> },
+  ]
+
+  if (langsLoading) return <PageSpinner />   // liste yüklemesi DataGrid'in kendi göstergesinde
 
   const formBody = (isEdit: boolean) => (
     <div className="space-y-5">
@@ -376,7 +452,7 @@ export function PlatformTypesPage() {
           <div className="flex items-center gap-1 rounded-xl p-1"
             style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
             {[false, true].map(v => (
-              <button key={String(v)} onClick={() => setActiveOnly(v)}
+              <button key={String(v)} onClick={() => grid.mutate(n => { if (v) n.set('activeOnly', 'true'); else n.delete('activeOnly') })}
                 className={cn('px-3 py-1 rounded-lg text-sm font-medium transition-all',
                   activeOnly === v ? 'bg-white shadow-sm' : 'text-[var(--text-s)]')}
                 style={activeOnly === v ? { color: 'var(--text)' } : {}}>
@@ -388,75 +464,27 @@ export function PlatformTypesPage() {
         </div>
       </div>
 
-      <div className="card overflow-hidden p-0">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'AD', 'TİP', 'ŞEMA ALANLARI', 'DURUM', ''].map(h => (
-                <th key={h} className={cn('px-4 py-3 text-xs font-semibold tracking-wider',
-                  h === '' ? 'w-24' : 'text-left')}
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {platformTypes.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Platform tipi bulunamadı.
-              </td></tr>
-            )}
-            {platformTypes.map(p => (
-              <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3">
-                  <code className="text-xs px-2 py-0.5 rounded-md font-mono"
-                    style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>
-                    {p.code}
-                  </code>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{getName(p)}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <CapabilityBadges caps={p.capabilities ?? (p.isMarketplace ? MARKETPLACE_CAPABILITIES : DEFAULT_CAPABILITIES)} />
-                </td>
-                <td className="px-4 py-3">
-                  {p.settingsSchema && p.settingsSchema.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {p.settingsSchema.slice(0, 3).map(f => (
-                        <span key={f.key} className="text-xs px-1.5 py-0.5 rounded"
-                          style={{
-                            background: f.section === 'credentials' ? '#fef3c7' : 'var(--surface2)',
-                            color: f.section === 'credentials' ? '#92400e' : 'var(--text-s)',
-                            border: '1px solid var(--border)',
-                          }}>
-                          {getFieldLabel(f)}
-                        </span>
-                      ))}
-                      {p.settingsSchema.length > 3 && (
-                        <span className="text-xs" style={{ color: 'var(--text-s)' }}>
-                          +{p.settingsSchema.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge variant={p.isActive ? 'success' : 'neutral'}>{p.isActive ? 'Aktif' : 'Pasif'}</Badge>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button className="text-xs px-2 py-1 rounded-lg transition-colors"
-                    style={{ color: 'var(--brand)', background: 'var(--surface2)', border: '1px solid var(--border)' }}
-                    onClick={e => openEdit(p, e)}>
-                    Düzenle
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid<PlatformTypeGridRow>
+        gridId="platform-types"
+        views
+        grid={grid}
+        columns={columns}
+        rows={data?.items ?? []}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        empty="Platform tipi bulunamadı."
+        search={{ placeholder: 'Tip kodu veya adıyla ara…' }}
+        minWidth={1040}
+        export={{ endpoint: '/core/platform-types/export', named: () => ({ activeOnly: activeOnly ? 'true' : undefined }), fallbackFileName: 'platform-tipleri.xlsx' }}
+        compact={{
+          title: p => getName(p),
+          subtitle: p => `${p.code}${p.isMarketplace ? ' · pazaryeri' : ''}`,
+          right: p => p.channelCount > 0 ? `${p.channelCount} kanal` : '',
+          badge: p => <Badge variant={p.isActive ? 'success' : 'neutral'}>{p.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
+      />
 
       {/* Create Modal */}
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Yeni Platform Tipi" size="lg"

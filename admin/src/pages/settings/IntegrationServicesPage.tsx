@@ -1,13 +1,16 @@
 import { useState, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, CheckCircle } from 'lucide-react'
-import { cn, toSnakeCase } from '@/lib/utils'
+import { toSnakeCase } from '@/lib/utils'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { I18nField } from '@/components/ui/I18nField'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { useLanguages } from '@/hooks/useLanguages'
 import { useAuthStore } from '@/store/auth'
 import { FL } from '@/lib/field-labels'
@@ -33,6 +36,23 @@ export interface IntegrationServiceRow {
   cargoCodeMaxLength: number | null
   cargoCodeCharset: string | null
 }
+
+/** DataGrid satırı — /core/integration-services/grid: şema JSON'u YOK, yalnız "şeması var" bayrağı. */
+interface IntegrationServiceGridRow {
+  id: string
+  code: string
+  nameI18n: Record<string, string>
+  serviceType: string
+  isAvailable: boolean
+  logoUrl: string | null
+  trackingUrlTemplate: string | null
+  hasSchema: boolean
+  integrationCount: number
+  cargoCodeStrategy: string | null
+  createdAt: string
+}
+
+interface Sayfali<T> { items: T[]; totalCount: number; page: number; pageSize: number }
 
 const CARGO_STRATEGIES = [
   { value: '', label: '— (varsayılan: serbest)' },
@@ -100,21 +120,36 @@ export function IntegrationServicesPage() {
   // sıradan firma kullanıcısına sayfa tamamen kapalı (sidebar'da da görünmez).
   const canManage = useAuthStore(s => s.hasPermission)('definition.manage')
 
-  const [typeFilter, setTypeFilter] = useState<string>('')
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (IntegrationServiceGrid.Schema) + Excel + görünümler.
+  // ★ Ayrı uç: /core/integration-services TAM liste + ayar şeması döner (firma entegrasyon formunun
+  // dropdown'ı bunu bekler); liste ekranı sayfalı /integration-services/grid kullanır.
+  // ★ Şema alanı ÇİPLERİ ve düzenleme modalı tam tanıma ihtiyaç duyuyor → tam liste ÖNBELLEKLİ olarak
+  // ayrıca çekilir (zaten panelin başka yerlerinde de istenen, react-query'de paylaşılan sorgu).
+  const [sp] = useSearchParams()
+  const typeFilter = sp.get('serviceType') ?? ''
+  const grid = useGridState('integration-services', { defaultPageSize: 30, defaultSort: 'serviceType', defaultDir: 'asc' })
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<IntegrationServiceRow | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm())
   const [savedOk, setSavedOk] = useState(false)
 
-  const { data: services = [], isLoading } = useQuery<IntegrationServiceRow[]>({
+  const { data, isLoading, isFetching, error: listError } = useQuery<Sayfali<IntegrationServiceGridRow>>({
+    queryKey: ['integration-services-grid', typeFilter, ...grid.queryKey],
+    queryFn: async () =>
+      (await api.get(`/core/integration-services/grid?${grid.toParams({ serviceType: typeFilter || undefined })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
+  })
+
+  const { data: services = [] } = useQuery<IntegrationServiceRow[]>({
     queryKey: ['integration-services'],
     queryFn: async () => {
       const { data } = await api.get('/core/integration-services')
       return data.data ?? []
     },
+    staleTime: 5 * 60_000,
   })
-
-  const filtered = typeFilter ? services.filter(s => s.serviceType === typeFilter) : services
+  const tamTanim = (code: string) => services.find(x => x.code === code)
 
   const sourceLang = languages.find(l => l.isDefault)?.code ?? 'tr'
   const i18nValues = useMemo(() => buildI18nValues(form.nameI18n, languages), [form.nameI18n, languages])
@@ -208,6 +243,53 @@ export function IntegrationServicesPage() {
       </div>
     )
   }
+
+  const columns: GridColumn<IntegrationServiceGridRow>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 160,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      cell: s => <code className="text-xs px-2 py-0.5 rounded-md font-mono"
+        style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>{s.code}</code> },
+    { key: 'name', header: 'AD', priority: 1, frozen: true, sortable: true, minWidth: 200,
+      filter: { type: 'text', label: 'Ad' },
+      cell: s => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{getName(s)}</span> },
+    { key: 'serviceType', header: 'TİP', priority: 1, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Servis tipi', options: SERVICE_TYPES.map(t => ({ value: t.value, label: t.label })) },
+      cell: s => <Badge variant="info">{serviceTypeLabel(s.serviceType)}</Badge> },
+    // Şema alanı çipleri önbellekli TAM tanımdan gelir (şema JSON'u grid satırında taşınmaz).
+    { key: 'hasSchema', header: 'ŞEMA ALANLARI', priority: 2, minWidth: 240,
+      filter: { type: 'boolean', label: 'Ayar şeması var' },
+      cell: s => {
+        const alanlar = tamTanim(s.code)?.settingsSchema ?? null
+        if (!alanlar || alanlar.length === 0)
+          return <span className="text-xs" style={{ color: 'var(--text-s)' }}>{s.hasSchema ? 'Var' : '—'}</span>
+        return <div className="flex flex-wrap gap-1">
+          {alanlar.slice(0, 3).map(f => (
+            <span key={f.key} className="text-xs px-1.5 py-0.5 rounded"
+              style={{
+                background: f.section === 'credentials' ? '#fef3c7' : 'var(--surface2)',
+                color: f.section === 'credentials' ? '#92400e' : 'var(--text-s)',
+                border: '1px solid var(--border)',
+              }}>{getFieldLabel(f)}</span>
+          ))}
+          {alanlar.length > 3 && <span className="text-xs" style={{ color: 'var(--text-s)' }}>+{alanlar.length - 3}</span>}
+        </div>
+      } },
+    { key: 'integrationCount', header: 'FİRMA', priority: 2, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Firma entegrasyonu' },
+      filters: [{ field: 'kullanimda', label: 'Kullanımda', type: 'boolean' },
+                { field: 'cargoCodeStrategy', label: 'Kargo kod stratejisi', type: 'enum' },
+                { field: 'hasLogo', label: 'Logosu var', type: 'boolean' },
+                { field: 'trackingUrlTemplate', label: 'Takip linki', type: 'text' }],
+      cell: s => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{s.integrationCount}</span> },
+    { key: 'isAvailable', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'boolean', label: 'Kullanılabilir' },
+      filters: [{ field: 'createdAt', label: 'Oluşturma', type: 'date' }],
+      cell: s => <Badge variant={s.isAvailable ? 'success' : 'neutral'}>{s.isAvailable ? 'Kullanılabilir' : 'Kapalı'}</Badge> },
+    { key: 'actions', header: '', priority: 3, align: 'right', exportable: false, stopRowClick: true,
+      cell: s => <button className="text-xs px-2 py-1 rounded-lg transition-colors"
+        style={{ color: 'var(--brand)', background: 'var(--surface2)', border: '1px solid var(--border)' }}
+        onClick={() => { const tam = tamTanim(s.code); if (tam) openEdit(tam) }}>Düzenle</button> },
+  ]
 
   if (isLoading || langsLoading) return <PageSpinner />
 
@@ -333,8 +415,8 @@ export function IntegrationServicesPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <select className="sel" style={{ width: 180 }} value={typeFilter}
-            onChange={e => setTypeFilter(e.target.value)}>
+          <select className="sel" style={{ width: 180 }} value={typeFilter} aria-label="Servis tipi"
+            onChange={e => grid.mutate(n => { if (e.target.value) n.set('serviceType', e.target.value); else n.delete('serviceType') })}>
             <option value="">Tüm tipler</option>
             {SERVICE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
@@ -342,77 +424,27 @@ export function IntegrationServicesPage() {
         </div>
       </div>
 
-      <div className="card overflow-hidden p-0">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'AD', 'TİP', 'ŞEMA ALANLARI', 'DURUM', ''].map(h => (
-                <th key={h} className={cn('px-4 py-3 text-xs font-semibold tracking-wider',
-                  h === '' ? 'w-24' : 'text-left')}
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Servis bulunamadı.
-              </td></tr>
-            )}
-            {filtered.map(s => (
-              <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3">
-                  <code className="text-xs px-2 py-0.5 rounded-md font-mono"
-                    style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>
-                    {s.code}
-                  </code>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{getName(s)}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <Badge variant="info">{serviceTypeLabel(s.serviceType)}</Badge>
-                </td>
-                <td className="px-4 py-3">
-                  {s.settingsSchema && s.settingsSchema.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {s.settingsSchema.slice(0, 3).map(f => (
-                        <span key={f.key} className="text-xs px-1.5 py-0.5 rounded"
-                          style={{
-                            background: f.section === 'credentials' ? '#fef3c7' : 'var(--surface2)',
-                            color: f.section === 'credentials' ? '#92400e' : 'var(--text-s)',
-                            border: '1px solid var(--border)',
-                          }}>
-                          {getFieldLabel(f)}
-                        </span>
-                      ))}
-                      {s.settingsSchema.length > 3 && (
-                        <span className="text-xs" style={{ color: 'var(--text-s)' }}>
-                          +{s.settingsSchema.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge variant={s.isAvailable ? 'success' : 'neutral'}>
-                    {s.isAvailable ? 'Kullanılabilir' : 'Kapalı'}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button className="text-xs px-2 py-1 rounded-lg transition-colors"
-                    style={{ color: 'var(--brand)', background: 'var(--surface2)', border: '1px solid var(--border)' }}
-                    onClick={() => openEdit(s)}>
-                    Düzenle
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid<IntegrationServiceGridRow>
+        gridId="integration-services"
+        views
+        grid={grid}
+        columns={columns}
+        rows={data?.items ?? []}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        empty="Servis bulunamadı."
+        search={{ placeholder: 'Servis kodu veya adıyla ara…' }}
+        minWidth={1040}
+        export={{ endpoint: '/core/integration-services/export', named: () => ({ serviceType: typeFilter || undefined }), fallbackFileName: 'servis-katalogu.xlsx' }}
+        compact={{
+          title: s => getName(s),
+          subtitle: s => `${s.code} · ${serviceTypeLabel(s.serviceType)}`,
+          right: s => s.integrationCount > 0 ? `${s.integrationCount} firma` : '',
+          badge: s => <Badge variant={s.isAvailable ? 'success' : 'neutral'}>{s.isAvailable ? 'Kullanılabilir' : 'Kapalı'}</Badge>,
+        }}
+      />
 
       {/* Create Modal */}
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Yeni Servis Tanımı" size="lg"

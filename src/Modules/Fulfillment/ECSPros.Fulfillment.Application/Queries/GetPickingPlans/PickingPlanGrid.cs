@@ -34,6 +34,7 @@ public static class PickingPlanGrid
         .Date("createdAt", p => p.CreatedAt)
         .Guid("warehouseId", p => p.WarehouseId)
         .Guid("plannedBy", p => p.PlannedBy)
+        .Sort("assignment", p => p.Lines.Count() == 0 ? 0 : p.Lines.Count(l => l.AssignedTo != null) * 100 / p.Lines.Count())
         .Sort("planNumber", p => p.PlanNumber)
         .Sort("planType", p => p.PlanType)
         .Sort("status", p => p.Status)

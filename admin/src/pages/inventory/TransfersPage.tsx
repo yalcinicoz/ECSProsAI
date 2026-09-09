@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { PermissionGuard } from '@/components/ui/PermissionGuard'
 import type { Warehouse } from './WarehousesPage'
 import { getWarehouseName } from './warehouseHelpers'
@@ -45,8 +47,10 @@ export function TransfersPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
-  const [statusFilter, setStatusFilter] = useState('')
-  const [page, setPage] = useState(1)
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (TransferGrid.Schema) + Excel + görünümler.
+  const [sp] = useSearchParams()
+  const statusFilter = sp.get('status') ?? ''
+  const grid = useGridState('transfers', { defaultPageSize: 20, defaultSort: 'createdAt', defaultDir: 'desc' })
   const [createOpen, setCreateOpen] = useState(false)
 
   const [form, setForm] = useState<CreateForm>({
@@ -61,19 +65,16 @@ export function TransfersPage() {
     },
   })
 
-  const { data: transfersData, isLoading: tLoading } = useQuery<PagedResult<TransferSummary>>({
-    queryKey: ['transfers', statusFilter, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: '20' })
-      if (statusFilter) params.set('status', statusFilter)
-      const { data } = await api.get(`/inventory/transfers?${params}`)
-      return data.data
-    },
+  const { data: transfersData, isLoading: tLoading, isFetching, error: listError } = useQuery<PagedResult<TransferSummary>>({
+    queryKey: ['transfers', statusFilter, ...grid.queryKey],
+    queryFn: async () =>
+      (await api.get(`/inventory/transfers?${grid.toParams({ status: statusFilter || undefined })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const transfers = transfersData?.items ?? []
   const totalCount = transfersData?.totalCount ?? 0
-  const totalPages = Math.ceil(totalCount / 20)
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -103,17 +104,45 @@ export function TransfersPage() {
   const isCreateValid = form.fromWarehouseId && form.toWarehouseId
     && form.fromWarehouseId !== form.toWarehouseId
 
+  const columns: GridColumn<TransferSummary>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 130,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      filters: [{ field: 'notes', label: 'Not', type: 'text' }],
+      cell: t => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{t.code}</code> },
+    { key: 'fromWarehouse', header: 'KAYNAK', priority: 1, sortable: true,
+      filter: { type: 'enum', label: 'Kaynak depo', field: 'fromWarehouseId', options: warehouses.map(w => ({ value: w.id, label: getWarehouseName(w) })) },
+      cell: t => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{t.fromWarehouseCode}</span> },
+    { key: 'toWarehouse', header: 'HEDEF', priority: 1, sortable: true,
+      filter: { type: 'enum', label: 'Hedef depo', field: 'toWarehouseId', options: warehouses.map(w => ({ value: w.id, label: getWarehouseName(w) })) },
+      cell: t => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{t.toWarehouseCode}</span> },
+    { key: 'transferType', header: 'TİP', priority: 2, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Tip', options: TRANSFER_TYPES.map(tt => ({ value: tt.value, label: tt.label })) },
+      cell: t => <span className="text-sm" style={{ color: 'var(--text-s)' }}>
+        {TRANSFER_TYPES.find(tt => tt.value === t.transferType)?.label ?? t.transferType}</span> },
+    { key: 'itemCount', header: 'KALEM', priority: 2, align: 'center', sortable: true, filter: { type: 'number', label: 'Kalem sayısı' },
+      cell: t => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{t.itemCount}</span> },
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(STATUS_MAP).map(([value, st]) => ({ value, label: st.label })) },
+      filters: [{ field: 'open', label: 'Açık transfer', type: 'boolean' }],
+      cell: t => { const st = STATUS_MAP[t.status] ?? { label: t.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
+    { key: 'createdAt', header: 'TARİH', priority: 2, sortable: true, filter: { type: 'date', label: 'Oluşturma', quick: true },
+      filters: [{ field: 'requestedAt', label: 'Talep tarihi', type: 'date' }],
+      cell: t => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(t.createdAt).toLocaleDateString('tr-TR')}</span> },
+    { key: 'detail', header: '', priority: 3, align: 'right', exportable: false,
+      cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
+  ]
+
   return (
     <div className="p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Transferler</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{totalCount} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{totalCount.toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}</p>
         </div>
         <div className="flex items-center gap-3">
-          <select className="inp text-sm py-1.5 px-3 h-auto" value={statusFilter}
-            onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
+          <select className="inp text-sm py-1.5 px-3 h-auto" value={statusFilter} aria-label="Durum"
+            onChange={e => grid.mutate(n => { if (e.target.value) n.set('status', e.target.value); else n.delete('status') })}
             style={{ minWidth: 140 }}>
             <option value="">Tüm Durumlar</option>
             {Object.entries(STATUS_MAP).map(([v, s]) => (
@@ -126,86 +155,28 @@ export function TransfersPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'KAYNAK', 'HEDEF', 'TİP', 'KALEM', 'DURUM', 'TARİH', ''].map(h => (
-                <th key={h} className={`px-4 py-3 text-xs font-semibold ${h === '' ? 'w-20' : 'text-left'}`}
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tLoading && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Yükleniyor...
-              </td></tr>
-            )}
-            {!tLoading && transfers.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Transfer bulunamadı.
-              </td></tr>
-            )}
-            {transfers.map(t => {
-              const st = STATUS_MAP[t.status] ?? { label: t.status, variant: 'neutral' as const }
-              return (
-                <tr key={t.id}
-                  onClick={() => navigate(`/inventory/transfers/${t.id}`)}
-                  className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                  style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3">
-                    <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{t.code}</code>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm" style={{ color: 'var(--text-m)' }}>{t.fromWarehouseCode}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm" style={{ color: 'var(--text-m)' }}>{t.toWarehouseCode}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm" style={{ color: 'var(--text-s)' }}>
-                      {TRANSFER_TYPES.find(tt => tt.value === t.transferType)?.label ?? t.transferType}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{t.itemCount}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={st.variant}>{st.label}</Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs" style={{ color: 'var(--text-s)' }}>
-                      {new Date(t.createdAt).toLocaleDateString('tr-TR')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>
-            ← Önceki
-          </button>
-          <span className="text-sm" style={{ color: 'var(--text-s)' }}>{page} / {totalPages}</span>
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>
-            Sonraki →
-          </button>
-        </div>
-      )}
+      <DataGrid<TransferSummary>
+        gridId="transfers"
+        views
+        grid={grid}
+        columns={columns}
+        rows={transfers}
+        totalCount={totalCount}
+        loading={tLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        onRowClick={t => navigate(`/inventory/transfers/${t.id}`)}
+        empty="Transfer bulunamadı."
+        search={{ placeholder: 'Transfer kodu veya notta ara…' }}
+        minWidth={920}
+        export={{ endpoint: '/inventory/transfers/export', named: () => ({ status: statusFilter || undefined }), fallbackFileName: 'transferler.xlsx' }}
+        compact={{
+          title: t => t.code,
+          subtitle: t => `${t.fromWarehouseCode} → ${t.toWarehouseCode}`,
+          right: t => `${t.itemCount} kalem`,
+          badge: t => { const st = STATUS_MAP[t.status] ?? { label: t.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> },
+        }}
+      />
 
       {/* Create Modal — sadece ana bilgiler */}
       <Modal open={createOpen} onClose={() => { setCreateOpen(false); resetForm() }} title="Yeni Transfer Talebi">

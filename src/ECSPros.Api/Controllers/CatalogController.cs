@@ -1,3 +1,4 @@
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Catalog.Application.Commands.AddAxisSubAttribute;
 using ECSPros.Catalog.Application.Commands.GenerateBarcodes;
 using ECSPros.Catalog.Application.Commands.UpdateCatalogSetting;
@@ -356,12 +357,40 @@ public class CatalogController : ControllerBase
 
     // ─── Attribute Types ───────────────────────────────────────────────────────
 
-    /// <summary>Özellik tiplerini listeler.</summary>
+    /// <summary>Özellik tiplerini TAM liste olarak (değerleriyle) döner — ürün grubu detayı, özellik
+    /// tipi detayı, pazaryeri eşleme ve FilterBuilder bunu bütün hâlinde bekler.
+    /// ⚠ Sayfalanmaz; liste EKRANI için /attribute-types/grid kullanın.</summary>
     [HttpGet("attribute-types")]
     public async Task<IActionResult> GetAttributeTypes([FromQuery] bool activeOnly = true, [FromQuery] bool includeCounts = true, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new GetAttributeTypesQuery(activeOnly, includeCounts), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Özellik tipleri liste ekranı (DataGrid): sayfalı, değer/grup sayılı + f.* filtreleri + sort/dir.</summary>
+    [HttpGet("attribute-types/grid")]
+    public async Task<IActionResult> GetAttributeTypesGrid([FromQuery] bool activeOnly = false, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetAttributeTypesGridQuery(
+            new AttributeTypeFilters(activeOnly, search), grid.Page, grid.PageSize, grid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Özellik tiplerini Excel'e aktarır (DataGrid).</summary>
+    [HttpPost("attribute-types/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportAttributeTypes(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<CatalogController> logger, CancellationToken ct)
+    {
+        var filters = new AttributeTypeFilters(body.NamedValue("activeOnly") == "true", body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "attribute-types", "ozellik-tipleri", "Özellik Tipleri",
+            ECSPros.Api.Grid.AttributeTypeExportColumns.All,
+            max => _mediator.Send(new ExportAttributeTypesQuery(filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Yeni özellik tipi oluşturur.</summary>
@@ -399,12 +428,41 @@ public class CatalogController : ControllerBase
 
     // ─── Product Groups ────────────────────────────────────────────────────────
 
-    /// <summary>Ürün gruplarını listeler.</summary>
+    /// <summary>Ürün gruplarını TAM liste olarak döner (özellik/eksen şemasıyla) — dropdown kaynağı.
+    /// ⚠ Sayfalanmaz: ürün listesi grup süzgeci, kanal kategori detayı, komisyon ve FilterBuilder bunu
+    /// bütün hâlinde bekler. Liste EKRANI için sayfalı /product-groups/grid ucunu kullanın.</summary>
     [HttpGet("product-groups")]
     public async Task<IActionResult> GetProductGroups([FromQuery] bool activeOnly = true, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new GetProductGroupsQuery(activeOnly), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Ürün grupları liste ekranı (DataGrid): sayfalı + f.* filtreleri + sort/dir.</summary>
+    [HttpGet("product-groups/grid")]
+    public async Task<IActionResult> GetProductGroupsGrid([FromQuery] bool activeOnly = false, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        // Ürün grubu kanaldan bağımsız bir tanım kaydıdır → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetProductGroupsGridQuery(
+            new ProductGroupListFilters(activeOnly, search), grid.Page, grid.PageSize, grid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Ürün gruplarını Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: activeOnly.</summary>
+    [HttpPost("product-groups/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportProductGroups(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<CatalogController> logger, CancellationToken ct)
+    {
+        var filters = new ProductGroupListFilters(body.NamedValue("activeOnly") == "true", body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "product-groups", "urun-gruplari", "Ürün Grupları",
+            ECSPros.Api.Grid.ProductGroupExportColumns.All,
+            max => _mediator.Send(new ExportProductGroupsQuery(filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Yeni ürün grubu oluşturur; copyAttributesFromGroupId verilirse kaynak grubun özellik şablonu kopyalanır.</summary>

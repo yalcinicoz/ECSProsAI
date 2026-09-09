@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Storefront.Application.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,11 @@ public record GetNewsletterSubscriptionsQuery(
     Guid? FirmPlatformId = null,
     string? Search = null,
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedResult<NewsletterSubscriptionDto>>>;
+    int PageSize = 20,
+    // Y3 (K2): kullanıcının görebileceği kanallar; null = kısıt yok, boş = hiçbir kayıt.
+    IReadOnlyCollection<Guid>? KanalKisiti = null,
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<NewsletterSubscriptionDto>>>;
+    // Grid (2026-09-09, DataGrid): beyaz listeli f.* filtreleri + sort/dir (NewsletterSubscriptionGrid.Schema)
 
 public record NewsletterSubscriptionDto(
     Guid Id,
@@ -28,21 +33,15 @@ public class GetNewsletterSubscriptionsQueryHandler(IStorefrontDbContext db)
     public async Task<Result<PagedResult<NewsletterSubscriptionDto>>> Handle(
         GetNewsletterSubscriptionsQuery request, CancellationToken ct)
     {
-        var q = db.NewsletterSubscriptions.AsNoTracking().AsQueryable();
-
-        if (request.IsActive.HasValue)
-            q = q.Where(n => n.IsActive == request.IsActive.Value);
-        if (request.FirmPlatformId.HasValue)
-            q = q.Where(n => n.FirmPlatformId == request.FirmPlatformId.Value);
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var aranan = request.Search.Trim().ToLower();
-            q = q.Where(n => n.Email.ToLower().Contains(aranan));
-        }
+        // Y3 kanal kapsamı + adlandırılmış + grid filtreleri TEK yerden (liste ve Excel aynı sonucu verir).
+        var q = NewsletterSubscriptionGrid.ApplyAll(
+            db.NewsletterSubscriptions.AsNoTracking(),
+            new NewsletterFilters(request.IsActive, request.FirmPlatformId, request.Search),
+            request.Grid,
+            request.KanalKisiti ?? request.Grid?.KanalKisiti);
 
         var toplam = await q.CountAsync(ct);
-        var kayitlar = await q
-            .OrderByDescending(n => n.CreatedAt)
+        var kayitlar = await NewsletterSubscriptionGrid.Schema.ApplySort(q, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(n => new NewsletterSubscriptionDto(

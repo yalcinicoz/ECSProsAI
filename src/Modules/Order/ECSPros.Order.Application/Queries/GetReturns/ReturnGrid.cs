@@ -27,6 +27,8 @@ public static class ReturnGrid
         .Number("refundAmount", r => r.RefundAmount)
         .Guid("orderId", r => r.OrderId)
         .Guid("memberId", r => r.MemberId)
+        .Sort("returnType", r => r.ReturnType)
+        .Sort("cargoReturnCode", r => r.CargoReturnCode)
         .Sort("returnNumber", r => r.ReturnNumber)
         .Sort("refundAmount", r => r.RefundAmount)
         .Sort("status", r => r.Status)

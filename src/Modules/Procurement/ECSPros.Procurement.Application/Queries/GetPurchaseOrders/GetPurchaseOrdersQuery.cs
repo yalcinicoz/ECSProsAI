@@ -1,5 +1,6 @@
 using ECSPros.Procurement.Application.Services;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,9 @@ public record GetPurchaseOrdersQuery(
     string? Status = null,
     string? Search = null,        // kod veya kalem model metni
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedResult<PurchaseOrderRowDto>>>;
+    int PageSize = 20,
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<PurchaseOrderRowDto>>>;
+    // Grid (2026-09-09, DataGrid): beyaz listeli f.* filtreleri + sort/dir (PurchaseOrderGrid.Schema)
 
 public record PurchaseOrderRowDto(
     Guid Id, string Code, Guid SupplierId, DateTime OrderDate, DateTime? ExpectedDate,
@@ -21,19 +24,14 @@ public class GetPurchaseOrdersQueryHandler(IProcurementDbContext db)
 {
     public async Task<Result<PagedResult<PurchaseOrderRowDto>>> Handle(GetPurchaseOrdersQuery request, CancellationToken ct)
     {
-        var q = db.PurchaseOrders.AsNoTracking();
-        if (request.SupplierId.HasValue) q = q.Where(p => p.SupplierId == request.SupplierId.Value);
-        if (!string.IsNullOrWhiteSpace(request.Status)) q = q.Where(p => p.Status == request.Status);
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var s = request.Search.Trim().ToLower();
-            q = q.Where(p => p.Code.ToLower().Contains(s)
-                || p.Items.Any(i => !i.IsDeleted && (
-                    (i.ModelText ?? "").ToLower().Contains(s) || (i.ColorText ?? "").ToLower().Contains(s))));
-        }
+        // Adlandırılmış + grid filtreleri TEK yerden (liste ve Excel aynı sonucu verir).
+        var q = PurchaseOrderGrid.ApplyAll(
+            db.PurchaseOrders.AsNoTracking(),
+            new PurchaseOrderFilters(request.SupplierId, request.Status, request.Search),
+            request.Grid);
 
         var total = await q.CountAsync(ct);
-        var rows = await q.OrderByDescending(p => p.Code)
+        var rows = await PurchaseOrderGrid.Schema.ApplySort(q, request.Grid)
             .Skip((Math.Max(1, request.Page) - 1) * request.PageSize).Take(request.PageSize)
             .Select(p => new PurchaseOrderRowDto(
                 p.Id, p.Code, p.SupplierId, p.OrderDate, p.ExpectedDate, p.Status,

@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Storefront.Application.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,11 @@ public record GetStockAlertsForAdminQuery(
     Guid? FirmPlatformId = null,
     string? Search = null,
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedResult<AdminStockAlertDto>>>;
+    int PageSize = 20,
+    // Y3 (K2): kullanıcının görebileceği kanallar; null = kısıt yok, boş = hiçbir kayıt.
+    IReadOnlyCollection<Guid>? KanalKisiti = null,
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<AdminStockAlertDto>>>;
+    // Grid (2026-09-09, DataGrid): beyaz listeli f.* filtreleri + sort/dir (StockAlertGrid.Schema)
 
 public record AdminStockAlertDto(
     Guid Id,
@@ -31,23 +36,15 @@ public class GetStockAlertsForAdminQueryHandler(IStorefrontDbContext db)
     public async Task<Result<PagedResult<AdminStockAlertDto>>> Handle(
         GetStockAlertsForAdminQuery request, CancellationToken ct)
     {
-        var q = db.StockAlerts.AsNoTracking().AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(request.Status))
-            q = q.Where(a => a.Status == request.Status);
-        if (request.FirmPlatformId.HasValue)
-            q = q.Where(a => a.FirmPlatformId == request.FirmPlatformId.Value);
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var aranan = request.Search.Trim().ToLower();
-            q = q.Where(a =>
-                (a.Email != null && a.Email.ToLower().Contains(aranan)) ||
-                (a.ProductCode != null && a.ProductCode.ToLower().Contains(aranan)));
-        }
+        // Y3 kanal kapsamı + adlandırılmış + grid filtreleri TEK yerden (liste ve Excel aynı sonucu verir).
+        var q = StockAlertGrid.ApplyAll(
+            db.StockAlerts.AsNoTracking(),
+            new StockAlertFilters(request.Status, request.FirmPlatformId, request.Search),
+            request.Grid,
+            request.KanalKisiti ?? request.Grid?.KanalKisiti);
 
         var toplam = await q.CountAsync(ct);
-        var kayitlar = await q
-            .OrderByDescending(a => a.CreatedAt)
+        var kayitlar = await StockAlertGrid.Schema.ApplySort(q, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(a => new AdminStockAlertDto(

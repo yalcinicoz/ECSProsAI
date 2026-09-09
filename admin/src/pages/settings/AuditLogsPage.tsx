@@ -57,7 +57,7 @@ export function AuditLogsPage() {
       cell: l => { const [t, v] = EYLEM[l.action] ?? [l.action, 'neutral' as BadgeVariant]; return <Badge variant={v}>{t}</Badge> } },
     { key: 'entityType', header: 'KAYIT TİPİ', priority: 1, sortable: true, filter: { type: 'text', label: 'Kayıt tipi', ops: ['contains', 'eq', 'startswith'] },
       cell: l => <code className="text-xs font-mono">{l.entityType}</code> },
-    { key: 'entityId', header: 'KAYIT', priority: 2, filter: { type: 'text', label: 'Kayıt kimliği', ops: ['eq', 'contains'] },
+    { key: 'entityId', header: 'KAYIT', sortable: true, priority: 2, filter: { type: 'text', label: 'Kayıt kimliği', ops: ['eq', 'contains'] },
       cell: l => <code className="text-xs font-mono" style={{ color: 'var(--text-s)' }} title={l.entityId}>{l.entityId.slice(0, 8)}…</code> },
     { key: 'user', header: 'KULLANICI', priority: 2, filter: { type: 'enum', label: 'Kullanıcı', field: 'userId', options: userOptions },
       cell: l => l.userName ?? (l.userId ? <span title={l.userId}>{l.userId.slice(0, 8)}…</span> : '—') },
@@ -86,6 +86,12 @@ export function AuditLogsPage() {
         empty="Denetim logu yok."
         search={{ placeholder: 'Kayıt tipi, işlem, kayıt kimliği, IP ara…' }}
         export={{ endpoint: '/iam/audit-logs/export', fallbackFileName: 'denetim-loglari.xlsx' }}
+        compact={{
+          title: l => l.entityType,
+          subtitle: l => `${l.userName ?? '—'} · ${new Date(l.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}`,
+          right: l => l.ipAddress ?? '',
+          badge: l => { const [t, v] = EYLEM[l.action] ?? [l.action, 'neutral' as BadgeVariant]; return <Badge variant={v}>{t}</Badge> },
+        }}
       />
     </div>
   )

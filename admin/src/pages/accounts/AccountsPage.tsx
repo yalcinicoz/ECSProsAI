@@ -1,12 +1,10 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Search, ChevronRight } from 'lucide-react'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { PageSpinner } from '@/components/ui/Spinner'
-import { cn } from '@/lib/utils'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import type { AccountGroup } from './AccountGroupsPage'
 
 const ACCOUNT_TYPES = [
@@ -51,16 +49,16 @@ interface PagedResult<T> {
 }
 
 export function AccountsPage() {
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (CurrentAccountGrid.Schema) + Excel + görünümler.
+  // Tip/sahip/grup/durum süzgeçleri URL'de adlandırılmış filtre olarak durur (derin link bozulmaz).
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const [accountType, setAccountType] = useState(searchParams.get('accountType') ?? '')
-  const [ownerType, setOwnerType] = useState('')
-  const [groupId, setGroupId] = useState('')
-  const [isActive, setIsActive] = useState<string>('')
-  const [search, setSearch] = useState('')
-  const [searchInput, setSearchInput] = useState('')
-  const [page, setPage] = useState(1)
-  const PAGE_SIZE = 30
+  const [sp] = useSearchParams()
+  const accountType = sp.get('accountType') ?? ''
+  const ownerType = sp.get('ownerType') ?? ''
+  const groupId = sp.get('groupId') ?? ''
+  const isActive = sp.get('isActive') ?? ''
+  const grid = useGridState('accounts', { defaultPageSize: 30, defaultSort: 'title', defaultDir: 'asc' })
+  const setNamed = (k: string, v: string) => grid.mutate(n => { if (v) n.set(k, v); else n.delete(k) })
 
   const { data: groups = [] } = useQuery<AccountGroup[]>({
     queryKey: ['account-groups', false],
@@ -70,200 +68,133 @@ export function AccountsPage() {
     },
   })
 
-  const { data, isLoading } = useQuery<PagedResult<CurrentAccount>>({
-    queryKey: ['accounts', accountType, ownerType, groupId, isActive, search, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) })
-      if (accountType) params.set('accountType', accountType)
-      if (ownerType) params.set('ownerType', ownerType)
-      if (groupId) params.set('groupId', groupId)
-      if (isActive !== '') params.set('isActive', isActive)
-      if (search) params.set('search', search)
-      const { data } = await api.get(`/accounts?${params}`)
-      return data.data
-    },
+  const named = () => ({
+    accountType: accountType || undefined,
+    ownerType: ownerType || undefined,
+    groupId: groupId || undefined,
+    isActive: isActive !== '' ? isActive : undefined,
+  })
+
+  const { data, isLoading, isFetching, error: listError } = useQuery<PagedResult<CurrentAccount>>({
+    queryKey: ['accounts', accountType, ownerType, groupId, isActive, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/accounts?${grid.toParams(named())}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const accounts = data?.items ?? []
-  const totalCount = data?.totalCount ?? 0
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
-  function handleSearch() {
-    setSearch(searchInput)
-    setPage(1)
-  }
-
-  function resetFilters() {
-    setAccountType(''); setOwnerType(''); setGroupId(''); setIsActive('')
-    setSearch(''); setSearchInput(''); setPage(1)
-  }
-
-  if (isLoading && !data) return <PageSpinner />
+  const columns: GridColumn<CurrentAccount>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 120,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      cell: a => <code className="text-xs px-2 py-0.5 rounded-md font-mono"
+        style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>{a.code}</code> },
+    { key: 'title', header: 'ÜNVAN', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 240,
+      filter: { type: 'text', label: 'Ünvan' },
+      filters: [{ field: 'contactName', label: 'Yetkili', type: 'text' }, { field: 'email', label: 'E-posta', type: 'text' }],
+      cell: a => <div>
+        <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{a.title}</span>
+        {a.ownerType === 'member' && (
+          <span className="text-xs font-medium px-1.5 py-0.5 rounded-full ml-1.5" style={{ color: 'var(--brand)', background: 'var(--brand)18' }}>Üye</span>
+        )}
+        {a.contactName && <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>{a.contactName}</p>}
+      </div> },
+    { key: 'accountType', header: 'TİP', priority: 1, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Tip', options: ACCOUNT_TYPES.filter(t => t.value).map(t => ({ value: t.value, label: t.label })) },
+      filters: [
+        { field: 'ownerType', label: 'Sahiplik', type: 'enum', multiple: true, options: [
+          { value: 'external', label: 'Harici Cari' }, { value: 'member', label: 'Üye (cüzdan)' }, { value: 'firm', label: 'Firma' }] },
+        { field: 'supplierKind', label: 'Tedarikçi türü', type: 'enum', multiple: true, options: [
+          { value: 'normal', label: 'Normal' }, { value: 'marketplace', label: 'Pazaryeri' }] }],
+      cell: a => { const t = TYPE_BADGE[a.accountType]; return <>
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+          style={{ color: t?.color ?? 'var(--text-m)', background: `${t?.color ?? '#888'}18` }}>{t?.label ?? a.accountType}</span>
+        {a.supplierKind === 'marketplace' && (
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full ml-1.5" style={{ color: '#0ea5e9', background: '#0ea5e918' }}>Pazaryeri</span>
+        )}
+      </> } },
+    { key: 'group', header: 'GRUP', priority: 2, sortable: true,
+      filter: { type: 'enum', label: 'Grup', field: 'groupId', options: groups.map(g => ({ value: g.id, label: g.name })) },
+      cell: a => <span className="text-sm" style={{ color: 'var(--text-s)' }}>{a.groupName ?? '—'}</span> },
+    { key: 'taxNumber', header: 'VERGİ NO', priority: 2, sortable: true, filter: { type: 'text', label: 'Vergi no' },
+      cell: a => <span className="text-sm font-mono" style={{ color: 'var(--text-m)' }}>{a.taxNumber ?? '—'}</span> },
+    { key: 'city', header: 'ŞEHİR', priority: 2, sortable: true, filter: { type: 'text', label: 'Şehir' },
+      filters: [{ field: 'country', label: 'Ülke', type: 'enum' }],
+      cell: a => <span className="text-sm" style={{ color: 'var(--text-s)' }}>{a.city ?? '—'}</span> },
+    { key: 'creditLimit', header: 'KREDİ LİMİTİ', priority: 3, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Kredi limiti' },
+      filters: [{ field: 'hasCreditLimit', label: 'Limiti olan', type: 'boolean' }, { field: 'currency', label: 'Para birimi', type: 'enum' }],
+      cell: a => <span className="text-sm" style={{ color: 'var(--text-m)' }}>
+        {a.creditLimit > 0 ? `${a.creditLimit.toLocaleString('tr-TR')} ${a.currency}` : '—'}</span> },
+    { key: 'phone', header: 'TELEFON', priority: 3, defaultVisible: false, sortable: true, filter: { type: 'text', label: 'Telefon' },
+      cell: a => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{a.phone ?? '—'}</span> },
+    { key: 'isActive', header: 'DURUM', priority: 1, lockVisible: true, align: 'center', sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      filters: [{ field: 'createdAt', label: 'Oluşturma', type: 'date' }],
+      cell: a => <Badge variant={a.isActive ? 'success' : 'neutral'}>{a.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'detail', header: '', priority: 3, align: 'right', exportable: false,
+      cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
+  ]
 
   return (
     <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Cari Kartlar</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{totalCount} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
+            {(data?.totalCount ?? 0).toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}
+          </p>
         </div>
         <Button size="sm" onClick={() => navigate('/accounts/new')}>+ Yeni Cari</Button>
       </div>
 
-      {/* Filters */}
-      <div className="card p-4 mb-4">
-        <div className="flex flex-wrap gap-3 items-end">
-          {/* Search */}
-          <div className="flex-1 min-w-[200px]">
-            <label className="flbl">Ara</label>
-            <div className="flex gap-2">
-              <input className="inp flex-1" value={searchInput} placeholder="Ünvan, kod, vergi no, e-posta..."
-                onChange={e => setSearchInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSearch()} />
-              <button onClick={handleSearch} className="px-3 py-2 rounded-xl"
-                style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-                <Search size={14} style={{ color: 'var(--text-s)' }} />
-              </button>
-            </div>
-          </div>
-          {/* Type */}
-          <div style={{ minWidth: 140 }}>
-            <label className="flbl">Tip</label>
-            <select className="inp" value={accountType} onChange={e => { setAccountType(e.target.value); setPage(1) }}>
-              {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+      <DataGrid<CurrentAccount>
+        gridId="accounts"
+        views
+        grid={grid}
+        columns={columns}
+        rows={accounts}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        onRowClick={a => navigate(`/accounts/${a.id}`)}
+        empty="Cari bulunamadı."
+        search={{ placeholder: 'Ünvan, kod, vergi no, e-posta…' }}
+        minWidth={1060}
+        filterLeading={
+          <>
+            <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={accountType} aria-label="Tip"
+              onChange={e => setNamed('accountType', e.target.value)}>
+              {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.value ? t.label : 'Tip: Tümü'}</option>)}
             </select>
-          </div>
-          {/* Owner */}
-          <div style={{ minWidth: 130 }}>
-            <label className="flbl">Sahip</label>
-            <select className="inp" value={ownerType} onChange={e => { setOwnerType(e.target.value); setPage(1) }}>
-              <option value="">Tümü</option>
+            <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={ownerType} aria-label="Sahip"
+              onChange={e => setNamed('ownerType', e.target.value)}>
+              <option value="">Sahip: Tümü</option>
               <option value="external">Harici Cari</option>
               <option value="member">Üye (cüzdan)</option>
             </select>
-          </div>
-          {/* Group */}
-          <div style={{ minWidth: 160 }}>
-            <label className="flbl">Grup</label>
-            <select className="inp" value={groupId} onChange={e => { setGroupId(e.target.value); setPage(1) }}>
+            <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={groupId} aria-label="Grup"
+              onChange={e => setNamed('groupId', e.target.value)}>
               <option value="">Tüm Gruplar</option>
               {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
-          </div>
-          {/* Status */}
-          <div style={{ minWidth: 120 }}>
-            <label className="flbl">Durum</label>
-            <select className="inp" value={isActive} onChange={e => { setIsActive(e.target.value); setPage(1) }}>
-              <option value="">Tümü</option>
+            <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={isActive} aria-label="Durum"
+              onChange={e => setNamed('isActive', e.target.value)}>
+              <option value="">Durum: Tümü</option>
               <option value="true">Aktif</option>
               <option value="false">Pasif</option>
             </select>
-          </div>
-          {(accountType || ownerType || groupId || isActive || search) && (
-            <button onClick={resetFilters} className="text-xs px-3 py-2 rounded-xl" style={{ color: 'var(--text-s)', border: '1px solid var(--border)' }}>
-              Sıfırla
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'ÜNVAN', 'TİP', 'GRUP', 'VERGİ NO', 'ŞEHİR', 'DURUM', ''].map(h => (
-                <th key={h} className={cn('px-4 py-3 text-xs font-semibold', h === '' ? 'w-10' : 'text-left')} style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
-            )}
-            {!isLoading && accounts.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Cari bulunamadı.</td></tr>
-            )}
-            {accounts.map(a => {
-              const typeInfo = TYPE_BADGE[a.accountType]
-              return (
-                <tr key={a.id}
-                  onClick={() => navigate(`/accounts/${a.id}`)}
-                  className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                  style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3">
-                    <code className="text-xs px-2 py-0.5 rounded-md font-mono" style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>{a.code}</code>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div>
-                      <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{a.title}</span>
-                      {a.ownerType === 'member' && (
-                        <span className="text-xs font-medium px-1.5 py-0.5 rounded-full ml-1.5" style={{ color: 'var(--brand)', background: 'var(--brand)18' }}>Üye</span>
-                      )}
-                      {a.contactName && <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>{a.contactName}</p>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full"
-                      style={{ color: typeInfo?.color ?? 'var(--text-m)', background: `${typeInfo?.color ?? '#888'}18` }}>
-                      {typeInfo?.label ?? a.accountType}
-                    </span>
-                    {a.supplierKind === 'marketplace' && (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full ml-1.5" style={{ color: '#0ea5e9', background: '#0ea5e918' }}>Pazaryeri</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm" style={{ color: 'var(--text-s)' }}>{a.groupName ?? '—'}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm font-mono" style={{ color: 'var(--text-m)' }}>{a.taxNumber ?? '—'}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm" style={{ color: 'var(--text-s)' }}>{a.city ?? '—'}</span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <Badge variant={a.isActive ? 'success' : 'neutral'}>{a.isActive ? 'Aktif' : 'Pasif'}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <ChevronRight size={14} style={{ color: 'var(--text-s)' }} />
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-3">
-          <p className="text-xs" style={{ color: 'var(--text-s)' }}>
-            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, totalCount)} / {totalCount}
-          </p>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPage(1)} disabled={page === 1} className="px-2 py-1 rounded-lg text-xs disabled:opacity-40" style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>«</button>
-            <button onClick={() => setPage(p => p - 1)} disabled={page === 1} className="px-2 py-1.5 rounded-lg text-xs disabled:opacity-40" style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>‹ Önceki</button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
-              .reduce<(number | '…')[]>((acc, p, i, arr) => {
-                if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('…')
-                acc.push(p)
-                return acc
-              }, [])
-              .map((p, i) => p === '…'
-                ? <span key={`e${i}`} className="px-1 text-xs" style={{ color: 'var(--text-s)' }}>…</span>
-                : <button key={p} onClick={() => setPage(p as number)}
-                    className={cn('w-7 h-7 rounded-lg text-xs font-medium', page === p ? 'bg-[var(--brand)] text-white' : '')}
-                    style={page !== p ? { border: '1px solid var(--border)', color: 'var(--text)' } : {}}>
-                    {p}
-                  </button>
-              )}
-            <button onClick={() => setPage(p => p + 1)} disabled={page === totalPages} className="px-2 py-1.5 rounded-lg text-xs disabled:opacity-40" style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Sonraki ›</button>
-            <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 rounded-lg text-xs disabled:opacity-40" style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>»</button>
-          </div>
-        </div>
-      )}
+          </>
+        }
+        export={{ endpoint: '/accounts/export', named, fallbackFileName: 'cari-hesaplar.xlsx' }}
+        compact={{
+          title: a => a.title,
+          subtitle: a => `${a.code}${a.groupName ? ` · ${a.groupName}` : ''}`,
+          right: a => a.city ?? '',
+          badge: a => <Badge variant={a.isActive ? 'success' : 'neutral'}>{a.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
+      />
     </div>
   )
 }

@@ -28,6 +28,8 @@ public static class TrackingOutboxGrid
         .Bool("hasTargets", o => o.TargetsJson != null)
         .Guid("firmPlatformId", o => o.FirmPlatformId)
         .Kanal(o => o.FirmPlatformId)   // Y3: kanal kapsamı kolonu (K2)
+        .Sort("lastError", o => o.LastError)
+        .Sort("targets", o => o.TargetsJson != null)
         .Sort("createdAt", o => o.CreatedAt)
         .Sort("occurredAt", o => o.OccurredAt)
         .Sort("processedAt", o => o.ProcessedAt)

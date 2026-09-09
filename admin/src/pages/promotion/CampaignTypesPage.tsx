@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 
 // Salt-okunur: kampanya TİP tanımları (definition.campaign_types) + parametre şablonları.
 // Tipler kod ile seed edilir (yeni tip = motor handler'ı gerektirir); bu ekran yalnız görüntüler.
@@ -38,6 +41,25 @@ interface CampaignType {
 }
 
 const tr = (m?: Record<string, string> | null) => m?.['tr'] ?? Object.values(m ?? {})[0] ?? ''
+
+/** DataGrid satırı — /promotion/campaign-types/grid: ayar ŞEMASI yok, yalnız alan SAYISI (ağır jsonb). */
+interface CampaignTypeRow {
+  id: string
+  code: string
+  nameI18n: Record<string, string>
+  descriptionI18n?: Record<string, string>
+  scope: string
+  handlerClass: string
+  requiresProducts: boolean
+  productPriceDisplay: boolean
+  isStackable: boolean
+  isActive: boolean
+  sortOrder: number
+  campaignCount: number
+  settingsFieldCount: number
+}
+
+interface Sayfali<T> { items: T[]; totalCount: number; page: number; pageSize: number }
 
 const SCOPE_LABEL: Record<string, string> = {
   cart: 'Sepet', product: 'Ürün', shipping: 'Kargo', member: 'Üye',
@@ -133,62 +155,104 @@ function TypeDetailModal({ type, onClose }: { type: CampaignType; onClose: () =>
 }
 
 export function CampaignTypesPage() {
-  const [selected, setSelected] = useState<CampaignType | null>(null)
-  const { data: types = [], isLoading } = useQuery<CampaignType[]>({
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (CampaignTypeGrid.Schema) + Excel + görünümler.
+  // ★ Ayrı uç: /promotion/campaign-types TAM liste + ayar şeması döner (kampanya listesi/detayı bunu
+  // bekler); bu ekran sayfalı /campaign-types/grid kullanır ve satırda yalnız alan SAYISI taşınır.
+  // Satır tıklanınca açılan parametre şablonu modalı şemayı TALEP ANINDA tam listeden çeker.
+  const [sp] = useSearchParams()
+  const activeOnly = sp.get('activeOnly') === 'true'
+  const grid = useGridState('campaign-types', { defaultPageSize: 30, defaultSort: 'sortOrder', defaultDir: 'asc' })
+  const [selectedCode, setSelectedCode] = useState<string | null>(null)
+
+  const { data, isLoading, isFetching, error: listError } = useQuery<Sayfali<CampaignTypeRow>>({
+    queryKey: ['campaign-types-grid', activeOnly, ...grid.queryKey],
+    queryFn: async () =>
+      (await api.get(`/promotion/campaign-types/grid?${grid.toParams({ activeOnly: activeOnly ? 'true' : undefined })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
+  })
+
+  // Modal için tam tanım (ayar şemasıyla) — yalnız bir satır seçilince istenir, sonra önbellekte kalır.
+  const { data: tamTipler = [] } = useQuery<CampaignType[]>({
     queryKey: ['campaign-types', 'all'],
     queryFn: async () => (await api.get('/promotion/campaign-types?activeOnly=false')).data.data,
+    enabled: selectedCode !== null,
+    staleTime: 5 * 60_000,
   })
+  const selected = selectedCode ? tamTipler.find(t => t.code === selectedCode) ?? null : null
+
+  const columns: GridColumn<CampaignTypeRow>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 170,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      filters: [{ field: 'handlerClass', label: 'Handler sınıfı', type: 'text' }],
+      cell: t => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{t.code}</code> },
+    { key: 'name', header: 'AD', priority: 1, frozen: true, sortable: true, minWidth: 220,
+      filter: { type: 'text', label: 'Ad' },
+      filters: [{ field: 'description', label: 'Açıklama', type: 'text' }],
+      cell: t => <span className="text-sm" style={{ color: 'var(--text)' }}>{tr(t.nameI18n)}</span> },
+    { key: 'scope', header: 'KAPSAM', priority: 1, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Kapsam', options: Object.entries(SCOPE_LABEL).map(([value, label]) => ({ value, label })) },
+      cell: t => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{SCOPE_LABEL[t.scope] ?? t.scope}</span> },
+    { key: 'settingsFieldCount', header: 'PARAMETRE', priority: 2, align: 'right',
+      cell: t => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{t.settingsFieldCount} alan</span> },
+    { key: 'campaignCount', header: 'KAMPANYA', priority: 2, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Kampanya sayısı' },
+      filters: [{ field: 'kullanimda', label: 'Kullanımda (kampanyası var)', type: 'boolean' }],
+      cell: t => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{t.campaignCount}</span> },
+    { key: 'requiresProducts', header: 'ÖZELLİK', priority: 2, sortable: true,
+      filter: { type: 'boolean', label: 'Ürün gerekir' },
+      filters: [
+        { field: 'productPriceDisplay', label: 'Kart fiyatını etkiler', type: 'boolean' },
+        { field: 'isStackable', label: 'Birleşebilir (stack)', type: 'boolean' }],
+      cell: t => <div className="flex flex-wrap gap-1">
+        {t.requiresProducts && <Badge variant="neutral">Ürün</Badge>}
+        {t.productPriceDisplay && <Badge variant="success">Kart fiyatı</Badge>}
+        {t.isStackable && <Badge variant="warning">Stack</Badge>}
+      </div> },
+    { key: 'sortOrder', header: 'SIRA', priority: 3, align: 'center', sortable: true, filter: { type: 'number', label: 'Sıra' },
+      cell: t => <span className="text-sm" style={{ color: 'var(--text-s)' }}>{t.sortOrder}</span> },
+    { key: 'isActive', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      filters: [{ field: 'createdAt', label: 'Oluşturma', type: 'date' }],
+      cell: t => <Badge variant={t.isActive ? 'success' : 'neutral'}>{t.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'detay', header: '', priority: 3, align: 'right', exportable: false,
+      cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
+  ]
 
   return (
     <div className="p-6">
       <div className="mb-4">
         <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Kampanya Tipleri</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
-          Tanımlı kampanya tipleri ve parametre şablonları (salt-okunur). {types.length} tip
+          Tanımlı kampanya tipleri ve parametre şablonları (salt-okunur). {(data?.totalCount ?? 0).toLocaleString('tr-TR')} tip
+          {grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}
         </p>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'AD', 'KAPSAM', 'PARAMETRE', 'ÖZELLİK', 'DURUM', ''].map(h => (
-                <th key={h} className={`px-4 py-3 text-xs font-semibold ${h === '' ? 'w-16' : 'text-left'}`}
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
-            )}
-            {!isLoading && types.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Kampanya tipi yok.</td></tr>
-            )}
-            {types.map(t => (
-              <tr key={t.id} onClick={() => setSelected(t)}
-                className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3"><code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{t.code}</code></td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text)' }}>{tr(t.nameI18n)}</td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>{SCOPE_LABEL[t.scope] ?? t.scope}</td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>{t.settingsSchema?.length ?? 0} alan</td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {t.requiresProducts && <Badge variant="neutral">Ürün</Badge>}
-                    {t.productPriceDisplay && <Badge variant="success">Kart fiyatı</Badge>}
-                    {t.isStackable && <Badge variant="warning">Stack</Badge>}
-                  </div>
-                </td>
-                <td className="px-4 py-3"><Badge variant={t.isActive ? 'success' : 'neutral'}>{t.isActive ? 'Aktif' : 'Pasif'}</Badge></td>
-                <td className="px-4 py-3 text-right"><span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid<CampaignTypeRow>
+        gridId="campaign-types"
+        views
+        grid={grid}
+        columns={columns}
+        rows={data?.items ?? []}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        onRowClick={t => setSelectedCode(t.code)}
+        empty="Kampanya tipi yok."
+        search={{ placeholder: 'Tip kodu veya adıyla ara…' }}
+        minWidth={1080}
+        export={{ endpoint: '/promotion/campaign-types/export', named: () => ({ activeOnly: activeOnly ? 'true' : undefined }), fallbackFileName: 'kampanya-tipleri.xlsx' }}
+        compact={{
+          title: t => tr(t.nameI18n),
+          subtitle: t => `${t.code} · ${SCOPE_LABEL[t.scope] ?? t.scope}`,
+          right: t => `${t.settingsFieldCount} alan`,
+          badge: t => <Badge variant={t.isActive ? 'success' : 'neutral'}>{t.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
+      />
 
-      {selected && <TypeDetailModal type={selected} onClose={() => setSelected(null)} />}
+      {selectedCode && selected && <TypeDetailModal type={selected} onClose={() => setSelectedCode(null)} />}
     </div>
   )
 }

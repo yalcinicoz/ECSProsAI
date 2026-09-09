@@ -1,3 +1,4 @@
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Shared.Kernel.Authorization;
 using ECSPros.Api.Authorization;
 using ECSPros.Cms.Application.Commands.CopyPageContent;
@@ -27,7 +28,8 @@ public class CmsController : ControllerBase
         _mediator = mediator;
     }
 
-    /// <summary>CMS sayfalarını listeler.</summary>
+    /// <summary>CMS sayfalarını TAM liste olarak döner — sayfa seçicileri (CMS detayı, sipariş
+    /// detayındaki sözleşme bağlantısı) bunu bekler. ⚠ Sayfalanmaz; liste EKRANI için /pages/grid.</summary>
     [HttpGet("pages")]
     public async Task<IActionResult> GetPages(
         [FromQuery] Guid? firmPlatformId,
@@ -37,6 +39,39 @@ public class CmsController : ControllerBase
     {
         var result = await _mediator.Send(new GetPagesQuery(firmPlatformId, activeOnly, pageType), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>İçerik sayfaları liste ekranı (DataGrid): sayfalı + f.* filtreleri + sort/dir.
+    /// Y3: kanal kapsamı LİSTEYE de uygulanır (kapsam dışı kanalın sayfası görünmez).</summary>
+    [HttpGet("pages/grid")]
+    public async Task<IActionResult> GetPagesGrid(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromQuery] Guid? firmPlatformId, [FromQuery] bool activeOnly = false,
+        [FromQuery] string? pageType = null, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        var kapsam = await kanalKapsami.KanallarAsync(Permissions.CmsView, ct);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, kapsam, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetPagesGridQuery(
+            new PageListFilters(firmPlatformId, activeOnly, pageType, search), grid.Page, grid.PageSize, kapsam, grid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>İçerik sayfalarını Excel'e aktarır (DataGrid). Y3: kapsam kullanıcının yetkisinden.</summary>
+    [HttpPost("pages/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportPages(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<CmsController> logger, CancellationToken ct)
+    {
+        var kapsam = await kanalKapsami.KanallarAsync(Permissions.CmsView, ct);
+        var filters = new PageListFilters(PageType: body.NamedValue("pageType"), Search: body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "cms-pages", "icerik-sayfalari", "İçerik Sayfaları",
+            ECSPros.Api.Grid.PageExportColumns.All,
+            max => _mediator.Send(new ExportPagesQuery(filters, body.ToGridRequest(kapsam), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>CMS sayfası detayını döner.</summary>

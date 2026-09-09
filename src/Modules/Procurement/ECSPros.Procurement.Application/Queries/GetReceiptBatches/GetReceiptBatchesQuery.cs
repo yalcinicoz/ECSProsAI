@@ -1,5 +1,6 @@
 using ECSPros.Procurement.Application.Services;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,9 @@ public record GetReceiptBatchesQuery(
     string? Status = null,
     string? Search = null,        // kod veya irsaliye no
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedResult<ReceiptBatchRowDto>>>;
+    int PageSize = 20,
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<ReceiptBatchRowDto>>>;
+    // Grid (2026-09-09, DataGrid): beyaz listeli f.* filtreleri + sort/dir (ReceiptBatchGrid.Schema)
 
 public record ReceiptBatchRowDto(
     Guid Id, string Code, Guid SupplierId, Guid WarehouseId, DateTime ReceivedAt,
@@ -22,17 +25,14 @@ public class GetReceiptBatchesQueryHandler(IProcurementDbContext db)
 {
     public async Task<Result<PagedResult<ReceiptBatchRowDto>>> Handle(GetReceiptBatchesQuery request, CancellationToken ct)
     {
-        var q = db.ReceiptBatches.AsNoTracking();
-        if (request.SupplierId.HasValue) q = q.Where(b => b.SupplierId == request.SupplierId.Value);
-        if (!string.IsNullOrWhiteSpace(request.Status)) q = q.Where(b => b.Status == request.Status);
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var s = request.Search.Trim().ToLower();
-            q = q.Where(b => b.Code.ToLower().Contains(s) || (b.DeliveryNoteNumber ?? "").ToLower().Contains(s));
-        }
+        // Adlandırılmış + grid filtreleri TEK yerden (liste ve Excel aynı sonucu verir).
+        var q = ReceiptBatchGrid.ApplyAll(
+            db.ReceiptBatches.AsNoTracking(),
+            new ReceiptBatchFilters(request.SupplierId, request.Status, request.Search),
+            request.Grid);
 
         var total = await q.CountAsync(ct);
-        var rows = await q.OrderByDescending(b => b.Code)
+        var rows = await ReceiptBatchGrid.Schema.ApplySort(q, request.Grid)
             .Skip((Math.Max(1, request.Page) - 1) * request.PageSize).Take(request.PageSize)
             .Select(b => new ReceiptBatchRowDto(
                 b.Id, b.Code, b.SupplierId, b.WarehouseId, b.ReceivedAt, b.PackageCount, b.DeliveryNoteNumber,

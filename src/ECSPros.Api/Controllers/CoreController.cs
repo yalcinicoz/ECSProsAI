@@ -1,3 +1,4 @@
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Api.Authorization;
 using ECSPros.Shared.Kernel.Authorization;
 using ECSPros.Core.Domain.Entities;
@@ -74,11 +75,46 @@ public class CoreController : ControllerBase
     }
 
     /// <summary>Platform tiplerini listeler (trendyol, hepsiburada, site vb.).</summary>
+    /// <summary>Platform tiplerini TAM liste olarak (ayar şeması + yeteneklerle) döner — Kanallar,
+    /// Firma detayı ve Pazaryerleri ekranları bunu bekler.
+    /// ⚠ Sayfalanmaz; liste EKRANI için /platform-types/grid kullanın.</summary>
     [HttpGet("platform-types")]
     public async Task<IActionResult> GetPlatformTypes([FromQuery] bool activeOnly = true, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new GetPlatformTypesQuery(activeOnly), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Platform tipleri liste ekranı (DataGrid): sayfalı + f.* filtreleri + sort/dir.
+    /// Satırda şema/yetenek JSON'u YOK — ayrıntı tam uçtan çekilir.</summary>
+    [HttpGet("platform-types/grid")]
+    public async Task<IActionResult> GetPlatformTypesGrid(
+        [FromQuery] bool activeOnly = false, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        // Platform TİPİ kanalın tanımıdır, kanala bağlı değil → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 30);
+        var result = await _mediator.Send(new ECSPros.Core.Application.Queries.GetPlatformTypes.GetPlatformTypesGridQuery(
+            new ECSPros.Core.Application.Queries.GetPlatformTypes.PlatformTypeFilters(activeOnly, search),
+            grid.Page, grid.PageSize, grid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Platform tiplerini Excel'e aktarır (DataGrid).</summary>
+    [HttpPost("platform-types/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportPlatformTypes(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<CoreController> logger, CancellationToken ct)
+    {
+        var filters = new ECSPros.Core.Application.Queries.GetPlatformTypes.PlatformTypeFilters(
+            body.NamedValue("activeOnly") == "true", body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "platform-types", "platform-tipleri", "Platform Tipleri",
+            ECSPros.Api.Grid.PlatformTypeExportColumns.All,
+            max => _mediator.Send(new ECSPros.Core.Application.Queries.GetPlatformTypes.ExportPlatformTypesQuery(
+                filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Yeni platform tipi oluşturur.</summary>
@@ -137,11 +173,45 @@ public class CoreController : ControllerBase
     }
 
     /// <summary>Entegrasyon servislerini listeler.</summary>
+    /// <summary>Servis kataloğunu TAM liste olarak (ayar şemasıyla) döner — firma entegrasyon formunun
+    /// dropdown'ı bunu bekler. ⚠ Sayfalanmaz; liste EKRANI için /integration-services/grid kullanın.</summary>
     [HttpGet("integration-services")]
     public async Task<IActionResult> GetIntegrationServices([FromQuery] string? serviceType = null, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new GetIntegrationServicesQuery(serviceType), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Servis kataloğu liste ekranı (DataGrid): sayfalı + f.* filtreleri + sort/dir.
+    /// Satırda şema JSON'u YOK, yalnız "şeması var" bayrağı.</summary>
+    [HttpGet("integration-services/grid")]
+    public async Task<IActionResult> GetIntegrationServicesGrid(
+        [FromQuery] string? serviceType = null, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        // Servis kataloğu definition şemasındadır, kanaldan bağımsızdır → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 30);
+        var result = await _mediator.Send(new ECSPros.Core.Application.Queries.GetIntegrationServices.GetIntegrationServicesGridQuery(
+            new ECSPros.Core.Application.Queries.GetIntegrationServices.IntegrationServiceFilters(serviceType, search),
+            grid.Page, grid.PageSize, grid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Servis kataloğunu Excel'e aktarır (DataGrid): named: serviceType.</summary>
+    [HttpPost("integration-services/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportIntegrationServices(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<CoreController> logger, CancellationToken ct)
+    {
+        var filters = new ECSPros.Core.Application.Queries.GetIntegrationServices.IntegrationServiceFilters(
+            body.NamedValue("serviceType"), body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "integration-services", "servis-katalogu", "Servis Kataloğu",
+            ECSPros.Api.Grid.IntegrationServiceExportColumns.All,
+            max => _mediator.Send(new ECSPros.Core.Application.Queries.GetIntegrationServices.ExportIntegrationServicesQuery(
+                filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Servis kataloğuna yeni servis tanımı ekler — yalnız platform yönetimi
@@ -236,11 +306,40 @@ public class CoreController : ControllerBase
     // ── Firmalar ───────────────────────────────────────────────────────────────
 
     /// <summary>Firma listesini döner.</summary>
+    /// <summary>Firmaları TAM liste olarak döner — birçok ekranın firma seçicisi bunu bekler.
+    /// ⚠ Sayfalanmaz; liste EKRANI için /firms/grid kullanın.</summary>
     [HttpGet("firms")]
     public async Task<IActionResult> GetFirms([FromQuery] bool activeOnly = false, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new GetFirmsQuery(activeOnly), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Firmalar liste ekranı (DataGrid): sayfalı + f.* filtreleri + sort/dir.</summary>
+    [HttpGet("firms/grid")]
+    public async Task<IActionResult> GetFirmsGrid([FromQuery] bool activeOnly = false, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        // Firma, kanalın ÜSTÜNDEKİ kavramdır (kanallar firmaya bağlı) → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetFirmsGridQuery(
+            new FirmFilters(activeOnly, search), grid.Page, grid.PageSize, grid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Firmaları Excel'e aktarır (DataGrid).</summary>
+    [HttpPost("firms/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportFirms(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<CoreController> logger, CancellationToken ct)
+    {
+        var filters = new FirmFilters(body.NamedValue("activeOnly") == "true", body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "firms", "firmalar", "Firmalar",
+            ECSPros.Api.Grid.FirmExportColumns.All,
+            max => _mediator.Send(new ExportFirmsQuery(filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Firma detayını döner (platformlar + entegrasyonlar dahil).</summary>

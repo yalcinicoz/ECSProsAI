@@ -131,6 +131,12 @@ export function QuotesPage() {
         fetching={isFetching}
         error={listError ? errText(listError) : null}
         empty="Teklif yok."
+        compact={{
+          title: q => q.quoteNumber,
+          subtitle: q => `Geçerlilik: ${new Date(q.validUntil).toLocaleDateString('tr-TR')}`,
+          right: q => `${q.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ${q.currencyCode === 'TRY' ? '₺' : q.currencyCode}`,
+          badge: q => { const [l, v] = DURUM[q.status] ?? [q.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> },
+        }}
       />
     </div>
   )

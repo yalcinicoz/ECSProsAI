@@ -19,6 +19,10 @@ public class CmsDbContext : DbContext, ICmsDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // DataGrid: jsonb sözlük alanlarında filtre/sıralama (GridJson.Text → jsonb_extract_path_text,
+        // yerleşik PG fonksiyonu). Şema değiştirmez, migration gerektirmez; kaydı olmayan DbContext'te
+        // i18n ad üzerinden filtre/sıralama SQL'e çevrilemez (2026-09-09'da Core'da bu yaşandı).
+        modelBuilder.HasDbFunction(ECSPros.Shared.Kernel.Grid.GridJson.TextMethod).HasName("jsonb_extract_path_text").IsBuiltIn();
         modelBuilder.HasDefaultSchema("cms");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CmsDbContext).Assembly);
         base.OnModelCreating(modelBuilder);

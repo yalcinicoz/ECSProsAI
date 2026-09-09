@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Storefront.Application.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,9 @@ public record GetContactMessagesQuery(
     int Page = 1,
     int PageSize = 20,
     // Y3 (K2): kullanıcının görebileceği kanallar; null = kısıt yok, boş = hiçbir kayıt.
-    IReadOnlyCollection<Guid>? KanalKisiti = null) : IRequest<Result<PagedResult<ContactMessageDto>>>;
+    IReadOnlyCollection<Guid>? KanalKisiti = null,
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<ContactMessageDto>>>;
+    // Grid (2026-09-09, DataGrid): beyaz listeli f.* filtreleri + sort/dir (ContactMessageGrid.Schema)
 
 public record ContactMessageDto(
     Guid Id,
@@ -33,30 +36,15 @@ public class GetContactMessagesQueryHandler(IStorefrontDbContext db)
     public async Task<Result<PagedResult<ContactMessageDto>>> Handle(
         GetContactMessagesQuery request, CancellationToken ct)
     {
-        var q = db.ContactMessages.AsNoTracking().AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(request.Status))
-            q = q.Where(m => m.Status == request.Status);
-        if (request.FirmPlatformId.HasValue)
-            q = q.Where(m => m.FirmPlatformId == request.FirmPlatformId.Value);
-        // Y3 (K2): kanal kapsamı — kullanıcının erişemediği kanalın mesajı listede görünmez.
-        if (request.KanalKisiti is not null)
-        {
-            var izinli = request.KanalKisiti.ToList();
-            q = q.Where(m => izinli.Contains(m.FirmPlatformId));
-        }
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var aranan = request.Search.Trim().ToLower();
-            q = q.Where(m =>
-                m.Name.ToLower().Contains(aranan) ||
-                m.Email.ToLower().Contains(aranan) ||
-                (m.Subject != null && m.Subject.ToLower().Contains(aranan)));
-        }
+        // Y3 kanal kapsamı + adlandırılmış + grid filtreleri TEK yerden (liste ve Excel aynı sonucu verir).
+        var q = ContactMessageGrid.ApplyAll(
+            db.ContactMessages.AsNoTracking(),
+            new ContactMessageFilters(request.Status, request.FirmPlatformId, request.Search),
+            request.Grid,
+            request.KanalKisiti ?? request.Grid?.KanalKisiti);
 
         var toplam = await q.CountAsync(ct);
-        var kayitlar = await q
-            .OrderByDescending(m => m.CreatedAt)
+        var kayitlar = await ContactMessageGrid.Schema.ApplySort(q, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(m => new ContactMessageDto(

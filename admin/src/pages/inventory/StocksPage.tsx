@@ -210,7 +210,7 @@ export function StocksPage() {
             </div>
           </div>
         </div>) },
-    { key: 'warehouse', header: 'DEPO', priority: 1, lockVisible: true, filter: { type: 'enum', label: 'Depo', field: 'warehouseId', options: warehouseOptions }, cell: s => <span className="text-sm" style={{ color: 'var(--text)' }}>{s.warehouseName}</span> },
+    { key: 'warehouse', header: 'DEPO', sortable: true, priority: 1, lockVisible: true, filter: { type: 'enum', label: 'Depo', field: 'warehouseId', options: warehouseOptions }, cell: s => <span className="text-sm" style={{ color: 'var(--text)' }}>{s.warehouseName}</span> },
     { key: 'section', header: 'KISIM', priority: 2, filter: { type: 'enum', label: 'Kısım', field: 'sectionId', options: sectionOptions.map(o => ({ value: o.id, label: o.label })) }, cell: s => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{s.sectionName ?? '—'}</span> },
     { key: 'bin', header: 'RAF', priority: 2, filter: { type: 'enum', label: 'Raf', field: 'binId', options: binOptions.map(o => ({ value: o.id, label: o.label })) }, cell: s => s.binCode
       ? <code className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>{s.binCode}</code>
@@ -294,6 +294,11 @@ export function StocksPage() {
         empty={filtreVar ? 'Stok kaydı bulunamadı.' : 'Ürün kodu/adı/barkod arayın veya bir depo seçin — sonuçlar burada listelenir.'}
         minWidth={760}
         export={{ endpoint: '/inventory/stocks/admin-list/export', named, fallbackFileName: 'stok.xlsx' }}
+        compact={{
+          title: r => r.productCode,
+          subtitle: r => `${r.warehouseName}${r.sectionName ? ` · ${r.sectionName}` : ''}${r.binCode ? ` · ${r.binCode}` : ''}`,
+          right: r => `${r.availableQuantity} / ${r.quantity}`,
+        }}
       />
 
       {/* Adjust Modal */}

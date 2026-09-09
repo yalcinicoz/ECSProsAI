@@ -174,6 +174,12 @@ export function GiftCardsPage() {
         search={{ placeholder: 'Kart kodu ara…' }}
         export={{ endpoint: '/orders/gift-cards/export', named: () => ({ status: tab || undefined }), fallbackFileName: 'hediye-kartlari.xlsx' }}
         views
+        compact={{
+          title: g => g.code,
+          subtitle: g => `${g.originalAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ${g.currencyCode} · ${new Date(g.validFrom).toLocaleDateString('tr-TR')}`,
+          right: g => `${g.remainingAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} kalan`,
+          badge: g => { const [l, v] = DURUM[g.status] ?? [g.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> },
+        }}
       />
       {creating && <YeniKartModal onClose={() => setCreating(false)} />}
     </div>

@@ -1,3 +1,4 @@
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Iam.Application.Services;
 using ECSPros.Shared.Kernel.Authorization;
 using ECSPros.Shared.Kernel.Common;
@@ -217,15 +218,17 @@ public record YetkiLogSatiri(
 public record GetYetkiLoglariQuery(
     DateTime? Baslangic = null, DateTime? Bitis = null, Guid? AktorId = null,
     Guid? HedefKullaniciId = null, Guid? HedefGrupId = null, string? Olay = null,
-    string? Arama = null, int Page = 1, int PageSize = 50)
+    string? Arama = null, int Page = 1, int PageSize = 50,
+    GridRequest? Grid = null)
     : IRequest<Result<PagedResult<YetkiLogSatiri>>>;
+    // Grid (2026-09-09, DataGrid): beyaz listeli f.* filtreleri + sort/dir (YetkiLogGrid.Schema)
 
 public class GetYetkiLoglariQueryHandler(IIamDbContext db)
     : IRequestHandler<GetYetkiLoglariQuery, Result<PagedResult<YetkiLogSatiri>>>
 {
     public async Task<Result<PagedResult<YetkiLogSatiri>>> Handle(GetYetkiLoglariQuery r, CancellationToken ct)
     {
-        var q = db.AuditLogs.AsNoTracking().Where(a => a.EntityType.StartsWith("yetki."));
+        var q = YetkiLogGrid.YalnizYetkiOlaylari(db.AuditLogs.AsNoTracking());
 
         if (r.Baslangic is { } b) q = q.Where(a => a.CreatedAt >= b);
         if (r.Bitis is { } s) q = q.Where(a => a.CreatedAt <= s);
@@ -235,11 +238,42 @@ public class GetYetkiLoglariQueryHandler(IIamDbContext db)
         if (r.HedefKullaniciId is { } hk) q = q.Where(a => a.EntityId == hk);
         if (r.HedefGrupId is { } hg) q = q.Where(a => a.EntityId == hg);
 
+        // 2026-09-09 DÜZELTME: arama artık SUNUCUDA ve sayımla tutarlı.
+        // Eskiden özet metni BELLEKTE, sayfalamadan SONRA süzülüyordu; toplam filtresiz sayıldığı için
+        // sayfalama bozuluyordu (eski bir kaydı arayınca "N kayıt" yazıp boş sayfa gösteriyordu).
+        // Özet metni Context jsonb'sinde Dictionary<string,object> olarak durduğu için SQL'e çevrilemez;
+        // bu yüzden terim ÖNCE kullanıcı/grup/yetki kayıtlarına çözülüp DB'de kimlik üzerinden süzülür.
+        if (!string.IsNullOrWhiteSpace(r.Arama))
+        {
+            var terim = r.Arama.Trim().ToLower();
+
+            var eslesenKullanicilar = await db.Users.AsNoTracking()
+                .Where(u => (u.FirstName + " " + u.LastName).ToLower().Contains(terim)
+                    || u.Email.ToLower().Contains(terim) || u.Username.ToLower().Contains(terim))
+                .Select(u => u.Id).ToListAsync(ct);
+            var eslesenGruplar = await db.Roles.AsNoTracking()
+                // ⚠ Sözlük indeksleyicisi/ContainsKey SQL'e ÇEVRİLMEZ; jsonb için GridJson.Text (DbFunction) şart.
+                .Where(g => g.Code.ToLower().Contains(terim)
+                    || GridJson.Text(g.NameI18n, "tr")!.ToLower().Contains(terim))
+                .Select(g => g.Id).ToListAsync(ct);
+            var eslesenYetkiler = await db.Permissions.AsNoTracking()
+                .Where(p => p.Code.ToLower().Contains(terim))
+                .Select(p => p.Id).ToListAsync(ct);
+
+            var hedefIdEslesme = eslesenKullanicilar.Concat(eslesenGruplar).Concat(eslesenYetkiler).Distinct().ToList();
+            q = q.Where(a => a.EntityType.ToLower().Contains(terim)
+                || (a.UserId != null && eslesenKullanicilar.Contains(a.UserId.Value))
+                || hedefIdEslesme.Contains(a.EntityId));
+        }
+
+        // Grid filtreleri (başlık süzgeçleri) — sayım ve sayfalama aynı küme üzerinde.
+        q = YetkiLogGrid.Schema.ApplyFilters(q, r.Grid);
+
         var toplam = await q.CountAsync(ct);
         var sayfa = Math.Max(1, r.Page);
         var boy = Math.Clamp(r.PageSize, 1, 200);
 
-        var ham = await q.OrderByDescending(a => a.CreatedAt)
+        var ham = await YetkiLogGrid.Schema.ApplySort(q, r.Grid)
             .Skip((sayfa - 1) * boy).Take(boy)
             .Select(a => new { a.Id, a.CreatedAt, a.EntityType, a.UserId, a.EntityId, a.Context, a.OldValues, a.NewValues, a.IpAddress })
             .ToListAsync(ct);
@@ -276,13 +310,7 @@ public class GetYetkiLoglariQueryHandler(IIamDbContext db)
                 Metin(a.OldValues), Metin(a.NewValues), a.IpAddress);
         }).ToList();
 
-        // Arama: özet metninde (bellekte — sayfa başına en çok 200 satır)
-        if (!string.IsNullOrWhiteSpace(r.Arama))
-        {
-            var terim = r.Arama.Trim().ToLowerInvariant();
-            satirlar = satirlar.Where(x => x.Ozet.ToLowerInvariant().Contains(terim)).ToList();
-        }
-
+        // (Arama artık yukarıda, SUNUCUDA uygulanıyor — burada bellekte tekrar süzmek sayfalamayı bozardı.)
         return Result.Success(new PagedResult<YetkiLogSatiri>(satirlar, toplam, sayfa, boy));
     }
 }

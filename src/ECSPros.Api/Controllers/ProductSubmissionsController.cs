@@ -1,3 +1,4 @@
+using ECSPros.Shared.Kernel.Grid;
 using System.Security.Claims;
 using ECSPros.Api.Authorization;
 using ECSPros.Catalog.Application.Commands.ApproveProductSubmission;
@@ -27,13 +28,36 @@ public class ProductSubmissionsController : ControllerBase
     }
 
     /// <summary>Gönderim listesi (durum/tedarikçi filtreli, sayfalı).</summary>
+    /// <summary>Gönderim listesi (DataGrid: f.* filtreleri + sort/dir + arama).</summary>
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] string? status, [FromQuery] Guid? supplierId,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        [FromQuery] string? search = null, CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetAdminProductSubmissionsQuery(status, supplierId, page, pageSize), ct);
+        // Gönderim tedarikçiye bağlıdır, kanala değil → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetAdminProductSubmissionsQuery(
+            status, supplierId, grid.Page, grid.PageSize, search, grid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Gönderimleri Excel'e aktarır (DataGrid): named: status/supplierId.</summary>
+    [HttpPost("export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> Export(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<ProductSubmissionsController> logger, CancellationToken ct)
+    {
+        var tedarikci = body.NamedValue("supplierId");
+        var filters = new ProductSubmissionFilters(
+            body.NamedValue("status"),
+            Guid.TryParse(tedarikci, out var sid) ? sid : null,
+            body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "product-submissions", "urun-gonderimleri", "Ürün Gönderimleri",
+            ECSPros.Api.Grid.ProductSubmissionExportColumns.All,
+            max => _mediator.Send(new ExportProductSubmissionsQuery(filters, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Gönderim detayı — tam ham gövde (inceleme için).</summary>

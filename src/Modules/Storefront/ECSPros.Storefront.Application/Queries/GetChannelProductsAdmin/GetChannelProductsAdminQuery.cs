@@ -4,6 +4,7 @@ using ECSPros.Shared.Contracts.Channels;
 using ECSPros.Storefront.Application.Services.ChannelScoping;
 using ECSPros.Shared.Kernel.Common;
 using ECSPros.Storefront.Application.Services;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,7 +21,8 @@ public record GetChannelProductsAdminQuery(
     string? Status = null,   // all | selected | excluded | stopped
     int Page = 1,
     int PageSize = 30,
-    IReadOnlyCollection<Guid>? RestrictToProductIds = null   // F3: listeleme durumu/sebep filtresi (controller çözer)
+    IReadOnlyCollection<Guid>? RestrictToProductIds = null,  // F3: listeleme durumu/sebep filtresi (controller çözer)
+    GridRequest? Grid = null                                 // 2026-09-09 DataGrid: ürün alanlarında f.* + sort/dir
     ) : IRequest<Result<PagedResult<ChannelProductAdminItemDto>>>;
 
 public record ChannelProductAdminItemDto(
@@ -31,7 +33,12 @@ public record ChannelProductAdminItemDto(
     bool IsSelected,                  // opt-out: satır yok VEYA IsActive=true
     DateTime? SaleStoppedFrom,
     DateTime? SaleStoppedUntil,
-    bool IsStoppedNow);
+    bool IsStoppedNow,
+    // 2026-09-09 (DataGrid): kolon olarak gösterilen/sıralanan ürün alanları — filtreleri "boş hücre"
+    // göstermek yerine gerçek değerle karşılansın diye eklendi (additive).
+    string SourceType = "own",
+    decimal BasePrice = 0,
+    int VariantCount = 0);
 
 public class GetChannelProductsAdminQueryHandler(IStorefrontDbContext sfDb, ICatalogDbContext catDb, IChannelCapabilityResolver capabilityResolver)
     : IRequestHandler<GetChannelProductsAdminQuery, Result<PagedResult<ChannelProductAdminItemDto>>>
@@ -112,13 +119,16 @@ public class GetChannelProductsAdminQueryHandler(IStorefrontDbContext sfDb, ICat
             baseQuery = baseQuery.Where(p => allow.Contains(p.Id));
         }
 
+        // DataGrid: ÜRÜN alanlarında başlık filtreleri + sıralama (kanal durumu bellekte çözüldüğü için
+        // şemada yok — bkz. ChannelProductGrid açıklaması). Sayım filtrelerden SONRA alınır.
+        baseQuery = ChannelProductGrid.Schema.ApplyFilters(baseQuery, request.Grid);
+
         var total = await baseQuery.CountAsync(ct);
 
-        var paged = await baseQuery
-            .OrderBy(p => p.Code)
+        var paged = await ChannelProductGrid.Schema.ApplySort(baseQuery, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(p => new { p.Id, p.Code, p.NameI18n })
+            .Select(p => new { p.Id, p.Code, p.NameI18n, p.SourceType, p.BasePrice, VariantCount = p.Variants.Count(v => !v.IsDeleted) })
             .ToListAsync(ct);
 
         var productIds = paged.Select(p => p.Id).ToList();
@@ -137,7 +147,8 @@ public class GetChannelProductsAdminQueryHandler(IStorefrontDbContext sfDb, ICat
                 images.TryGetValue(p.Id, out var fn) ? cdnBase + fn : null,
                 Selected(p.Id),
                 st?.SaleStoppedFrom, st?.SaleStoppedUntil,
-                StoppedNow(p.Id));
+                StoppedNow(p.Id),
+                p.SourceType, p.BasePrice, p.VariantCount);
         }).ToList();
 
         return Result.Success(new PagedResult<ChannelProductAdminItemDto>(

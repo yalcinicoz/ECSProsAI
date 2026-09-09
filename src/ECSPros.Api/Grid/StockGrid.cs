@@ -28,6 +28,7 @@ public static class StockGrid
         .Guid("sectionId", s => s.SectionId)
         .Guid("binId", s => s.BinId)
         .Guid("variantId", s => s.VariantId)
+        .Sort("warehouse", s => GridJson.Text(s.Warehouse.NameI18n, "tr"))
         .Sort("quantity", s => s.Quantity)
         .Sort("reserved", s => s.ReservedQuantity)
         .Sort("available", s => s.Quantity - s.ReservedQuantity)

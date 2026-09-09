@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 import { useFirmPlatforms } from '@/pages/cms/cmsPageShared'
 
@@ -96,11 +99,12 @@ function MessageModal({ msg, platformName, onClose }: {
 }
 
 export function ContactMessagesPage() {
-  const [tab, setTab] = useState('new')
-  const [platformId, setPlatformId] = useState('')
-  const [search, setSearch] = useState('')
-  const [appliedSearch, setAppliedSearch] = useState('')
-  const [page, setPage] = useState(1)
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (ContactMessageGrid.Schema) + Excel + görünümler.
+  // Y3: kanal kapsamı sunucuda kullanıcının yetkisinden çözülür.
+  const [sp] = useSearchParams()
+  const tab = sp.get('status') ?? 'new'
+  const platformId = sp.get('firmPlatformId') ?? ''
+  const grid = useGridState('contact-messages', { defaultPageSize: 20, defaultSort: 'createdAt', defaultDir: 'desc' })
   const [selected, setSelected] = useState<ContactMessage | null>(null)
 
   const queryClient = useQueryClient()
@@ -108,15 +112,12 @@ export function ContactMessagesPage() {
   const platformName = (pid?: string) =>
     platforms.find(p => p.id === pid)?.nameI18n?.['tr'] ?? '—'
 
-  const { data, isLoading } = useQuery<PagedResult<ContactMessage>>({
-    queryKey: ['contact-messages', tab, platformId, appliedSearch, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: '20' })
-      if (tab) params.set('status', tab)
-      if (platformId) params.set('firmPlatformId', platformId)
-      if (appliedSearch) params.set('search', appliedSearch)
-      return (await api.get(`/contact-messages?${params}`)).data.data
-    },
+  const { data, isLoading, isFetching, error: listError } = useQuery<PagedResult<ContactMessage>>({
+    queryKey: ['contact-messages', tab, platformId, ...grid.queryKey],
+    queryFn: async () =>
+      (await api.get(`/contact-messages?${grid.toParams({ status: tab || undefined, firmPlatformId: platformId || undefined })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   // Gelen kutusu davranışı: yeni mesaj açılınca otomatik okundu olur.
@@ -131,7 +132,35 @@ export function ContactMessagesPage() {
   }
 
   const messages = data?.items ?? []
-  const totalPages = Math.ceil((data?.totalCount ?? 0) / 20)
+
+  const columns: GridColumn<ContactMessage>[] = [
+    { key: 'createdAt', header: 'TARİH', priority: 1, frozen: true, sortable: true, minWidth: 150,
+      filter: { type: 'date', label: 'Tarih', quick: true },
+      cell: m => <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-s)' }}>
+        {new Date(m.createdAt).toLocaleString('tr-TR')}</span> },
+    { key: 'name', header: 'GÖNDEREN', priority: 1, lockVisible: true, frozen: true, sortable: true,
+      filter: { type: 'text', label: 'Gönderen' },
+      filters: [{ field: 'isMember', label: 'Üye mesajı', type: 'boolean' }],
+      cell: m => <span className={cn('text-sm', m.status === 'new' && 'font-semibold')} style={{ color: 'var(--text)' }}>{m.name}</span> },
+    { key: 'email', header: 'E-POSTA', priority: 2, sortable: true, filter: { type: 'text', label: 'E-posta' },
+      filters: [{ field: 'phone', label: 'Telefon', type: 'text' }, { field: 'hasPhone', label: 'Telefonu olan', type: 'boolean' }],
+      cell: m => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{m.email}</span> },
+    { key: 'subject', header: 'KONU', priority: 1, sortable: true, minWidth: 240,
+      filter: { type: 'text', label: 'Konu' },
+      filters: [{ field: 'message', label: 'Mesaj metni', type: 'text' }],
+      cell: m => <span className={cn('text-sm truncate block', m.status === 'new' && 'font-medium')}
+        style={{ color: 'var(--text)', maxWidth: 320 }}>
+        {m.subject?.trim() || <span style={{ color: 'var(--text-s)' }}>{m.message.slice(0, 60)}…</span>}</span> },
+    { key: 'firmPlatformId', header: 'PLATFORM', priority: 2, sortable: false,
+      filter: { type: 'enum', label: 'Platform', options: platforms.map(p => ({ value: p.id, label: p.nameI18n?.['tr'] ?? p.id })) },
+      cell: m => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{platformName(m.firmPlatformId)}</span> },
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: [
+        { value: 'new', label: 'Yeni' }, { value: 'read', label: 'Okundu' },
+        { value: 'answered', label: 'Yanıtlandı' }, { value: 'archived', label: 'Arşiv' }] },
+      cell: m => <Badge variant={m.status === 'new' ? 'warning' : 'neutral'}>
+        {m.status === 'new' ? 'Yeni' : m.status === 'answered' ? 'Yanıtlandı' : m.status === 'archived' ? 'Arşiv' : 'Okundu'}</Badge> },
+  ]
 
   return (
     <div className="p-6">
@@ -139,11 +168,12 @@ export function ContactMessagesPage() {
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>İletişim Mesajları</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
-            {data?.totalCount ?? 0} kayıt — site iletişim formundan gelen mesajlar
+            {(data?.totalCount ?? 0).toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''} — site iletişim formundan gelen mesajlar
           </p>
         </div>
-        <select className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 180 }}
-          value={platformId} onChange={e => { setPlatformId(e.target.value); setPage(1) }}>
+        <select className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 180 }} aria-label="Platform"
+          value={platformId}
+          onChange={e => grid.mutate(n => { if (e.target.value) n.set('firmPlatformId', e.target.value); else n.delete('firmPlatformId') })}>
           <option value="">Tüm platformlar</option>
           {platforms.map(p => (
             <option key={p.id} value={p.id}>{p.nameI18n?.['tr'] ?? p.id}</option>
@@ -154,76 +184,32 @@ export function ContactMessagesPage() {
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
         {TABS.map(t => (
           <button key={t.key} className={cn('stab', tab === t.key && 'active')}
-            onClick={() => { setTab(t.key); setPage(1) }}>{t.label}</button>
+            onClick={() => grid.mutate(n => { if (t.key) n.set('status', t.key); else n.delete('status') })}>{t.label}</button>
         ))}
       </div>
 
-      <div className="flex items-center gap-2 mb-4">
-        <input className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 220 }}
-          placeholder="Ad, e-posta veya konu ara…" value={search}
-          onChange={e => setSearch(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { setAppliedSearch(search.trim()); setPage(1) } }} />
-        <button onClick={() => { setAppliedSearch(search.trim()); setPage(1) }}
-          className="px-3 py-1.5 rounded-lg text-sm"
-          style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Ara</button>
-      </div>
-
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['TARİH', 'GÖNDEREN', 'E-POSTA', 'KONU', 'PLATFORM', 'DURUM'].map(h => (
-                <th key={h} className="px-4 py-3 text-xs font-semibold text-left"
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
-            )}
-            {!isLoading && messages.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                {tab === 'new' ? 'Okunmamış mesaj yok.' : 'Mesaj yok.'}
-              </td></tr>
-            )}
-            {messages.map(m => (
-              <tr key={m.id} onClick={() => openMessage(m)}
-                className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: 'var(--text-s)' }}>
-                  {new Date(m.createdAt).toLocaleString('tr-TR')}
-                </td>
-                <td className={cn('px-4 py-3 text-sm', m.status === 'new' && 'font-semibold')}
-                  style={{ color: 'var(--text)' }}>{m.name}</td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>{m.email}</td>
-                <td className={cn('px-4 py-3 text-sm max-w-xs truncate', m.status === 'new' && 'font-medium')}
-                  style={{ color: 'var(--text)' }}>
-                  {m.subject?.trim() || <span style={{ color: 'var(--text-s)' }}>{m.message.slice(0, 60)}…</span>}
-                </td>
-                <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-s)' }}>{platformName(m.firmPlatformId)}</td>
-                <td className="px-4 py-3">
-                  <Badge variant={m.status === 'new' ? 'warning' : 'neutral'}>
-                    {m.status === 'new' ? 'Yeni' : 'Okundu'}
-                  </Badge>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>← Önceki</button>
-          <span className="text-sm" style={{ color: 'var(--text-s)' }}>{page} / {totalPages}</span>
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Sonraki →</button>
-        </div>
-      )}
+      <DataGrid<ContactMessage>
+        gridId="contact-messages"
+        views
+        grid={grid}
+        columns={columns}
+        rows={messages}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        onRowClick={openMessage}
+        empty={tab === 'new' ? 'Okunmamış mesaj yok.' : 'Mesaj yok.'}
+        search={{ placeholder: 'Ad, e-posta veya konu ara…' }}
+        minWidth={1000}
+        export={{ endpoint: '/contact-messages/export', named: () => ({ status: tab || undefined }), fallbackFileName: 'iletisim-mesajlari.xlsx' }}
+        compact={{
+          title: m => m.name,
+          subtitle: m => m.subject?.trim() || m.message.slice(0, 60),
+          right: m => new Date(m.createdAt).toLocaleDateString('tr-TR'),
+          badge: m => <Badge variant={m.status === 'new' ? 'warning' : 'neutral'}>{m.status === 'new' ? 'Yeni' : 'Okundu'}</Badge>,
+        }}
+      />
 
       {selected && (
         <MessageModal

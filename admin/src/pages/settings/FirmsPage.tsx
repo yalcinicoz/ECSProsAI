@@ -1,19 +1,27 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
-import { Plus, ChevronRight } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Plus } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { I18nField } from '@/components/ui/I18nField'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { useLanguages } from '@/hooks/useLanguages'
 import { FL } from '@/lib/field-labels'
 import { buildI18nValues } from '@/lib/i18n-helper'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+/** DataGrid satırı — /core/firms/grid (platform sayısı da gelir). */
+export interface FirmRow extends Firm {
+  platformCount: number
+}
+
+interface PagedResult<T> { items: T[]; totalCount: number; page: number; pageSize: number }
 
 export interface Firm {
   id: string
@@ -58,17 +66,23 @@ export function FirmsPage() {
   const queryClient = useQueryClient()
   const { data: languages = [], isLoading: langsLoading } = useLanguages()
 
+  // DataGrid (2026-09-09): sunucu filtre/sıralama/arama (FirmGrid.Schema) + Excel + görünümler.
+  // ★ Ayrı uç: /core/firms TÜM firmaları döner (firma seçicileri); ekran /firms/grid kullanır.
+  const [sp] = useSearchParams()
+  const activeOnly = sp.get('activeOnly') === 'true'
+  const grid = useGridState('firms', { defaultPageSize: 20, defaultSort: 'code', defaultDir: 'asc' })
   const [createOpen, setCreateOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<Firm | null>(null)
+  const [editTarget, setEditTarget] = useState<FirmRow | null>(null)
   const [form, setForm] = useState<FirmForm>(emptyForm())
 
-  const { data: firms = [], isLoading } = useQuery<Firm[]>({
-    queryKey: ['firms'],
-    queryFn: async () => {
-      const { data } = await api.get('/core/firms?activeOnly=false')
-      return data.data
-    },
+  const { data, isLoading, isFetching, error: listError } = useQuery<PagedResult<FirmRow>>({
+    queryKey: ['firms-grid', activeOnly, ...grid.queryKey],
+    queryFn: async () =>
+      (await api.get(`/core/firms/grid?${grid.toParams({ activeOnly: activeOnly ? 'true' : undefined })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
+  const firms = data?.items ?? []
 
   const sourceLang = languages.find(l => l.isDefault)?.code ?? 'tr'
   const i18nValues = useMemo(() => buildI18nValues(form.nameI18n, languages), [form.nameI18n, languages])
@@ -118,7 +132,7 @@ export function FirmsPage() {
     setCreateOpen(true)
   }
 
-  function openEdit(f: Firm, e: React.MouseEvent) {
+  function openEdit(f: FirmRow, e: React.MouseEvent) {
     e.stopPropagation()
     setEditTarget(f)
     setForm({
@@ -134,7 +148,7 @@ export function FirmsPage() {
     })
   }
 
-  if (isLoading || langsLoading) return <PageSpinner />
+  if (langsLoading) return <PageSpinner />   // liste yüklemesi DataGrid'in kendi göstergesinde
 
   const formBody = (isEdit: boolean) => (
     <div className="space-y-4">
@@ -205,74 +219,66 @@ export function FirmsPage() {
     </div>
   )
 
+  const columns: GridColumn<FirmRow>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 120,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      cell: f => <code className="text-xs px-2 py-0.5 rounded-md font-mono"
+        style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>{f.code}</code> },
+    { key: 'name', header: 'AD', priority: 1, frozen: true, sortable: true, minWidth: 220,
+      filter: { type: 'text', label: 'Ad' },
+      cell: f => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{getFirmName(f)}</span> },
+    { key: 'taxNumber', header: 'VERGİ NO', priority: 1, sortable: true, filter: { type: 'text', label: 'Vergi no' },
+      filters: [{ field: 'taxOffice', label: 'Vergi dairesi', type: 'text' }],
+      cell: f => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{f.taxNumber || '—'}</span> },
+    { key: 'phone', header: 'TELEFON', priority: 2, sortable: true, filter: { type: 'text', label: 'Telefon' },
+      filters: [{ field: 'email', label: 'E-posta', type: 'text' }, { field: 'address', label: 'Adres', type: 'text' }],
+      cell: f => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{f.phone || '—'}</span> },
+    { key: 'platformCount', header: 'KANAL', priority: 2, align: 'center', sortable: true, filter: { type: 'number', label: 'Kanal sayısı' },
+      cell: f => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{f.platformCount}</span> },
+    { key: 'isMain', header: 'ANA', priority: 2, align: 'center', sortable: true, filter: { type: 'boolean', label: 'Ana firma' },
+      cell: f => f.isMain ? <Badge variant="warning">Ana</Badge> : <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span> },
+    { key: 'isActive', header: 'DURUM', priority: 1, lockVisible: true, align: 'center', sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      filters: [{ field: 'createdAt', label: 'Oluşturma', type: 'date' }],
+      cell: f => <Badge variant={f.isActive ? 'success' : 'neutral'}>{f.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'actions', header: '', priority: 3, align: 'right', exportable: false, stopRowClick: true,
+      cell: f => <button className="text-xs px-2 py-1 rounded-lg transition-colors"
+        style={{ color: 'var(--brand)', background: 'var(--surface2)', border: '1px solid var(--border)' }}
+        onClick={e => openEdit(f, e)}>Düzenle</button> },
+  ]
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Firmalar</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{firms.length} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{(data?.totalCount ?? 0).toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}</p>
         </div>
         <Button size="sm" onClick={openCreate}><Plus size={14} /> Yeni Firma</Button>
       </div>
 
-      <div className="card overflow-hidden p-0">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'AD', 'VERGİ NO', 'TELEFON', 'ANA', 'DURUM', ''].map(h => (
-                <th key={h} className={cn('px-4 py-3 text-xs font-semibold tracking-wider', h === '' ? 'w-32' : 'text-left')}
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {firms.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Firma bulunamadı.
-              </td></tr>
-            )}
-            {firms.map(f => (
-              <tr key={f.id}
-                onClick={() => navigate(`/settings/firms/${f.id}`)}
-                className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3">
-                  <code className="text-xs px-2 py-0.5 rounded-md font-mono"
-                    style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>
-                    {f.code}
-                  </code>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{getFirmName(f)}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm" style={{ color: 'var(--text-m)' }}>{f.taxNumber || '—'}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm" style={{ color: 'var(--text-m)' }}>{f.phone || '—'}</span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {f.isMain && <Badge variant="warning">Ana</Badge>}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge variant={f.isActive ? 'success' : 'neutral'}>{f.isActive ? 'Aktif' : 'Pasif'}</Badge>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      className="text-xs px-2 py-1 rounded-lg transition-colors"
-                      style={{ color: 'var(--brand)', background: 'var(--surface2)', border: '1px solid var(--border)' }}
-                      onClick={e => openEdit(f, e)}>
-                      Düzenle
-                    </button>
-                    <ChevronRight size={14} style={{ color: 'var(--text-s)' }} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid<FirmRow>
+        gridId="firms"
+        views
+        grid={grid}
+        columns={columns}
+        rows={firms}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
+        onRowClick={f => navigate(`/settings/firms/${f.id}`)}
+        empty="Firma bulunamadı."
+        search={{ placeholder: 'Firma kodu, adı veya VKN ara…' }}
+        minWidth={940}
+        export={{ endpoint: '/core/firms/export', named: () => ({ activeOnly: activeOnly ? 'true' : undefined }), fallbackFileName: 'firmalar.xlsx' }}
+        compact={{
+          title: f => getFirmName(f),
+          subtitle: f => `${f.code}${f.taxNumber ? ` · ${f.taxNumber}` : ''}`,
+          right: f => `${f.platformCount} kanal`,
+          badge: f => <Badge variant={f.isActive ? 'success' : 'neutral'}>{f.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
+      />
 
       {/* Create */}
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Yeni Firma" size="lg"
