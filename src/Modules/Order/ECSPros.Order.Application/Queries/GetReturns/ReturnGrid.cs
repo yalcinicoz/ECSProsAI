@@ -1,6 +1,7 @@
 using ECSPros.Order.Application.Services;
 using ECSPros.Order.Domain.Entities;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ public static class ReturnGrid
     public static readonly string[] Statuses = { "requested", "approved", "received", "refunded", "rejected" };
 
     public static readonly GridSchema<Return> Schema = new GridSchema<Return>()
+        .Kanal(r => r.Order.FirmPlatformId)   // Y3 (K2): iadenin kanalı SİPARİŞTEN gelir
         .Text("returnNumber", r => r.ReturnNumber)
         .Text("trackingNumber", r => r.ReturnTrackingNumber)
         .Text("cargoReturnCode", r => r.CargoReturnCode)
@@ -52,13 +54,12 @@ public static class ReturnGrid
     public static IQueryable<Return> ApplyAll(IQueryable<Return> query, ReturnListFilters f, GridRequest? grid, bool includeStatus = true)
     {
         query = ApplyNamed(query, f, includeStatus);
-        return includeStatus ? Schema.ApplyFilters(query, grid) : Schema.ApplyFilters(query, grid, "status");
+        // Y3 (K2): kanal kapsamı — kapsam dışı satır listede/sayımda/exportta görünmez.
+        return Schema.ApplyKanalKapsami(includeStatus ? Schema.ApplyFilters(query, grid) : Schema.ApplyFilters(query, grid, "status"), grid?.KanalKisiti);
     }
 
-    public static string StatusLabel(string s) => s switch
-    {
-        "requested" => "Talep Edildi", "approved" => "Onaylandı", "received" => "Teslim Alındı", "refunded" => "Geri Ödendi", "rejected" => "Reddedildi", _ => s,
-    };
+    public static string StatusLabel(string s)   // M4: metin DurumEtiketleri.Panel.IadeDurumu'nda
+        => DurumEtiketleri.Etiket(DurumEtiketleri.Panel.IadeDurumu, s);
     public static string TypeLabel(string s) => s == "refund" ? "İade" : s;
 }
 

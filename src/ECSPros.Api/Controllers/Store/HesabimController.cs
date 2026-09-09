@@ -126,16 +126,19 @@ public class HesabimController(
 
             foreach (var detay in detaylar)
             {
-                var (durumMetni, durumSinifi, filtre, adim) = detay.Status switch
+                // M4 (2026-09-09): DURUM METNİ artık DurumEtiketleri.Vitrin'den — mobil aynı metni alır,
+                // ikisi ayrışamaz. CSS sınıfı/sekme anahtarı/akış adımı sayfa sunumuna ait, burada kalır.
+                var (durumSinifi, filtre, adim) = detay.Status switch
                 {
-                    "pending" or "confirmed" => ("Sipariş Alındı", "alindi", "devam", 1),
-                    "processing"             => ("Hazırlanıyor", "hazirlaniyor", "devam", 2),
-                    "shipped"                => ("Kargoda", "yolda", "devam", 3),
-                    "delivered"              => ("Teslim Edildi", "tamamlandi", "tamamlanan", 4),
-                    "cancelled"              => ("İptal Edildi", "iade", "tamamlanan", 1),
-                    "returned"               => ("İade Edildi", "iade-onaylandi", "tamamlanan", 4),
-                    _                        => (detay.Status, "alindi", "devam", 1)
+                    "pending" or "confirmed" => ("alindi", "devam", 1),
+                    "processing"             => ("hazirlaniyor", "devam", 2),
+                    "shipped"                => ("yolda", "devam", 3),
+                    "delivered"              => ("tamamlandi", "tamamlanan", 4),
+                    "cancelled"              => ("iade", "tamamlanan", 1),
+                    "returned"               => ("iade-onaylandi", "tamamlanan", 4),
+                    _                        => ("alindi", "devam", 1)
                 };
+                var durumMetni = DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.SiparisDurumu, detay.Status);
 
                 // H1: entegratör PDF'li en güncel fatura — buton yalnız o zaman görünür
                 // (canlıda fatura kaydı olmayan siparişte hiçbir şey değişmez).
@@ -432,15 +435,17 @@ public class HesabimController(
         foreach (var iade in iadeDetaylari)
         {
             var siparis = await SiparisDetay(iade.OrderId);
-            var (durumMetni, durumSinifi, filtre, adim) = iade.Status switch
+            // M4: iade durum metni de DurumEtiketleri.Vitrin.IadeDurumu'ndan (mobil ile aynı).
+            var (durumSinifi, filtre, adim) = iade.Status switch
             {
-                "requested" => ("İade Talebi Alındı", "iade", "devam", 1),
-                "approved"  => ("İade Onaylandı", "iade", "devam", 2),
-                "received"  => ("İade İnceleniyor", "iade", "devam", 3),
-                "refunded"  => ("İade Tamamlandı", "iade-onaylandi", "tamamlanan", 4),
-                "rejected"  => ("İade Reddedildi", "iade", "tamamlanan", 0),
-                _           => (iade.Status, "iade", "devam", 1)
+                "requested" => ("iade", "devam", 1),
+                "approved"  => ("iade", "devam", 2),
+                "received"  => ("iade", "devam", 3),
+                "refunded"  => ("iade-onaylandi", "tamamlanan", 4),
+                "rejected"  => ("iade", "tamamlanan", 0),
+                _           => ("iade", "devam", 1)
             };
+            var durumMetni = DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.IadeDurumu, iade.Status);
 
             var (bilgiBaslik, bilgiMetin, bilgiUyari) = iade.Status switch
             {

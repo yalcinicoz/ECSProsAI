@@ -39,7 +39,9 @@ public class CatalogProductService(ICatalogDbContext db) : IProductService
 
         var varyantlar = await db.ProductVariants.AsNoTracking()
             .Where(v => ids.Contains(v.Id))
-            .Select(v => new { v.Id, v.ProductId, ProductCode = v.Product.Code, v.Product.NameI18n, v.Sku })
+            .Select(v => new { v.Id, v.ProductId, ProductCode = v.Product.Code, v.Product.NameI18n, v.Sku,
+                // M1: taban fiyat — varyant fiyatı ürünü ezer (varyant fiyatı 0 ise ürün taban fiyatı).
+                BasePrice = v.BasePrice > 0 ? v.BasePrice : v.Product.BasePrice })
             .ToListAsync(ct);
 
         var productIds = varyantlar.Select(v => v.ProductId).Distinct().ToList();
@@ -109,15 +111,15 @@ public class CatalogProductService(ICatalogDbContext db) : IProductService
         static string TrAd(Dictionary<string, string> i18n, string yedek = "") =>
             i18n.TryGetValue("tr", out var ad) ? ad : i18n.Values.FirstOrDefault() ?? yedek;
 
+        // M3 (2026-09-09): seçenek metni TEK kuraldan (VaryantSecenekMetni) — ürün detayındaki
+        // variantInfo ile birebir aynı: iç filtre ekseni dışarıda, sıra renk → beden.
         var ozetByVariant = attrSatirlari
             .GroupBy(a => a.VariantId)
             .ToDictionary(
                 g => g.Key,
-                g => string.Join(", ", g
+                g => ECSPros.Shared.Contracts.VaryantSecenekMetni.Kur(g
                     .GroupBy(a => a.TipKodu).Select(t => t.First())
-                    .OrderBy(a => a.TipKodu, StringComparer.Ordinal)
-                    .Take(3)
-                    .Select(a => $"{TrAd(a.TipAd, a.TipKodu)}: {TrAd(a.DegerAd)}")));
+                    .Select(a => (a.TipKodu, TrAd(a.TipAd, a.TipKodu), TrAd(a.DegerAd)))) ?? "");
 
         return varyantlar.ToDictionary(
             v => v.Id,
@@ -130,6 +132,7 @@ public class CatalogProductService(ICatalogDbContext db) : IProductService
                 v.ProductId,
                 string.IsNullOrWhiteSpace(v.Sku) ? null : v.Sku,
                 renkByVariant.TryGetValue(v.Id, out var renkId) ? renkId : null,
-                bedenByVariant.TryGetValue(v.Id, out var bedenId) ? bedenId : null));
+                bedenByVariant.TryGetValue(v.Id, out var bedenId) ? bedenId : null,
+                v.BasePrice));
     }
 }

@@ -1,3 +1,4 @@
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using ECSPros.Shared.Kernel.Grid;
 using MediatR;
@@ -36,4 +37,17 @@ public record OrderListDto(
     string CurrencyCode,
     DateTime CreatedAt,
     string? RecipientName = null,
-    string? PaymentMethod = null);   // 2026-08-04: kart | kapida-nakit | kapida-kart | null
+    string? PaymentMethod = null)   // 2026-08-04: kart | kapida-nakit | kapida-kart | null
+{
+    // ── M4 (2026-09-09, mobil): kod → vitrin etiketi. Store/mobil "Siparişlerim" listesi bunu gösterir;
+    // ADMIN PANELİ kendi haritasını (orderConstants.ts) kullanır — panel dili farklıdır (bkz. DurumEtiketleri).
+    // Türetilmiş alan: handler değişmedi, JSON'a otomatik girer.
+    public string StatusLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.SiparisDurumu, Status);
+    public string StatusColor => DurumEtiketleri.Renk(DurumEtiketleri.Vitrin.SiparisDurumu, Status);
+    public string StatusVariant => DurumEtiketleri.Varyant(DurumEtiketleri.Vitrin.SiparisDurumu, Status);
+    public string PaymentStatusLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.OdemeDurumu, PaymentStatus);
+    public string PaymentMethodLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.OdemeYontemi, PaymentMethod);
+    public bool CanCancel => DurumEtiketleri.IptalEdilebilir(Status);
+    public bool CanReturn => DurumEtiketleri.IadeEdilebilir(Status);
+    public bool CanReview => DurumEtiketleri.YorumYazilabilir(Status);
+}

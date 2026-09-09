@@ -1,5 +1,6 @@
 using ECSPros.Order.Application.Services;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,7 @@ public static class OrderGrid
         .Number("total", o => o.GrandTotal)
         .Bool("paid", o => o.PaymentStatus == "paid")
         .Guid("firmPlatformId", o => o.FirmPlatformId)
+        .Kanal(o => o.FirmPlatformId)   // Y3: kanal kapsamı kolonu (K2)
         .Guid("memberId", o => o.MemberId)
         .Sort("createdAt", o => o.CreatedAt)
         .Sort("orderNumber", o => o.OrderNumber)
@@ -76,23 +78,20 @@ public static class OrderGrid
     public static IQueryable<OrderEntity> ApplyAll(IQueryable<OrderEntity> query, OrderListFilters f, GridRequest? grid, bool includeStatus = true)
     {
         query = ApplyNamed(query, f, includeStatus);
-        return includeStatus ? Schema.ApplyFilters(query, grid) : Schema.ApplyFilters(query, grid, "status");
+        query = includeStatus ? Schema.ApplyFilters(query, grid) : Schema.ApplyFilters(query, grid, "status");
+        // Y3 (K2): kullanıcının erişemediği kanalın siparişi listeye/sayıma/exporta girmez.
+        return Schema.ApplyKanalKapsami(query, grid?.KanalKisiti);
     }
 
     // ── Excel etiketleri (panel orderConstants ile aynı) ──
-    public static string StatusLabel(string s) => s switch
-    {
-        "pending" => "Bekleyen", "confirmed" => "Onaylı", "processing" => "İşlemde", "shipped" => "Kargoda",
-        "delivered" => "Teslim", "cancelled" => "İptal", "returned" => "İade", _ => s,
-    };
-    public static string PaymentStatusLabel(string s) => s switch
-    {
-        "pending" => "Bekliyor", "unpaid" => "Ödenmedi", "paid" => "Ödendi", "partial" => "Kısmi", "refunded" => "İade Edildi", "failed" => "Başarısız", _ => s,
-    };
-    public static string PaymentMethodLabel(string? s) => s switch
-    {
-        "kart" => "Kart (Online)", "kapida-nakit" => "Kapıda Nakit", "kapida-kart" => "Kapıda Kart", null => "", _ => s,
-    };
+    // M4 (2026-09-09): metinler DurumEtiketleri.Panel'de tek yerde; store/mobil uçları
+    // DurumEtiketleri.Vitrin'i kullanır (müşteri dili — bilinçli farklı).
+    public static string StatusLabel(string s)
+        => DurumEtiketleri.Etiket(DurumEtiketleri.Panel.SiparisDurumu, s);
+    public static string PaymentStatusLabel(string s)
+        => DurumEtiketleri.Etiket(DurumEtiketleri.Panel.OdemeDurumu, s);
+    public static string PaymentMethodLabel(string? s)
+        => DurumEtiketleri.Etiket(DurumEtiketleri.Panel.OdemeYontemi, s);
 }
 
 /// <summary>Sipariş listesinin adlandırılmış filtreleri (GET parametreleri / export gövdesi "named").</summary>

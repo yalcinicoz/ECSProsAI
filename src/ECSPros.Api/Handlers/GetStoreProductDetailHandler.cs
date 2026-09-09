@@ -123,6 +123,11 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
                 .ToDictionaryAsync(x => x.VariantId, x => x.Total, ct)
             : new Dictionary<Guid, int>();
 
+        // i18n değer okuma (tr → ilk değer → yedek): variantInfo metni için.
+        static string TrDeger(Dictionary<string, string> i18n, string yedek)
+            => i18n.TryGetValue("tr", out var tr) && !string.IsNullOrWhiteSpace(tr)
+                ? tr : i18n.Values.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? yedek;
+
         var variants = product.Variants.Where(v => v.IsActive).Select(v =>
         {
             channelPrices.TryGetValue(v.Id, out var channelPrice);
@@ -152,10 +157,18 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
             else
                 variantImages = [];
 
+            // M3 (2026-09-09, mobil isteği): hazır seçenek metni — sepet/yorum uçlarıyla AYNI
+            // kuraldan (VaryantSecenekMetni): iç filtre ekseni dışarıda, sıra renk → beden.
+            var variantInfo = ECSPros.Shared.Contracts.VaryantSecenekMetni.Kur(attrs.Select(a =>
+                (a.AttributeTypeCode,
+                 TrDeger(a.AttributeTypeNameI18n, a.AttributeTypeCode),
+                 TrDeger(a.AttributeValueNameI18n, ""))));
+
             return new StoreVariantDto(
                 v.Id, v.Sku, v.BasePrice, channelPrice?.Price, channelPrice?.CompareAtPrice,
                 v.IsActive, variantImages, attrs,
-                stockByVariant.GetValueOrDefault(v.Id, 0));
+                stockByVariant.GetValueOrDefault(v.Id, 0),
+                variantInfo);
         }).ToList();
 
         // Ürün seviyesi özellikler (cinsiyet, kumaş türü vb.) — detay sayfası "Öne Çıkan
@@ -170,6 +183,26 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
             .Where(g => g.Id == product.ProductGroupId)
             .Select(g => g.NameI18n)
             .FirstOrDefaultAsync(ct);
+
+        // M3 (mobil isteği): özellik tablosuna "Kategori Grubu" ve "Stok Durumu" satırları.
+        // Bilgi yanıtta zaten vardı (productGroupNameI18n / variants[].stockQty) ama istemcinin
+        // ayrı ayrı yorumlaması gerekiyordu; tabloya hazır satır olarak da eklenir.
+        if (groupName is { Count: > 0 })
+            productAttrs.Add(new StoreProductAttributeDto(
+                "kategori_grubu",
+                new Dictionary<string, string> { ["tr"] = "Kategori Grubu", ["en"] = "Category Group" },
+                groupName));
+
+        // Stok satırı hiç yoksa (stok takibi tutulmayan katalog) "Tükendi" yazmak yanlış olur —
+        // bu durumda ürünün satış durumu esas alınır.
+        var stokVar = product.IsSaleOpen
+                      && (stockByVariant.Count == 0 || stockByVariant.Values.Any(q => q > 0));
+        productAttrs.Add(new StoreProductAttributeDto(
+            "stok_durumu",
+            new Dictionary<string, string> { ["tr"] = "Stok Durumu", ["en"] = "Availability" },
+            stokVar
+                ? new Dictionary<string, string> { ["tr"] = "Stokta", ["en"] = "In stock" }
+                : new Dictionary<string, string> { ["tr"] = "Tükendi", ["en"] = "Out of stock" }));
 
         // H5: aktif videolar — efektif URL: VideoUrl (K15 birincil) ?? video CDN tabanı +
         // FileName (taban ayarı yoksa dosya kayıtları atlanır; galeri video slaytı bundan beslenir).
@@ -200,7 +233,14 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
             .FirstOrDefault() ?? variants.FirstOrDefault();
         var minPrice = fiyatliVaryant is null ? product.BasePrice : (fiyatliVaryant.PlatformPrice ?? fiyatliVaryant.BasePrice);
         if (minPrice <= 0) minPrice = enDusukPozitif;
-        decimal? compareAt = fiyatliVaryant?.CompareAtPrice is { } eski && eski > minPrice ? eski : null;
+        // ★ M3 (2026-09-09): çizili fiyat artık LİSTE ile AYNI kuralla bulunur — ürünün aktif
+        // varyantlarındaki EN YÜKSEK çizili fiyat (satış fiyatından büyükse). Eskiden yalnız
+        // "en ucuz varyantın" çizili fiyatına bakılıyordu; o varyantta çizili fiyat yoksa detay
+        // indirimi HİÇ göstermiyor (P-00020538, P-00021410), başka varyant seçilince de listeden
+        // FARKLI değer gösteriyordu (P-00021624: liste 799,99 ↔ detay 599,99).
+        var enYuksekCizili = variants
+            .Select(v => v.CompareAtPrice ?? 0m).Where(c => c > 0).DefaultIfEmpty(0m).Max();
+        decimal? compareAt = enYuksekCizili > minPrice ? enYuksekCizili : null;
 
         string? kampanyaAdi = null; decimal? kampanyaFiyat = null;
         List<ECSPros.Shared.Contracts.CampaignBadge>? kampanyaRozetleri = null;
@@ -222,6 +262,20 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
 
         // B9: tek fiyat sözleşmesi (kural KartFiyatGorunumu'nda; Razor detayı kendi hesabını yapar, etkilenmez)
         var (satisFiyati, ciziliFiyat) = ECSPros.Shared.Contracts.KartFiyatGorunumu.Hesapla(minPrice, compareAt, kampanyaFiyat);
+
+        // MK4 (kullanıcı kararı 2026-09-09): varyantın KENDİ çizili fiyatı yoksa ÜRÜN düzeyindeki
+        // referans kopyalanır — mobil her varyantta indirim oranını hesaplayabilsin. Yalnız o
+        // varyantın satış fiyatından büyükse yazılır (aksi hâlde "indirim" yanlış görünürdü).
+        if (ciziliFiyat is { } urunCizili)
+        {
+            for (var i = 0; i < variants.Count; i++)
+            {
+                if (variants[i].CompareAtPrice is > 0) continue;
+                var varyantSatis = variants[i].PlatformPrice ?? variants[i].BasePrice;
+                if (varyantSatis > 0 && urunCizili > varyantSatis)
+                    variants[i] = variants[i] with { CompareAtPrice = urunCizili };
+            }
+        }
 
         // A5/A10: kanal slug'ları (varyant → slug); kanonik slug = fiyatlı/ilk varyantın slug'ı.
         Dictionary<Guid, string>? variantSlugs = null; string? slug = null;

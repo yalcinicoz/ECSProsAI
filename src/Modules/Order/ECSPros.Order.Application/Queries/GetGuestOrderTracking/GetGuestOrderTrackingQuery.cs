@@ -1,3 +1,4 @@
+using ECSPros.Shared.Contracts;
 using ECSPros.Order.Application.Services;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
@@ -14,7 +15,7 @@ namespace ECSPros.Order.Application.Queries.GetGuestOrderTracking;
 public record GetGuestOrderTrackingQuery(Guid FirmPlatformId, string OrderNumber, string Phone)
     : IRequest<Result<GuestOrderTrackingDto>>;
 
-public record GuestOrderTrackingDto(
+public partial record GuestOrderTrackingDto(
     Guid OrderId,
     string OrderNumber,
     string Status,
@@ -28,6 +29,18 @@ public record GuestOrderTrackingDto(
     string? RequestedCargoName,
     List<GuestOrderTrackingItemDto> Items,
     List<GuestOrderShipmentDto> Shipments);
+
+// M4 (2026-09-09, mobil): misafir takibinde de vitrin etiketleri + akış şeridi. Aksiyon bayrağı YOK —
+// misafir iptal/iade/yorum yapamaz (bu uçlar üyelik ister), bilinçli olarak eklenmedi.
+public partial record GuestOrderTrackingDto
+{
+    public string StatusLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.SiparisDurumu, Status);
+    public string StatusColor => DurumEtiketleri.Renk(DurumEtiketleri.Vitrin.SiparisDurumu, Status);
+    public string StatusVariant => DurumEtiketleri.Varyant(DurumEtiketleri.Vitrin.SiparisDurumu, Status);
+    public string PaymentStatusLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.OdemeDurumu, PaymentStatus);
+    public string PaymentMethodLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.OdemeYontemi, PaymentMethod);
+    public List<AkisAdimi> Timeline => DurumEtiketleri.SiparisAkisi(Status);
+}
 
 public record GuestOrderTrackingItemDto(
     Guid VariantId,

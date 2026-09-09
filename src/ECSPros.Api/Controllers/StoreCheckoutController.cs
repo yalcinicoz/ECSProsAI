@@ -31,6 +31,44 @@ public class StoreCheckoutController(
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>
+    /// M2 (2026-09-09, mobil isteği): SİPARİŞ ÖN İZLEMESİ — ödemeden önce "ne ödeyeceğim?".
+    ///
+    /// Yan etkisi yoktur: sipariş oluşturmaz, kupon kullanımı yazmaz, stok düşmez. Tutar,
+    /// checkout'un kullandığı servislerin ve <c>SiparisTutarKurali</c>'nın aynısıyla hesaplanır —
+    /// ön izlemede görülen tutar ile siparişte tahsil edilen tutar ayrışamaz.
+    ///
+    /// Kalemler SEPETTEN okunur (istemci fiyat/kalem göndermez). <c>requestedCargoIntegrationId</c>
+    /// ve <c>shippingNeighborhoodId</c> bugün bedeli ETKİLEMEZ (kanal başına tek sabit ücret);
+    /// alanlar ileride kargo firması/bölge bazlı ücret gelirse diye sözleşmede kabul edilir.
+    /// </summary>
+    [HttpPost("preview")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Preview([FromBody] StoreCheckoutPreviewRequest req, CancellationToken ct)
+    {
+        Guid? memberId = null;
+        if (User.FindFirst("type")?.Value == "member")
+        {
+            var sub = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (sub != null && Guid.TryParse(sub, out var mid)) memberId = mid;
+        }
+
+        var sepet = await mediator.Send(new ECSPros.Crm.Application.Queries.GetCart.GetCartQuery(
+            req.CartId, memberId, req.SessionId, req.FirmPlatformId), ct);
+        if (sepet.IsFailure) return BadRequest(new { success = false, error = sepet.Error });
+        if (sepet.Value is not { Items.Count: > 0 } dolu)
+            return BadRequest(new { success = false, error = "Sepet boş." });
+
+        var sonuc = await mediator.Send(new ECSPros.Order.Application.Queries.CheckoutPreview.CheckoutOnizlemeQuery(
+            dolu.FirmPlatformId,
+            dolu.Items.Select(i => new ECSPros.Order.Application.Queries.CheckoutPreview.OnizlemeKalemi(
+                i.VariantId, i.Quantity, i.Id)).ToList(),
+            req.PaymentMethod, req.CouponCode, memberId, dolu.CurrencyCode), ct);
+
+        if (sonuc.IsFailure) return BadRequest(new { success = false, error = sonuc.Error });
+        return Ok(new { success = true, data = sonuc.Value });
+    }
+
     [HttpPost]
     [AllowAnonymous] // 2026-07-22: misafir checkout — üye claim'i varsa bağlanır, yoksa misafir siparişi
     public async Task<IActionResult> Checkout([FromBody] StoreCheckoutRequest req, CancellationToken ct)
@@ -176,3 +214,15 @@ public record StoreCheckoutItemRequest(
     decimal UnitPrice);
 
 public record StoreCouponValidateRequest(string Code, decimal CartTotal);
+
+/// <summary>M2 ön izleme isteği: kalemler SEPETTEN okunur; fiyat/kalem istemciden alınmaz.</summary>
+/// <param name="RequestedCargoIntegrationId">Bugün bedeli etkilemez (kanal başına tek ücret) — ileri uyumluluk.</param>
+/// <param name="ShippingNeighborhoodId">Bugün bedeli etkilemez — ileri uyumluluk.</param>
+public record StoreCheckoutPreviewRequest(
+    Guid? CartId = null,
+    string? SessionId = null,
+    Guid? FirmPlatformId = null,
+    string? CouponCode = null,
+    string? PaymentMethod = null,
+    Guid? RequestedCargoIntegrationId = null,
+    Guid? ShippingNeighborhoodId = null);

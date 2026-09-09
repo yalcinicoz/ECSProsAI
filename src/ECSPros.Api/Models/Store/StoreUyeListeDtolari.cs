@@ -24,12 +24,26 @@ public record ViewedProductItemDto(
 public record MemberReviewItemDto(
     Guid Id, string ProductCode, int Rating, string? Text, string Status, string? RejectReason,
     bool IsDeleted, DateTime CreatedAt, DateTime? DeletedAt, string? Topic, IReadOnlyList<string>? Photos,
-    string? ProductName, string? ImageUrl);
+    string? ProductName, string? ImageUrl)
+{
+    // M4 (2026-09-09, mobil): "Yorumlarım" satırının vitrin etiketi (pending → "Onay Bekliyor",
+    // approved → "Yayında", rejected → "Yayınlanmadı"). Panel moderasyon ekranı kendi dilini kullanır.
+    public string StatusLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.YorumDurumu, Status);
+    public string StatusColor => DurumEtiketleri.Renk(DurumEtiketleri.Vitrin.YorumDurumu, Status);
+    public string StatusVariant => DurumEtiketleri.Varyant(DurumEtiketleri.Vitrin.YorumDurumu, Status);
+}
 
 public record MemberQuestionItemDto(
     Guid Id, string ProductCode, string Question, string? Answer, string Status, string MemberName,
     DateTime CreatedAt, DateTime? AnsweredAt,
-    string? ProductName, string? ImageUrl);
+    string? ProductName, string? ImageUrl)
+{
+    // M4: "Sorularım" satırının vitrin etiketi (pending → "Cevap Bekleniyor", answered → "Cevaplandı",
+    // hidden → "Yayında Değil").
+    public string StatusLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.SoruDurumu, Status);
+    public string StatusColor => DurumEtiketleri.Renk(DurumEtiketleri.Vitrin.SoruDurumu, Status);
+    public string StatusVariant => DurumEtiketleri.Varyant(DurumEtiketleri.Vitrin.SoruDurumu, Status);
+}
 
 public record MemberCollectionItemDto(
     Guid Id, string Name, string? Description, bool IsPublic, bool IsShareable, string ShareCode, string Status,

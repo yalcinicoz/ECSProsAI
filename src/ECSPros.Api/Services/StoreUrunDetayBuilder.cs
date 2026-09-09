@@ -158,7 +158,11 @@ public class StoreUrunDetayBuilder(
             .FirstOrDefault() ?? havuz[0];
         var fiyat = fiyatliVaryant.PlatformPrice ?? fiyatliVaryant.BasePrice;
         if (fiyat <= 0) fiyat = enDusukPozitif;
-        var eskiFiyat = fiyatliVaryant.CompareAtPrice is { } eski && eski > fiyat ? eski : (decimal?)null;
+        // M3 (2026-09-09): çizili fiyat kuralı LİSTE ile aynı — havuzdaki EN YÜKSEK çizili fiyat
+        // (satış fiyatından büyükse). Eskiden yalnız en ucuz varyanta bakılıyordu: o varyantta
+        // çizili fiyat yoksa site detayında indirim hiç görünmüyor, listede görünüyordu.
+        var enYuksekCizili = havuz.Select(v => v.CompareAtPrice ?? 0m).Where(c => c > 0).DefaultIfEmpty(0m).Max();
+        var eskiFiyat = enYuksekCizili > fiyat ? enYuksekCizili : (decimal?)null;
 
         // F3: ürün detayı kampanyası — F2 resolver. Ürün-bazlı fiyat satış fiyatı üzerinden.
         var kmp = (await campaignResolver.ResolveForProductsAsync(platformId, new[] { urun.Id }, ct))

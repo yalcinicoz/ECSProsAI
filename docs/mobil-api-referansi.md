@@ -163,6 +163,22 @@ liste kartı `colors[]` de filtre_rengi'siz üründe renk ekseninden dolar.
 Misafir akışı: mobil bir `sessionId` (rastgele GUID) üretip saklar; üye girişinde
 `/cart/merge` çağrılır. Üye "sepetten çıkarılanlar": `/api/store/cart/removed` (GET/POST/DELETE, Üye).
 
+**Kargo (2026-09-09, additive):** GET `/cart` yanıtı dört alan daha döner —
+`shippingFee` (kanalın sabit kargo bedeli; `0` = kargo ücretsiz), `freeShippingThreshold`
+(kanalın ücretsiz kargo sepet limiti; `0` = limit yok), `freeShippingCampaign` (kargo
+kampanyası uygulanıyorsa adı, yoksa `null`) ve `shippingCampaignFee` (kampanya sonrası bedel;
+`0` = kampanya bedava yaptı, `null` = uygulanabilir kampanya yok).
+
+Gösterim kuralı (sunucudaki `KargoUcretiKurali`nın aynası — tahsilat checkout'ta sunucuda yapılır):
+
+1. `shippingFee <= 0` → **Ücretsiz**.
+2. `freeShippingThreshold > 0` ve **indirimler sonrası** ürün tutarı ≥ limit → **Ücretsiz**.
+3. `shippingCampaignFee` doluysa kanal sonucuyla karşılaştırılır; **düşük olan** uygulanır.
+4. Kalan durumda `shippingFee` tahsil edilir; limite kalan tutar "… TL daha ekleyin" olarak gösterilebilir.
+
+Sipariş tarafında bedel `ShippingFee` alanına yazılır ve `grandTotal`'a dahildir
+(`totalExpense` **kapıda ödeme** hizmet bedelidir, kargo değildir).
+
 **A4 (2026-09-07):** checkout başarılıysa sepet **sunucuda** temizlenir — kapıda ödemede sipariş
 anında, kartta ödeme onayında (PayTR callback / mock). Başarısız kart denemesinde sepet korunur.
 İstemcinin kalem kalem DELETE atması gerekmez.
@@ -427,3 +443,67 @@ indirim anlamına gelmez: sepet-bağımlı kampanyada `price` değişmez.
 `GET /api/store/favorites`, `GET /api/store/viewed-products`, `GET /api/store/collections`. Web (Razor) görünümü değişmedi:
 kart çizili satırı yalnız kanal indiriminde çıkar, kampanyanın kendi satırı korunur.
 
+
+---
+
+## 16. Durum kodu → etiket sözlüğü — `GET /api/store/lookups` (M4, 2026-09-09 UYGULANDI)
+
+Store uçları durumu **ham kod** olarak döner (`pending`, `shipped`, `requested`…) — istemci mantığı hep koda
+bakar. Etiket/renk bu tek uçtan gelir; istemci açılışta bir kez çeker ve saklar.
+
+```
+GET /api/store/lookups            (anonim, kanal bağımsız)
+→ { success, data: {
+      version: "58905543316c",
+      families: {
+        orderStatus:    [{ code, label, color, variant, description? }, …],
+        paymentStatus:  [...], paymentMethod: [...],
+        returnStatus:   [...], reviewStatus: [...], questionStatus: [...]
+      },
+      timelines: { orderStatus: [{code,label}×4], returnStatus: [{code,label}×4] }
+  }}
+```
+
+- `color` hex (`#16a34a`), `variant` anlamsal (`success` | `warning` | `danger` | `neutral` | `info`) —
+  temalı istemci `variant`'ı, temasız istemci `color`'ı kullanır.
+- `description` yalnız ödeme yöntemlerinde dolu (seçim ekranının alt satırı).
+- **`version` içerikten türer** (etiket kataloğunun SHA256'sı, elle artırılmaz) ve aynı değer `ETag`
+  başlığında da döner. İstemci `If-None-Match: "<version>"` gönderirse gövdesiz **304** alır.
+  `Cache-Control: public, max-age=3600`.
+- Bilinmeyen kod (yeni durum eklenmiş, istemci sözlüğü bayat): sunucu satır alanlarında **ham kodu**
+  etiket olarak döner, boş metin göndermez.
+
+**Etiketler vitrin (müşteri) dilindedir.** Admin paneli bilinçli olarak farklı metin kullanır: müşteri
+`pending` ile `confirmed` arasındaki iç onay adımını görmez, ikisi de **"Sipariş Alındı"**dır; panelde
+"Bekleyen" / "Onaylı" ayrı kalır. Kaynak: `Shared.Contracts.DurumEtiketleri` (`Vitrin` / `Panel`).
+
+### Satırdaki etiket alanları (sözlüğü çekmeden de çalışsın diye)
+
+| Uç | Eklenen alanlar |
+|---|---|
+| `GET /account/orders`, `GET /account/orders/{id}` | `statusLabel`, `statusColor`, `statusVariant`, `paymentStatusLabel`, `paymentMethodLabel`, `canCancel`, `canReturn`, `canReview` |
+| `GET /account/orders/{id}` | + `timeline: [{code,label,done,current}]` (4 adım) |
+| `GET /orders/track` (misafir) | etiketler + `timeline`; **bayraklar yok** (iptal/iade/yorum üyelik ister) |
+| `GET /account/returns`, `/account/returns/{id}` | `statusLabel`, `statusColor`, `statusVariant`; detayda iade `timeline` |
+| `GET /reviews/mine`, `GET /questions/mine` | `statusLabel`, `statusColor`, `statusVariant` |
+
+**`timeline` kuralı:** `alindi → hazirlaniyor → kargoda → teslim`. `done` geçilmiş adım, `current` şu anki
+adım. **İptal edilen siparişte `timeline` boş dizidir** — şerit çizilmez, durum `statusLabel`
+("İptal Edildi") ile gösterilir. Aynı kural iade akışında reddedilen iade için geçerlidir.
+
+**Aksiyon bayrakları** komutların dayattığı kuralın aynısıdır, istemci butonu bunlara göre gizler:
+`canCancel` yalnız `pending`/`confirmed`, `canReturn` ve `canReview` yalnız `delivered`.
+(`canReview` sipariş düzeyidir; "bu ürüne zaten yorum yazdım" denetimi `GET /reviews/reviewable`'da.)
+
+### `GET /payment-options` — etiketli yöntemler
+
+```
+→ data: {
+    methods: [{ code, label, description, fee, maxOrderTotal }, …],   // katalog sırası: kart → kapıda nakit → kapıda kart
+    methodCodes: ["kart","kapida-nakit","kapida-kart"],               // eski düz dizi, geriye dönük
+    codFee: 50, codLimit: 3000
+  }
+```
+
+`fee` kapıda ödeme hizmet bedeli (kartta `0`), `maxOrderTotal` kapıda ödeme üst sınırı (`0` = sınır yok).
+Eski `methods: ["kart", …]` düz dizisi **`methodCodes`** adıyla korundu.

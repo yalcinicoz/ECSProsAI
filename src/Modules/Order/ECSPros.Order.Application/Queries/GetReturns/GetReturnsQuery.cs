@@ -1,3 +1,4 @@
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using ECSPros.Shared.Kernel.Grid;
 using MediatR;
@@ -25,4 +26,10 @@ public record ReturnListDto(
     string RefundStatus,
     decimal RefundAmount,
     DateTime CreatedAt,
-    string? CargoReturnCode = null); // E8: kargo iade kodu
+    string? CargoReturnCode = null) // E8: kargo iade kodu
+{
+    // M4 (2026-09-09, mobil): "İadelerim" listesinin vitrin etiketi.
+    public string StatusLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.IadeDurumu, Status);
+    public string StatusColor => DurumEtiketleri.Renk(DurumEtiketleri.Vitrin.IadeDurumu, Status);
+    public string StatusVariant => DurumEtiketleri.Varyant(DurumEtiketleri.Vitrin.IadeDurumu, Status);
+}
