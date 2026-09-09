@@ -227,6 +227,30 @@
 </tr>
 </tbody></table>
 <p>Kural: <strong>En az bir ödeme yöntemi seçili olmalı</strong> (hiçbiri seçili değilse kırmızı uyarı görünür ve kayıt reddedilir). Kapalı yöntem sitede hiç gösterilmez; sunucu da bu yöntemle gelen siparişi reddeder. Değişiklik yaklaşık 1 dakika içinde siteye yansır.</p>
+<h3 id="kargo-ucreti">Kargo Ücreti<a class="anchor" href="#kargo-ucreti" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kargo ücreti (TL, 0 = ücretsiz)</td>
+<td>Hayır</td>
+<td>Bu kanalda satılan siparişlerden alınacak <strong>sabit</strong> kargo bedeli. <code>0</code> bırakılırsa kargo ücretsizdir (varsayılan). Sepet/ödeme özetinde gösterilir ve sipariş toplamına eklenir.</td>
+</tr>
+<tr>
+<td>Ücretsiz kargo sepet limiti (TL, 0 = yok)</td>
+<td>Hayır</td>
+<td>Bu tutar ve üzerindeki sepetlerde kargo alınmaz. Karşılaştırma <strong>indirimler (kupon + kampanya) düşüldükten sonraki</strong> ürün tutarına göre yapılır. <code>0</code> = limit yok (her sepette kargo alınır).</td>
+</tr>
+</tbody></table>
+<p>Kural: Bir <strong>Kargo Kampanyası</strong> (Pazarlama → Kampanyalar) koşulu sağlanıyorsa kargo bedelini düşürür ya
+da tamamen kaldırır. Kampanya koşulu sağlanmıyorsa bu kanal ayarları geçerlidir; iki sonuçtan <strong>müşteri
+lehine</strong> olan uygulanır. Sepette limitin altındaki müşteriye &quot;… TL daha ekleyin, kargo ücretsiz.&quot; bilgisi
+gösterilir. Değişiklik yaklaşık 1 dakika içinde siteye yansır.</p>
 <h3 id="kargo-gonderimi">Kargo Gönderimi<a class="anchor" href="#kargo-gonderimi" aria-hidden="true">#</a></h3>
 <table>
 <thead>
@@ -292,6 +316,12 @@
 <li><strong>Kimlik Bilgileri (API)</strong> bölümünde pazaryerinin verdiği anahtar/şifreyi girin.</li>
 <li><strong>Kargo Gönderimi</strong> kutusunu kapatın (kargoyu pazaryeri iletir).</li>
 <li><strong>Oluştur</strong>&#39;a tıklayın.</li>
+</ol>
+<h3 id="kargo-ucreti-tanimlama">Kargo ücreti tanımlama<a class="anchor" href="#kargo-ucreti-tanimlama" aria-hidden="true">#</a></h3>
+<ol>
+<li>Kanal kartına tıklayın.</li>
+<li><strong>Kargo Ücreti</strong> bölümünde bedeli (örn. <code>59,99</code>) ve isterseniz ücretsiz kargo limitini (örn. <code>1000</code>) girin.</li>
+<li><strong>Kaydet</strong>&#39;e tıklayın; yaklaşık 1 dakika içinde sitede geçerli olur. Limitsiz ücretsiz kargo için bedeli <code>0</code> bırakın.</li>
 </ol>
 <h3 id="kapida-odemeyi-kapatma-limit-degistirme">Kapıda ödemeyi kapatma / limit değiştirme<a class="anchor" href="#kapida-odemeyi-kapatma-limit-degistirme" aria-hidden="true">#</a></h3>
 <ol>

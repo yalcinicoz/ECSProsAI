@@ -1,5 +1,6 @@
 using ECSPros.Promotion.Application.Services;
 using ECSPros.Promotion.Domain.Entities;
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,8 @@ namespace ECSPros.Promotion.Application.Commands.ManageCoupon;
 
 // P3: kupon tanımı panelden — storefront C3/C10 kupon akışının veri kaynağı.
 // CouponType: "percentage" (DiscountValue = %) | "fixed" (DiscountValue = ₺)
+// Hedef (2026-09-09): MemberId → kişiye özel kupon, MemberGroupId → üye grubuna açık kupon,
+// ikisi de null → herkese açık. Kurallar KuponHedefKurali'nda; doğrulama ValidateCoupon'da.
 
 public record CreateCouponCommand(
     string Code,
@@ -20,6 +23,8 @@ public record CreateCouponCommand(
     bool ValidForFirstOrderOnly,
     DateTime StartsAt,
     DateTime? EndsAt,
+    Guid? MemberId,
+    Guid? MemberGroupId,
     Guid CreatedBy) : IRequest<Result<Guid>>;
 
 public record UpdateCouponCommand(
@@ -33,12 +38,14 @@ public record UpdateCouponCommand(
     bool ValidForFirstOrderOnly,
     DateTime StartsAt,
     DateTime? EndsAt,
+    Guid? MemberId,
+    Guid? MemberGroupId,
     bool IsActive,
     Guid UpdatedBy) : IRequest<Result<bool>>;
 
 public record DeleteCouponCommand(Guid Id, Guid DeletedBy) : IRequest<Result<bool>>;
 
-public class CreateCouponCommandHandler(IPromotionDbContext db)
+public class CreateCouponCommandHandler(IPromotionDbContext db, IMemberService memberService)
     : IRequestHandler<CreateCouponCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(CreateCouponCommand request, CancellationToken ct)
@@ -52,6 +59,13 @@ public class CreateCouponCommandHandler(IPromotionDbContext db)
             return Result.Failure<Guid>("İndirim değeri sıfırdan büyük olmalıdır.");
         if (request.CouponType == "percentage" && request.DiscountValue > 100)
             return Result.Failure<Guid>("Yüzde indirim 100'ü aşamaz.");
+
+        var hedefHatasi = KuponHedefKurali.TanimHatasi(request.MemberId, request.MemberGroupId);
+        if (hedefHatasi is not null)
+            return Result.Failure<Guid>(hedefHatasi);
+
+        if (request.MemberId.HasValue && !await memberService.MemberExistsAsync(request.MemberId.Value, ct))
+            return Result.Failure<Guid>("Seçilen üye bulunamadı.");
 
         var exists = await db.Coupons.AnyAsync(c => c.Code == kod, ct);
         if (exists)
@@ -67,6 +81,8 @@ public class CreateCouponCommandHandler(IPromotionDbContext db)
             UsageLimitPerMember = request.UsageLimitPerMember,
             MinimumCartTotal = request.MinimumCartTotal,
             ValidForFirstOrderOnly = request.ValidForFirstOrderOnly,
+            MemberId = request.MemberId,
+            MemberGroupId = request.MemberGroupId,
             StartsAt = request.StartsAt,
             EndsAt = request.EndsAt,
             IsActive = true,
@@ -79,7 +95,7 @@ public class CreateCouponCommandHandler(IPromotionDbContext db)
     }
 }
 
-public class UpdateCouponCommandHandler(IPromotionDbContext db)
+public class UpdateCouponCommandHandler(IPromotionDbContext db, IMemberService memberService)
     : IRequestHandler<UpdateCouponCommand, Result<bool>>
 {
     public async Task<Result<bool>> Handle(UpdateCouponCommand request, CancellationToken ct)
@@ -94,6 +110,14 @@ public class UpdateCouponCommandHandler(IPromotionDbContext db)
         if (request.CouponType == "percentage" && request.DiscountValue > 100)
             return Result.Failure<bool>("Yüzde indirim 100'ü aşamaz.");
 
+        var hedefHatasi = KuponHedefKurali.TanimHatasi(request.MemberId, request.MemberGroupId);
+        if (hedefHatasi is not null)
+            return Result.Failure<bool>(hedefHatasi);
+
+        if (request.MemberId.HasValue && request.MemberId != coupon.MemberId
+            && !await memberService.MemberExistsAsync(request.MemberId.Value, ct))
+            return Result.Failure<bool>("Seçilen üye bulunamadı.");
+
         coupon.NameI18n = request.NameI18n;
         coupon.CouponType = request.CouponType;
         coupon.DiscountValue = request.DiscountValue;
@@ -101,6 +125,8 @@ public class UpdateCouponCommandHandler(IPromotionDbContext db)
         coupon.UsageLimitPerMember = request.UsageLimitPerMember;
         coupon.MinimumCartTotal = request.MinimumCartTotal;
         coupon.ValidForFirstOrderOnly = request.ValidForFirstOrderOnly;
+        coupon.MemberId = request.MemberId;
+        coupon.MemberGroupId = request.MemberGroupId;
         coupon.StartsAt = request.StartsAt;
         coupon.EndsAt = request.EndsAt;
         coupon.IsActive = request.IsActive;

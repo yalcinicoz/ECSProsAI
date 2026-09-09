@@ -1,4 +1,5 @@
 using ECSPros.Promotion.Application.Services;
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -8,10 +9,12 @@ namespace ECSPros.Promotion.Application.Queries.ValidateCoupon;
 public class ValidateCouponQueryHandler : IRequestHandler<ValidateCouponQuery, Result<CouponValidationResult>>
 {
     private readonly IPromotionDbContext _context;
+    private readonly IMemberService _memberService;
 
-    public ValidateCouponQueryHandler(IPromotionDbContext context)
+    public ValidateCouponQueryHandler(IPromotionDbContext context, IMemberService memberService)
     {
         _context = context;
+        _memberService = memberService;
     }
 
     public async Task<Result<CouponValidationResult>> Handle(ValidateCouponQuery request, CancellationToken cancellationToken)
@@ -41,17 +44,22 @@ public class ValidateCouponQueryHandler : IRequestHandler<ValidateCouponQuery, R
         if (coupon.ValidForFirstOrderOnly && !request.IsFirstOrder)
             return Result.Failure<CouponValidationResult>("Bu kupon yalnızca ilk sipariş için geçerlidir.");
 
-        if (request.MemberId.HasValue)
-        {
-            if (coupon.MemberId.HasValue && coupon.MemberId != request.MemberId)
-                return Result.Failure<CouponValidationResult>("Bu kupon size ait değil.");
+        // Hedef kontrolü (kişiye özel / gruba özel kupon): misafir sepetinde de uygulanır —
+        // MemberId null iken kişiye özel kupon ESKİDEN kabul ediliyordu.
+        Guid? uyeGrubuId = null;
+        if (KuponHedefKurali.UyeGrubuGerekli(coupon.MemberGroupId, request.MemberId))
+            uyeGrubuId = (await _memberService.GetMemberAsync(request.MemberId!.Value, cancellationToken))?.MemberGroupId;
 
-            if (coupon.UsageLimitPerMember.HasValue)
-            {
-                var memberUsage = coupon.Usages.Count(u => u.MemberId == request.MemberId.Value);
-                if (memberUsage >= coupon.UsageLimitPerMember)
-                    return Result.Failure<CouponValidationResult>("Bu kuponu zaten kullandınız.");
-            }
+        var hedefEngeli = KuponHedefKurali.Engel(
+            coupon.MemberId, coupon.MemberGroupId, request.MemberId, uyeGrubuId);
+        if (hedefEngeli is not null)
+            return Result.Failure<CouponValidationResult>(hedefEngeli);
+
+        if (request.MemberId.HasValue && coupon.UsageLimitPerMember.HasValue)
+        {
+            var memberUsage = coupon.Usages.Count(u => u.MemberId == request.MemberId.Value);
+            if (memberUsage >= coupon.UsageLimitPerMember)
+                return Result.Failure<CouponValidationResult>("Bu kuponu zaten kullandınız.");
         }
 
         // İndirim hesapla

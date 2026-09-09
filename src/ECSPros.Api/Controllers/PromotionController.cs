@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Promotion.Application.Commands.CopyCampaign;
 using ECSPros.Promotion.Application.Commands.CreateCampaign;
 using ECSPros.Promotion.Application.Commands.ManageCoupon;
@@ -21,6 +23,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/promotion")]
 [Authorize]
+[RequirePermission(Permissions.PromotionView)]   // Y2: sayfa yetkisi
 public class PromotionController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -32,14 +35,14 @@ public class PromotionController : ControllerBase
 
     /// <summary>Kampanyaları listeler.</summary>
     [HttpGet("campaigns")]
-    public async Task<IActionResult> GetCampaigns(
+    public async Task<IActionResult> GetCampaigns([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, 
         [FromQuery] bool activeOnly = true, [FromQuery] string? search = null,
         CancellationToken ct = default)
     {
         // DataGrid F4 (2026-09-08): `page` parametresi varsa sayfalı+filtreli+sıralı (CampaignGrid.Schema); yoksa eski düz dizi (diğer çağıranlar bozulmaz)
         if (Request.Query.ContainsKey("page"))
         {
-            var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 50);
+            var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, await kanalKapsami.KanallarAsync(Permissions.PromotionView, ct), defaultPageSize: 50);
             var paged = await _mediator.Send(new GetCampaignsGridQuery(new CampaignListFilters(activeOnly, search), grid), ct);
             return Ok(new { success = true, data = paged.Value });
         }
@@ -50,26 +53,35 @@ public class PromotionController : ControllerBase
     /// <summary>Kampanyaları Excel'e aktarır (DataGrid F4): gövde search/sort/dir/filters/columns + named: activeOnly.</summary>
     [HttpPost("campaigns/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportCampaigns([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+    public async Task<IActionResult> ExportCampaigns([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
-        [FromServices] ILogger<PromotionController> logger, CancellationToken ct)
+        [FromServices] ILogger<PromotionController> logger, [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, CancellationToken ct)
     {
+        var kanalKisiti = await kanalKapsami.KanallarAsync(Permissions.PromotionView, ct);   // Y3: export listeyle aynı kapsamdan geçer
         var filters = new CampaignListFilters(ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "activeOnly") ?? false, body.Search);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "campaigns", "kampanyalar", "Kampanyalar",
-            ECSPros.Api.Grid.CampaignExportColumns.All, max => _mediator.Send(new ExportCampaignsQuery(filters, body.ToGridRequest(), max), ct), ct);
+            ECSPros.Api.Grid.CampaignExportColumns.All, max => _mediator.Send(new ExportCampaignsQuery(filters, body.ToGridRequest(kanalKisiti), max), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Kampanya detayı (düzenleme formu için — ürün kapsamı dahil).</summary>
     [HttpGet("campaigns/{id:guid}")]
-    public async Task<IActionResult> GetCampaignDetail(Guid id, CancellationToken ct)
+    public async Task<IActionResult> GetCampaignDetail(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new GetCampaignDetailQuery(id), ct);
         if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+
+        // Y3 (K2 + §C.2): kapsam dışı kampanyanın VARLIĞI sızmasın → 403 değil 404.
+        var kanallar = await kanalKapsami.KanallarAsync(Permissions.PromotionView, ct);
+        if (kanallar is not null && !kanallar.Contains(result.Value!.FirmPlatformId))
+            return NotFound(new { success = false, error = "Kampanya bulunamadı." });
+
         return Ok(new { success = true, data = result.Value });
     }
 
     /// <summary>Yeni kampanya oluşturur.</summary>
     [HttpPost("campaigns")]
+    [RequirePermission(Permissions.PromotionManage)]   // Y2
     public async Task<IActionResult> CreateCampaign([FromBody] CreateCampaignRequest request, CancellationToken ct)
     {
         Guid.TryParse(User.FindFirst("sub")?.Value, out var userId);
@@ -100,6 +112,7 @@ public class PromotionController : ControllerBase
 
     /// <summary>Kampanya günceller.</summary>
     [HttpPut("campaigns/{id:guid}")]
+    [RequirePermission(Permissions.PromotionManage)]   // Y2
     public async Task<IActionResult> UpdateCampaign(Guid id, [FromBody] UpdateCampaignRequest request, CancellationToken ct)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId))
@@ -130,6 +143,7 @@ public class PromotionController : ControllerBase
 
     /// <summary>Kampanyayı kopyalar (yeni kod, opsiyonel başka platform; kopya pasif başlar).</summary>
     [HttpPost("campaigns/{id:guid}/copy")]
+    [RequirePermission(Permissions.PromotionManage)]   // Y2
     public async Task<IActionResult> CopyCampaign(Guid id, [FromBody] CopyCampaignRequest request, CancellationToken ct)
     {
         Guid.TryParse(User.FindFirst("sub")?.Value, out var userId);
@@ -153,27 +167,33 @@ public class PromotionController : ControllerBase
     [HttpGet("coupons")]
     public async Task<IActionResult> GetCoupons(
         [FromQuery] string? search, [FromQuery] bool? isActive,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromQuery] Guid? memberId = null, [FromQuery] Guid? memberGroupId = null,
+        CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetCouponsQuery(search, isActive, page, pageSize), ct);
+        var result = await _mediator.Send(
+            new GetCouponsQuery(search, isActive, page, pageSize, memberId, memberGroupId), ct);
         return Ok(new { success = true, data = result.Value });
     }
 
     /// <summary>Yeni kupon tanımlar (P3).</summary>
     [HttpPost("coupons")]
+    [RequirePermission(Permissions.PromotionManage)]   // Y2
     public async Task<IActionResult> CreateCoupon([FromBody] CouponRequest request, CancellationToken ct)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
         var result = await _mediator.Send(new CreateCouponCommand(
             request.Code, request.NameI18n, request.CouponType, request.DiscountValue,
             request.UsageLimitTotal, request.UsageLimitPerMember, request.MinimumCartTotal,
-            request.ValidForFirstOrderOnly, AsUtc(request.StartsAt), AsUtcNullable(request.EndsAt), userId), ct);
+            request.ValidForFirstOrderOnly, AsUtc(request.StartsAt), AsUtcNullable(request.EndsAt),
+            request.MemberId, request.MemberGroupId, userId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Created("/api/promotion/coupons", new { success = true, data = new { id = result.Value } });
     }
 
     /// <summary>Kupon günceller (P3).</summary>
     [HttpPut("coupons/{id:guid}")]
+    [RequirePermission(Permissions.PromotionManage)]   // Y2
     public async Task<IActionResult> UpdateCoupon(Guid id, [FromBody] CouponRequest request, CancellationToken ct)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
@@ -181,13 +201,14 @@ public class PromotionController : ControllerBase
             id, request.NameI18n, request.CouponType, request.DiscountValue,
             request.UsageLimitTotal, request.UsageLimitPerMember, request.MinimumCartTotal,
             request.ValidForFirstOrderOnly, AsUtc(request.StartsAt), AsUtcNullable(request.EndsAt),
-            request.IsActive, userId), ct);
+            request.MemberId, request.MemberGroupId, request.IsActive, userId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
     }
 
     /// <summary>Kuponu siler — yalnız hiç kullanılmamış kuponlar silinebilir (P3).</summary>
     [HttpDelete("coupons/{id:guid}")]
+    [RequirePermission(Permissions.PromotionManage)]   // Y2
     public async Task<IActionResult> DeleteCoupon(Guid id, CancellationToken ct)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
@@ -214,6 +235,7 @@ public class PromotionController : ControllerBase
     /// Sipariş oluşturmadan önce çağrılır — sonuç gösterimi ve doğrulama için.
     /// </summary>
     [HttpPost("calculate")]
+    [RequirePermission(Permissions.PromotionManage)]   // Y2
     public async Task<IActionResult> CalculateDiscounts([FromBody] CalculateDiscountsRequest request, CancellationToken ct)
     {
         var items = request.Items
@@ -235,6 +257,7 @@ public class PromotionController : ControllerBase
 
     /// <summary>Kupon kodunu doğrular ve indirim tutarını hesaplar.</summary>
     [HttpPost("coupon/validate")]
+    [RequirePermission(Permissions.PromotionManage)]   // Y2
     public async Task<IActionResult> ValidateCoupon([FromBody] ValidateCouponRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -248,6 +271,7 @@ public class PromotionController : ControllerBase
 
     /// <summary>Kupon kullanımını kaydeder — sipariş tamamlandıktan sonra çağrılır.</summary>
     [HttpPost("coupon/use")]
+    [RequirePermission(Permissions.PromotionManage)]   // Y2
     public async Task<IActionResult> UseCoupon([FromBody] UseCouponRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -312,7 +336,9 @@ public record CouponRequest(
     bool ValidForFirstOrderOnly,
     DateTime StartsAt,
     DateTime? EndsAt,
-    bool IsActive = true);
+    bool IsActive = true,
+    Guid? MemberId = null,          // kişiye özel kupon
+    Guid? MemberGroupId = null);    // üye grubuna özel kupon (ikisi birden olamaz)
 
 public record CartItemRequest(Guid VariantId, decimal Quantity, decimal UnitPrice);
 

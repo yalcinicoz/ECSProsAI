@@ -10,6 +10,8 @@ interface Coupon {
   id: string
   campaignId?: string
   memberId?: string
+  memberGroupId?: string
+  memberName?: string
   code: string
   nameI18n: Record<string, string>
   couponType: string
@@ -33,6 +35,20 @@ interface CouponUsage {
   usedAt: string
 }
 
+interface MemberGroup {
+  id: string
+  nameI18n: Record<string, string>
+}
+
+interface MemberHit {
+  id: string
+  firstName: string
+  lastName: string
+  email?: string
+}
+
+const BOS_GRUPLAR: MemberGroup[] = []
+
 interface PagedResult<T> {
   items: T[]
   totalCount: number
@@ -43,6 +59,10 @@ interface PagedResult<T> {
 function errText(e: unknown) {
   const err = e as { response?: { data?: { error?: string } } }
   return err.response?.data?.error ?? 'İşlem başarısız oldu.'
+}
+
+function uyeAdi(m: MemberHit) {
+  return `${m.firstName} ${m.lastName}`.trim() || m.email || m.id.slice(0, 8)
 }
 
 function indirimYazisi(c: Coupon) {
@@ -68,6 +88,28 @@ function CouponModal({ coupon, onClose }: { coupon: Coupon | 'new'; onClose: () 
   const [ends, setEnds] = useState(c?.endsAt ? c.endsAt.slice(0, 10) : '')
   const [isActive, setIsActive] = useState(c?.isActive ?? true)
   const [error, setError] = useState('')
+
+  // Hedef: herkese açık / belirli üye / üye grubu (ikisi birden seçilemez — sunucuda da kontrollü)
+  const [hedef, setHedef] = useState<'all' | 'member' | 'group'>(
+    c?.memberId ? 'member' : c?.memberGroupId ? 'group' : 'all')
+  const [memberId, setMemberId] = useState(c?.memberId ?? '')
+  const [memberLabel, setMemberLabel] = useState(c?.memberName ?? '')
+  const [groupId, setGroupId] = useState(c?.memberGroupId ?? '')
+  const [memberSearch, setMemberSearch] = useState('')
+
+  const { data: groups = BOS_GRUPLAR } = useQuery<MemberGroup[]>({
+    queryKey: ['member-groups'],
+    queryFn: async () => (await api.get('/crm/member-groups')).data.data ?? BOS_GRUPLAR,
+    enabled: hedef === 'group',
+  })
+
+  const aramaTerimi = memberSearch.trim()
+  const { data: memberHits, isFetching: uyeAraniyor } = useQuery<PagedResult<MemberHit>>({
+    queryKey: ['coupon-member-search', aramaTerimi],
+    queryFn: async () =>
+      (await api.get(`/crm/members?search=${encodeURIComponent(aramaTerimi)}&activeOnly=false&pageSize=8`)).data.data,
+    enabled: hedef === 'member' && aramaTerimi.length >= 2,
+  })
 
   const remove = useMutation({
     mutationFn: async () => {
@@ -96,6 +138,8 @@ function CouponModal({ coupon, onClose }: { coupon: Coupon | 'new'; onClose: () 
         startsAt: new Date(`${starts}T00:00:00`).toISOString(),
         endsAt: ends ? new Date(`${ends}T23:59:59`).toISOString() : null,
         isActive,
+        memberId: hedef === 'member' ? memberId : null,
+        memberGroupId: hedef === 'group' ? groupId : null,
       }
       if (isNew) await api.post('/promotion/coupons', body)
       else await api.put(`/promotion/coupons/${c!.id}`, body)
@@ -107,7 +151,8 @@ function CouponModal({ coupon, onClose }: { coupon: Coupon | 'new'; onClose: () 
     onError: (e: unknown) => setError(errText(e)),
   })
 
-  const valid = code.trim().length >= 3 && name.trim() && parseFloat(discountValue) > 0
+  const hedefTamam = hedef === 'all' || (hedef === 'member' ? !!memberId : !!groupId)
+  const valid = code.trim().length >= 3 && name.trim() && parseFloat(discountValue) > 0 && hedefTamam
 
   return (
     <Modal open onClose={onClose} title={isNew ? 'Yeni Kupon' : `Kupon: ${c?.code}`}>
@@ -163,6 +208,64 @@ function CouponModal({ coupon, onClose }: { coupon: Coupon | 'new'; onClose: () 
           <div>
             <label className="flbl">Bitiş <span className="text-xs" style={{ color: 'var(--text-s)' }}>(boş = süresiz)</span></label>
             <input type="date" className="inp" value={ends} onChange={e => setEnds(e.target.value)} />
+          </div>
+        </div>
+        <div className="rounded-lg p-3" style={{ border: '1px solid var(--border)' }}>
+          <label className="flbl">Kimler Kullanabilir?</label>
+          <select className="inp" value={hedef}
+            onChange={e => {
+              const v = e.target.value as 'all' | 'member' | 'group'
+              setHedef(v)
+              if (v !== 'member') { setMemberId(''); setMemberLabel(''); setMemberSearch('') }
+              if (v !== 'group') setGroupId('')
+            }}>
+            <option value="all">Herkes (kodu bilen herkes)</option>
+            <option value="member">Belirli bir üye (kişiye özel)</option>
+            <option value="group">Üye grubu</option>
+          </select>
+          <div className="mt-2">
+            {hedef === 'all' ? (
+              <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+                Kod sepette elle girilir; kimseye özel değildir.
+              </p>
+            ) : hedef === 'group' ? (
+              <select className="inp" value={groupId} onChange={e => setGroupId(e.target.value)}>
+                <option value="">— grup seçin —</option>
+                {groups.map(g => (
+                  <option key={g.id} value={g.id}>{g.nameI18n?.['tr'] ?? g.id.slice(0, 8)}</option>
+                ))}
+              </select>
+            ) : memberId ? (
+              <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text)' }}>
+                <span className="px-2 py-1 rounded-lg" style={{ background: 'var(--surface2)' }}>
+                  {memberLabel || memberId.slice(0, 8)}
+                </span>
+                <button type="button" className="text-xs underline" style={{ color: 'var(--brand)' }}
+                  onClick={() => { setMemberId(''); setMemberLabel('') }}>değiştir</button>
+              </div>
+            ) : (
+              <div>
+                <input className="inp" value={memberSearch} onChange={e => setMemberSearch(e.target.value)}
+                  placeholder="Üye ara — ad, soyad, e-posta veya telefon (en az 2 karakter)" />
+                <div className="mt-1 max-h-40 overflow-y-auto">
+                  {aramaTerimi.length >= 2 && uyeAraniyor && (
+                    <p className="text-xs px-1 py-1" style={{ color: 'var(--text-s)' }}>Aranıyor…</p>
+                  )}
+                  {aramaTerimi.length >= 2 && !uyeAraniyor && (memberHits?.items?.length ?? 0) === 0 && (
+                    <p className="text-xs px-1 py-1" style={{ color: 'var(--text-s)' }}>Üye bulunamadı.</p>
+                  )}
+                  {(memberHits?.items ?? []).map(m => (
+                    <button key={m.id} type="button"
+                      className="w-full text-left text-sm px-2 py-1.5 rounded-lg hover:bg-[var(--surface2)]"
+                      style={{ color: 'var(--text)' }}
+                      onClick={() => { setMemberId(m.id); setMemberLabel(uyeAdi(m)) }}>
+                      {uyeAdi(m)}
+                      <span className="text-xs ml-2" style={{ color: 'var(--text-s)' }}>{m.email ?? ''}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -259,6 +362,11 @@ export function CouponsPage() {
   const [editing, setEditing] = useState<Coupon | 'new' | null>(null)
   const [usagesFor, setUsagesFor] = useState<Coupon | null>(null)
 
+  const { data: groups = BOS_GRUPLAR } = useQuery<MemberGroup[]>({
+    queryKey: ['member-groups'],
+    queryFn: async () => (await api.get('/crm/member-groups')).data.data ?? BOS_GRUPLAR,
+  })
+
   const { data, isLoading } = useQuery<PagedResult<Coupon>>({
     queryKey: ['coupons', tab, appliedSearch, page],
     queryFn: async () => {
@@ -271,6 +379,13 @@ export function CouponsPage() {
 
   const coupons = data?.items ?? []
   const totalPages = Math.ceil((data?.totalCount ?? 0) / 20)
+
+  const hedefYazisi = (cp: Coupon) => {
+    if (cp.memberId) return cp.memberName ?? 'Kişiye özel'
+    if (cp.memberGroupId)
+      return groups.find(g => g.id === cp.memberGroupId)?.nameI18n?.['tr'] ?? 'Üye grubu'
+    return 'Herkes'
+  }
 
   return (
     <div className="p-6">
@@ -301,7 +416,7 @@ export function CouponsPage() {
         <table className="w-full">
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'AD', 'İNDİRİM', 'KULLANIM', 'GEÇERLİLİK', 'DURUM', ''].map(h => (
+              {['KOD', 'AD', 'KİM KULLANABİLİR', 'İNDİRİM', 'KULLANIM', 'GEÇERLİLİK', 'DURUM', ''].map(h => (
                 <th key={h} className={`px-4 py-3 text-xs font-semibold ${h === '' ? 'w-28' : 'text-left'}`}
                   style={{ color: 'var(--text-s)' }}>{h}</th>
               ))}
@@ -309,10 +424,10 @@ export function CouponsPage() {
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
             )}
             {!isLoading && coupons.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
                 Kupon yok. "+ Yeni Kupon" ile tanımlayın; müşteriler sepette kodu girerek kullanır.
               </td></tr>
             )}
@@ -324,6 +439,12 @@ export function CouponsPage() {
                   <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{cp.code}</code>
                 </td>
                 <td className="px-4 py-3 text-sm" style={{ color: 'var(--text)' }}>{cp.nameI18n?.['tr'] ?? '—'}</td>
+                <td className="px-4 py-3 text-sm" style={{ color: cp.memberId || cp.memberGroupId ? 'var(--text)' : 'var(--text-s)' }}>
+                  {hedefYazisi(cp)}
+                  {cp.memberId != null && cp.memberId !== '' && (
+                    <span className="text-xs ml-1" style={{ color: 'var(--text-s)' }}>(kişiye özel)</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text)' }}>
                   {indirimYazisi(cp)}
                   {cp.minimumCartTotal != null && (

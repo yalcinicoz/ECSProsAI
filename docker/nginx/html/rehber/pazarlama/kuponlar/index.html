@@ -37,6 +37,10 @@ kupon müşterinin kod girmesini ister.</p>
 <td>Kuponun adı (Türkçe).</td>
 </tr>
 <tr>
+<td>KİM KULLANABİLİR</td>
+<td><code>Herkes</code> (kodu bilen herkes), kişiye özel kuponlarda üyenin adı + <code>(kişiye özel)</code>, gruba özel kuponlarda üye grubunun adı.</td>
+</tr>
+<tr>
 <td>İNDİRİM</td>
 <td><code>%10</code> ya da <code>50,00 ₺</code>; varsa yanında <code>(min 500 ₺)</code> en az sepet tutarı.</td>
 </tr>
@@ -110,7 +114,7 @@ kupon müşterinin kod girmesini ister.</p>
 <td>Kaydet</td>
 <td>Pencere altı</td>
 <td>Kupon oluşturulur/güncellenir, pencere kapanır.</td>
-<td>Kod ≥ 3 karakter, Ad dolu, İndirim değeri &gt; 0.</td>
+<td>Kod ≥ 3 karakter, Ad dolu, İndirim değeri &gt; 0; &quot;Belirli bir üye&quot;/&quot;Üye grubu&quot; seçildiyse hedef de seçili olmalı.</td>
 </tr>
 <tr>
 <td>Vazgeç</td>
@@ -180,6 +184,11 @@ kupon müşterinin kod girmesini ister.</p>
 <td>Son geçerli gün (günün sonuna kadar).</td>
 </tr>
 <tr>
+<td>Kimler Kullanabilir?</td>
+<td>—</td>
+<td><code>Herkes</code> (varsayılan) / <code>Belirli bir üye (kişiye özel)</code> / <code>Üye grubu</code>. Üye seçiminde ad, soyad, e-posta veya telefonla arayıp (en az 2 karakter) listeden seçersiniz; seçilen üye rozet olarak görünür, <strong>değiştir</strong> ile başkasına geçilir. Grup seçiminde CRM üye grupları listelenir. Üye ve grup <strong>birlikte</strong> seçilemez.</td>
+</tr>
+<tr>
 <td>Yalnız ilk siparişte geçerli</td>
 <td>—</td>
 <td>İşaretliyse daha önce siparişi olan üye kullanamaz.</td>
@@ -196,12 +205,17 @@ kupon müşterinin kod girmesini ister.</p>
 pasif kupon kodu.&quot;; başlangıç gelmemiş → &quot;Kupon henüz aktif değil.&quot;; bitiş geçmiş → &quot;Kupon süresi dolmuş.&quot;; toplam
 limit dolmuş → &quot;Kupon kullanım limiti dolmuş.&quot;; sepet küçük → &quot;Bu kupon için minimum sepet tutarı … ₺ olmalıdır.&quot;;
 ilk-sipariş kuralı → &quot;Bu kupon yalnızca ilk sipariş için geçerlidir.&quot;; üye başı limit dolmuş → &quot;Bu kuponu zaten
-kullandınız.&quot;</li>
+kullandınız.&quot;; kupon başkasına tanımlı → &quot;Bu kupon size ait değil.&quot;; kupon kişiye/gruba özelken müşteri giriş
+yapmamış → &quot;Bu kupon kişiye özeldir; kullanmak için giriş yapmalısınız.&quot;; müşteri kuponun grubunda değil → &quot;Bu kupon
+yalnız belirli bir üye grubu için geçerlidir.&quot;</li>
+<li><strong>Kişiye/gruba özel kupon</strong> müşterinin <em>Hesabım → İndirim Kuponlarım</em> listesinde ve sepetteki &quot;Kuponlarım&quot;
+penceresinde kendiliğinden görünür; herkese açık kodlar burada listelenmez, elle girilir.</li>
 <li>Yüzde indirim sepet toplamı üzerinden hesaplanır; tutar indirimi sabit düşer. Kupon indirimi sipariş kalemlerine
 satır tutarı oranında dağıtılır (iade tutarı doğru çıksın diye).</li>
 <li>Kupon <strong>yalnız kart ile ödemede</strong> geçerlidir; müşteri kapıda ödeme seçerse uygulanmış kupon sepetten kaldırılır ve
 ödeme sayfasında bilgi notu gösterilir.</li>
-<li>Misafir (üyeliksiz) siparişte kupon kullanılabilir ama üye başı sayaç tutulmaz.</li>
+<li>Misafir (üyeliksiz) siparişte <strong>herkese açık</strong> kupon kullanılabilir ama üye başı sayaç tutulmaz; kişiye ve gruba
+özel kuponlar misafir sepetinde kabul edilmez.</li>
 <li>Kullanılmış kupon silinemez; &quot;Aktif&quot; kutusunu kaldırarak pasife alın. Kullanım geçmişi korunur.</li>
 </ul>
 <h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
@@ -210,6 +224,13 @@ satır tutarı oranında dağıtılır (iade tutarı doğru çıksın diye).</li
 <li><strong>+ Yeni Kupon</strong> → Kupon Kodu <code>HOSGELDIN10</code>, Ad &quot;Hoş geldin indirimi&quot;, İndirim Tipi Yüzde, İndirim Değeri <code>10</code>.</li>
 <li>Üye Başı Limit <code>1</code>, &quot;Yalnız ilk siparişte geçerli&quot; işaretleyin; isterseniz En Az Sepet <code>300</code>.</li>
 <li>Bitiş tarihini boş bırakın (süresiz) → <strong>Kaydet</strong>.</li>
+</ol>
+<p><strong>Tek bir müşteriye özel kupon tanımlama (ör. şikâyet telafisi)</strong></p>
+<ol>
+<li><strong>+ Yeni Kupon</strong> → Kupon Kodu <code>TELAFI50</code>, Ad &quot;Telafi kuponu&quot;, İndirim Tipi Tutar, İndirim Değeri <code>50</code>.</li>
+<li><strong>Kimler Kullanabilir?</strong> → <code>Belirli bir üye (kişiye özel)</code>; arama kutusuna müşterinin adını veya e-postasını yazıp
+listeden seçin.</li>
+<li>Toplam Limit <code>1</code> verin → <strong>Kaydet</strong>. Kupon yalnız o üyenin hesabında görünür ve yalnız o üye kullanabilir.</li>
 </ol>
 <p><strong>Kuponun nerede kullanıldığını görmek</strong></p>
 <ol>
@@ -229,7 +250,12 @@ oluşturun.</p>
 En Az Sepet ve ödeme yöntemini (kapıda ödemede kupon geçmez) kontrol edin.</p>
 </blockquote>
 <blockquote class="callout not">
-<p><strong>Not:</strong> &quot;Kaydet&quot; butonu Kod 3 karakterden kısa, Ad boş ya da İndirim Değeri 0 iken pasiftir.</p>
+<p><strong>Not:</strong> &quot;Kaydet&quot; butonu Kod 3 karakterden kısa, Ad boş, İndirim Değeri 0 ya da seçilen hedef (üye/grup) boş iken
+pasiftir.</p>
+</blockquote>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Kişiye özel kuponda Toplam Limit <code>1</code> vermek, kodun paylaşılsa bile ikinci kez kullanılmasını engeller
+(kod zaten başkasında çalışmaz, ama sayaç net kalır).</p>
 </blockquote>
 <h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
 <ul>

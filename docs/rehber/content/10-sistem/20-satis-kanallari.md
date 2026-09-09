@@ -82,6 +82,17 @@ Bu iki bölüm yalnız seçilen platform tipinin alan şeması varsa görünür 
 
 Kural: **En az bir ödeme yöntemi seçili olmalı** (hiçbiri seçili değilse kırmızı uyarı görünür ve kayıt reddedilir). Kapalı yöntem sitede hiç gösterilmez; sunucu da bu yöntemle gelen siparişi reddeder. Değişiklik yaklaşık 1 dakika içinde siteye yansır.
 
+### Kargo Ücreti
+| Alan | Zorunlu | Açıklama / kurallar / örnek |
+|---|---|---|
+| Kargo ücreti (TL, 0 = ücretsiz) | Hayır | Bu kanalda satılan siparişlerden alınacak **sabit** kargo bedeli. `0` bırakılırsa kargo ücretsizdir (varsayılan). Sepet/ödeme özetinde gösterilir ve sipariş toplamına eklenir. |
+| Ücretsiz kargo sepet limiti (TL, 0 = yok) | Hayır | Bu tutar ve üzerindeki sepetlerde kargo alınmaz. Karşılaştırma **indirimler (kupon + kampanya) düşüldükten sonraki** ürün tutarına göre yapılır. `0` = limit yok (her sepette kargo alınır). |
+
+Kural: Bir **Kargo Kampanyası** (Pazarlama → Kampanyalar) koşulu sağlanıyorsa kargo bedelini düşürür ya
+da tamamen kaldırır. Kampanya koşulu sağlanmıyorsa bu kanal ayarları geçerlidir; iki sonuçtan **müşteri
+lehine** olan uygulanır. Sepette limitin altındaki müşteriye "… TL daha ekleyin, kargo ücretsiz." bilgisi
+gösterilir. Değişiklik yaklaşık 1 dakika içinde siteye yansır.
+
 ### Kargo Gönderimi
 | Alan | Zorunlu | Açıklama / kurallar / örnek |
 |---|---|---|
@@ -114,6 +125,11 @@ Kural: **En az bir ödeme yöntemi seçili olmalı** (hiçbiri seçili değilse 
 3. **Kimlik Bilgileri (API)** bölümünde pazaryerinin verdiği anahtar/şifreyi girin.
 4. **Kargo Gönderimi** kutusunu kapatın (kargoyu pazaryeri iletir).
 5. **Oluştur**'a tıklayın.
+
+### Kargo ücreti tanımlama
+1. Kanal kartına tıklayın.
+2. **Kargo Ücreti** bölümünde bedeli (örn. `59,99`) ve isterseniz ücretsiz kargo limitini (örn. `1000`) girin.
+3. **Kaydet**'e tıklayın; yaklaşık 1 dakika içinde sitede geçerli olur. Limitsiz ücretsiz kargo için bedeli `0` bırakın.
 
 ### Kapıda ödemeyi kapatma / limit değiştirme
 1. Kanal kartına tıklayın.
