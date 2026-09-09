@@ -1,0 +1,41 @@
+@* 2026-09-09: kargo bedeli gösterim aynası — TEK kopya. Asıl kural sunucuda
+   (Shared.Contracts.KargoUcretiKurali) ve tahsilat checkout'ta orada hesaplanır;
+   buradaki JS yalnız sepet/teslimat/ödeme ekranlarında canlı gösterim içindir
+   (seçim/adet/kupon değişince sunucuya gitmeden aynı sonucu üretir).
+   Kural: kanal ücreti 0 → ücretsiz; kanal eşiği aşıldıysa 0; kargo kampanyası
+   ücreti düşürebilir; iki sonuçtan MÜŞTERİ LEHİNE olan uygulanır. *@
+<script>
+window.msKargoHesapla = function (sepet, odenecekUrunTutari) {
+    const ucret = Number(sepet?.shippingFee) || 0;
+    const esik = Number(sepet?.freeShippingThreshold) || 0;
+    const kampanyaAd = sepet?.freeShippingCampaign || null;
+    const ham = sepet?.shippingCampaignFee;
+    const odenecek = Number(odenecekUrunTutari) || 0;
+
+    if (ucret <= 0) {
+        return { tutar: 0, bedava: true, sebep: "none", kampanyaAd: null, esikKalan: 0 };
+    }
+    const kanal = (esik > 0 && odenecek >= esik) ? 0 : ucret;
+    const kampanya = (ham === null || ham === undefined)
+        ? null : Math.min(Math.max(Number(ham), 0), ucret);
+    const tutar = kampanya === null ? kanal : Math.min(kanal, kampanya);
+    const bedava = tutar <= 0;
+    return {
+        tutar,
+        bedava,
+        sebep: bedava ? (kampanya === 0 ? "campaign" : "threshold") : null,
+        kampanyaAd,
+        esikKalan: (!bedava && esik > 0) ? Math.max(0, esik - odenecek) : 0,
+    };
+};
+
+/// Kargo satırının metnini yazar (bedavaysa "Ücretsiz", kampanyalıysa kampanya adıyla).
+window.msKargoYaz = function (alan, kargo, paraYaz) {
+    if (!alan) { return; }
+    alan.textContent = kargo.bedava
+        ? (kargo.sebep === "campaign" && kargo.kampanyaAd
+            ? "Ücretsiz (" + kargo.kampanyaAd + ")" : "Ücretsiz")
+        : paraYaz(kargo.tutar);
+    alan.classList.toggle("ms-siparis-ucretsiz", kargo.bedava);
+};
+</script>

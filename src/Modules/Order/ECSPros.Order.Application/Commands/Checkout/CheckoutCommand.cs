@@ -79,6 +79,7 @@ public class CheckoutCommandHandler(
     ECSPros.Shared.Contracts.IChannelPricingService pricingService,
     ECSPros.Shared.Contracts.IProductCampaignResolver campaignResolver,
     ECSPros.Shared.Contracts.ICouponValidator couponValidator,
+    ECSPros.Shared.Contracts.IShippingOptionsProvider shippingOptions,
     ECSPros.Shared.Contracts.IPaymentOptionsProvider paymentOptions,
     IPublisher publisher)
     : IRequestHandler<CheckoutCommand, Result<CheckoutSonucu>>
@@ -148,7 +149,12 @@ public class CheckoutCommandHandler(
             .Select(i => new ECSPros.Shared.Contracts.CartCampaignItem(
                 i.VariantId, urunIdByVariant[i.VariantId], i.Quantity, sunucuFiyatByVariant[i.VariantId]))
             .ToList();
-        var kampanyaSonuc = await campaignResolver.ResolveCartAsync(request.FirmPlatformId, kampanyaSepet, ct);
+        // 2026-09-09: kargo kampanyası da burada çözülür — kanal kargo bedeli (yüzde/tutar kapsamı
+        // bunun üzerine uygulanır) ve ödeme yöntemi (yöntem kısıtlı kampanyalar için) geçilir.
+        var kargoAyariKampanyaIcin = await shippingOptions.GetAsync(request.FirmPlatformId, ct);
+        var kampanyaSonuc = await campaignResolver.ResolveCartAsync(
+            request.FirmPlatformId, kampanyaSepet, ct,
+            kargoAyariKampanyaIcin.Fee, request.PaymentMethod);
         // Etkin birim fiyat = kampanyalı (varsa) yoksa kanal fiyatı.
         decimal EtkinFiyat(Guid vid) => kampanyaSonuc.ItemUnitPrices.GetValueOrDefault(vid, sunucuFiyatByVariant[vid]);
 
@@ -183,12 +189,24 @@ public class CheckoutCommandHandler(
             return Result.Failure<CheckoutSonucu>("Seçilen ödeme yöntemi bu mağazada şu an kullanılamıyor; lütfen başka bir yöntem seçin.");
 
         var kapidaOdeme = request.PaymentMethod is "kapida-nakit" or "kapida-kart";
-        var indirim = Math.Clamp(kuponIndirim + kampanyaSepetIndirim, 0m, subtotal);
-        var masraf = kapidaOdeme ? odemeSecenekleri.CodServiceFee : 0m;
+        // M2 (2026-09-09): tutar aritmetiği TEK kuralda (SiparisTutarKurali) — ön izleme ucu
+        // (POST /checkout/preview) aynı kuralı çağırır, iki yol birbirinden ayrışamaz.
+        var tutar = ECSPros.Order.Application.Services.SiparisTutarKurali.Hesapla(
+            subtotal, kuponIndirim, kampanyaSepetIndirim,
+            kapidaOdeme, odemeSecenekleri.CodServiceFee,
+            kargoAyariKampanyaIcin.Fee, kargoAyariKampanyaIcin.FreeThreshold,
+            kampanyaSonuc.Shipping?.Fee);
+        var indirim = tutar.Indirim;
+        var masraf = tutar.Masraf;
         if (kapidaOdeme && odemeSecenekleri.CodMaxOrderTotal > 0
             && subtotal - indirim >= odemeSecenekleri.CodMaxOrderTotal)
             return Result.Failure<CheckoutSonucu>(
                 $"{odemeSecenekleri.CodMaxOrderTotal:N0} TL ve üzeri siparişlerde kapıda ödeme kabul edilmez; lütfen kart ile ödemeyi seçin.");
+
+        // 2026-09-09: kargo bedeli SUNUCUDA — kanal ayarı (sabit ücret + ücretsiz kargo eşiği)
+        // ve varsa kargo kampanyası; eşik tabanı indirimler SONRASI ürün tutarı (kullanıcı kararı).
+        // İstemciden kargo tutarı alınmaz; sepette gösterilen değer bu kuralın aynasıdır.
+        var kargoBedeli = tutar.KargoBedeli;
 
         var orderNumber = await orderNumbers.GenerateAsync(request.FirmPlatformId, ct);
 
@@ -228,8 +246,9 @@ public class CheckoutCommandHandler(
             Subtotal = subtotal,
             TotalDiscount = indirim,
             TotalExpense = masraf,
+            ShippingFee = kargoBedeli,
             TotalTax = 0,
-            GrandTotal = subtotal - indirim + masraf
+            GrandTotal = tutar.GenelToplam
         };
 
         // C8: müşteri notu (daha önce sessizce düşüyordu) + sözleşme kabul kaydı tek jsonb'de.

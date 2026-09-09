@@ -47,7 +47,9 @@ public sealed class OrderTrackingEventBuilder(
 
         var extra = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["shipping"] = siparis.TotalExpense.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+            // 2026-09-09: "shipping" artık gerçek kargo bedeli (önceden kapıda ödeme hizmet
+            // bedeli buraya yazılıyordu — GA4 masrafı kargo sanıyordu).
+            ["shipping"] = siparis.ShippingFee.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
             ["tax"] = siparis.TotalTax.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
             ["discount"] = siparis.TotalDiscount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
             ["payment_method"] = siparis.PaymentMethod ?? "",

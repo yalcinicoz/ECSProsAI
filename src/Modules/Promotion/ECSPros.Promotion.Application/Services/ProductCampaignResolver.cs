@@ -29,6 +29,14 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
             .ToListAsync(ct);
     }
 
+    /// <summary>2026-09-09: kargo kampanyaları (CampaignType.Scope = "shipping") ürün fiyatına
+    /// dokunmaz; ürün başına TEK kazanan seçimine girerlerse indirim kampanyasını bastırırlar.
+    /// Bu yüzden ürün yollarında dışarıda bırakılır, sepette ayrıca değerlendirilirler.</summary>
+    private static bool KargoKampanyasi(Campaign c) => (c.CampaignType?.Scope ?? "product") == "shipping";
+
+    private static List<Campaign> UrunKampanyalari(List<Campaign> campaigns)
+        => campaigns.Where(c => !KargoKampanyasi(c)).ToList();
+
     /// <summary>Her ürün için kapsam+dışlama denetiminden geçen TÜM kampanyalar (öncelik azalan).</summary>
     private static Dictionary<Guid, List<Campaign>> UygunKampanyalar(List<Campaign> campaigns, IEnumerable<Guid> productIds)
     {
@@ -61,7 +69,7 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
         var campaigns = await AktifKampanyalarAsync(firmPlatformId, ct);
         if (campaigns.Count == 0) return result;
 
-        foreach (var (pid, c) in EtkinKampanya(campaigns, productIds))
+        foreach (var (pid, c) in EtkinKampanya(UrunKampanyalari(campaigns), productIds))
             result[pid] = BuildInfo(c);
         return result;
     }
@@ -75,13 +83,14 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
         var campaigns = await AktifKampanyalarAsync(firmPlatformId, ct);
         if (campaigns.Count == 0) return result;
 
-        foreach (var (pid, liste) in UygunKampanyalar(campaigns, productIds))
+        foreach (var (pid, liste) in UygunKampanyalar(UrunKampanyalari(campaigns), productIds))
             result[pid] = liste.Select(BuildInfo).ToList();
         return result;
     }
 
     public async Task<CartCampaignResult> ResolveCartAsync(
-        Guid firmPlatformId, IReadOnlyList<CartCampaignItem> items, CancellationToken ct = default)
+        Guid firmPlatformId, IReadOnlyList<CartCampaignItem> items, CancellationToken ct = default,
+        decimal kargoUcreti = 0m, string? odemeYontemi = null)
     {
         var itemPrices = new Dictionary<Guid, decimal>();
         var applied = new List<AppliedCampaign>();
@@ -92,7 +101,7 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
         var campaigns = await AktifKampanyalarAsync(firmPlatformId, ct);
         if (campaigns.Count == 0) return new CartCampaignResult(itemPrices, 0m, applied);
 
-        var winner = EtkinKampanya(campaigns, items.Select(i => i.ProductId));
+        var winner = EtkinKampanya(UrunKampanyalari(campaigns), items.Select(i => i.ProductId));
 
         // Ürün-bazlı fiyatlar + cart_only kampanyalar için uygulanabilir varyant kümesi
         var cartOnly = new Dictionary<Guid, Campaign>();
@@ -149,8 +158,25 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
             }
         }
 
+        // ── Kargo kampanyası (Scope=shipping) — ürün kazananından bağımsız, sepetin tamamına.
+        // Eşik tabanı KargoUcretiKurali ile aynı: indirimler SONRASI ödenecek ürün tutarı.
+        ShippingCampaignResult? kargoKampanya = null;
+        var kargoAdaylari = campaigns.Where(KargoKampanyasi).ToList();
+        if (kargoAdaylari.Count > 0)
+        {
+            var brut = items.Sum(i => itemPrices.GetValueOrDefault(i.VariantId, i.UnitPrice) * i.Quantity);
+            var odenecek = Math.Max(0m, brut - Math.Round(cartDiscount, 2));
+            foreach (var c in kargoAdaylari)   // öncelik azalan; ilk uygulanabilir kazanır
+            {
+                var ucret = CampaignEngine.KargoUcreti(c, odenecek, odemeYontemi, kargoUcreti);
+                if (ucret is null) continue;
+                kargoKampanya = new ShippingCampaignResult(c.Code, NameOf(c), ucret.Value);
+                break;
+            }
+        }
+
         return new CartCampaignResult(itemPrices, Math.Round(cartDiscount, 2), applied,
-            itemDiscounts.Count > 0 ? itemDiscounts : null);
+            itemDiscounts.Count > 0 ? itemDiscounts : null, kargoKampanya);
     }
 
     /// <summary>Sepet-seviyesi indirimi kapsam kalemlerine satır tutarı oranında dağıtır.

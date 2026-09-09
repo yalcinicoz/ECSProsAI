@@ -65,7 +65,14 @@ public record CartCampaignResult(
     Dictionary<Guid, decimal> ItemUnitPrices,
     decimal CartDiscount,
     List<AppliedCampaign> Applied,
-    Dictionary<Guid, decimal>? ItemDiscounts = null);
+    Dictionary<Guid, decimal>? ItemDiscounts = null,
+    ShippingCampaignResult? Shipping = null);
+
+/// <summary>2026-09-09: kargo kampanyası (definition tipi <c>free_shipping</c>, Scope=shipping) sonucu.
+/// <paramref name="Fee"/> kampanya uygulandıktan SONRAKİ kargo bedeli (full → 0, percent/amount → indirimli).
+/// Kanal ayarıyla karşılaştırma <see cref="KargoUcretiKurali"/>'nda yapılır; kampanya yalnız düşürür.
+/// Kargo kampanyaları ürün-bazlı kazanan seçimine GİRMEZ (indirim kampanyasını bastırmasın).</summary>
+public record ShippingCampaignResult(string Code, string Name, decimal Fee);
 
 public interface IProductCampaignResolver
 {
@@ -80,9 +87,14 @@ public interface IProductCampaignResolver
         Guid firmPlatformId, IReadOnlyCollection<Guid> productIds, CancellationToken ct = default);
 
     /// <summary>F4 checkout: sepet için kampanyaları uygular — ürün-bazlı fiyat (fiyata) +
-    /// sepet-seviyesi indirim (toplama). Sunucu-taraflı; istemci fiyatına güvenilmez.</summary>
+    /// sepet-seviyesi indirim (toplama). Sunucu-taraflı; istemci fiyatına güvenilmez.
+    /// 2026-09-09 (additive): kargo kampanyası da burada çözülür — <paramref name="kargoUcreti"/>
+    /// kanalın sabit kargo bedeli (yüzde/tutar kapsamı bunun üzerine uygulanır),
+    /// <paramref name="odemeYontemi"/> ödeme yöntemi kısıtı olan kampanyalar için (null = henüz
+    /// seçilmedi → yöntem kısıtlı kampanya UYGULANMAZ, sepette bedava yazıp ödemede tahsil etmeyelim).</summary>
     Task<CartCampaignResult> ResolveCartAsync(
-        Guid firmPlatformId, IReadOnlyList<CartCampaignItem> items, CancellationToken ct = default);
+        Guid firmPlatformId, IReadOnlyList<CartCampaignItem> items, CancellationToken ct = default,
+        decimal kargoUcreti = 0m, string? odemeYontemi = null);
 }
 
 /// <summary>Kampanyalı birim fiyat hesabı — F3 (vitrin) ve F4 (checkout) AYNI mantığı kullanır.</summary>

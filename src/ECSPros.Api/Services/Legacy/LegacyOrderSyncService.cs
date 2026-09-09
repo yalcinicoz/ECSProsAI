@@ -41,6 +41,9 @@ public sealed class LegacyOrderSyncService(
     private string ServicePass => config["Legacy:OrderService:Password"] ?? "";
     private string Kaynak => config["Legacy:OrderService:Kaynak"] ?? "website";
     private int CodExpenseTypeId => config.GetValue("Legacy:OrderService:CodExpenseTypeId", 2);
+    // 2026-09-09: kargo bedeli masraf tipi (eski dfexpensetypes kaydı); 0 = satır yazılmaz,
+    // tutar yine expenseTotal/orderTotal içinde gider.
+    private int CargoExpenseTypeId => config.GetValue("Legacy:OrderService:CargoExpenseTypeId", 0);
     private bool DecimalComma => config.GetValue("Legacy:OrderService:DecimalComma", true);
     private const int MaxAttempt = 5;
 
@@ -495,6 +498,7 @@ public sealed class LegacyOrderSyncService(
         string CityName, string DistrictName, string? NeighborhoodName,
         string? MemberFirstName, string? MemberLastName, string? MemberEmail, string? MemberPhone,
         string? MemberIdentityNumber, int? LegacyMemberId, Guid? MemberId, string? CustomerNote,
+        decimal ShippingFee,
         List<Kalem> Items);
 
     private async Task<SiparisVerisi?> SiparisOkuAsync(NpgsqlConnection pg, Guid orderId, CancellationToken ct)
@@ -506,7 +510,7 @@ public sealed class LegacyOrderSyncService(
                    o."ShippingAddressLine", o."ShippingPostalCode",
                    COALESCE(c."NameI18n"->>'tr',''), COALESCE(d."NameI18n"->>'tr',''), n."NameI18n"->>'tr',
                    m."FirstName", m."LastName", m."Email", m."Phone", m."IdentityNumber", m."LegacyMemberId",
-                   o."MemberId", o."CustomerNotes"->>'note', fp."Settings"
+                   o."MemberId", o."CustomerNotes"->>'note', fp."Settings", o."ShippingFee"
             FROM "order".ord_orders o
             LEFT JOIN crm.crm_cities c ON c."Id" = o."ShippingCityId"
             LEFT JOIN crm.crm_districts d ON d."Id" = o."ShippingDistrictId"
@@ -554,6 +558,7 @@ public sealed class LegacyOrderSyncService(
             r.IsDBNull(23) ? null : r.GetInt32(23),
             r.IsDBNull(24) ? null : r.GetGuid(24),
             r.IsDBNull(25) ? null : r.GetString(25),
+            r.IsDBNull(27) ? 0m : r.GetDecimal(27),   // 2026-09-09: kargo bedeli (SELECT sonuna eklendi)
             new List<Kalem>());
         await r.CloseAsync();
 
@@ -762,19 +767,29 @@ public sealed class LegacyOrderSyncService(
             }
         }
 
-        // Kapıda bedeli masraf satırı (expenseTypeId ayarı verilmişse)
+        // Masraf satırları (expenseTypeId ayarı verilmişse): kapıda bedeli + kargo bedeli.
+        // 2026-09-09: kargo bedeli ayrı bir masraf kalemidir; tipi tanımlı değilse satır
+        // yazılmaz ama tutar expenseTotal/orderTotal içinde gider (COD ile aynı kural).
+        var masrafSatirNo = 0;
         if (kapida && v.TotalExpense > 0 && CodExpenseTypeId > 0)
         {
-            Ekle("orderExpenses[0].expenseTypeId", CodExpenseTypeId.ToString());
-            Ekle("orderExpenses[0].expenseAmount", Para(v.TotalExpense));
-            Ekle("orderExpenses[0].expenseDescription", "Kapıda Ödeme Hizmet Bedeli");
+            Ekle($"orderExpenses[{masrafSatirNo}].expenseTypeId", CodExpenseTypeId.ToString());
+            Ekle($"orderExpenses[{masrafSatirNo}].expenseAmount", Para(v.TotalExpense));
+            Ekle($"orderExpenses[{masrafSatirNo}].expenseDescription", "Kapıda Ödeme Hizmet Bedeli");
+            masrafSatirNo++;
+        }
+        if (v.ShippingFee > 0 && CargoExpenseTypeId > 0)
+        {
+            Ekle($"orderExpenses[{masrafSatirNo}].expenseTypeId", CargoExpenseTypeId.ToString());
+            Ekle($"orderExpenses[{masrafSatirNo}].expenseAmount", Para(v.ShippingFee));
+            Ekle($"orderExpenses[{masrafSatirNo}].expenseDescription", "Kargo Bedeli");
         }
 
         // Toplamlar (bizim sunucu-hesaplı sipariş toplamlarımız)
         Ekle("productTotal", Para(v.Subtotal));
         Ekle("subTotal", Para(v.Subtotal));
         Ekle("discountTotal", Para(v.TotalDiscount));
-        Ekle("expenseTotal", Para(v.TotalExpense));
+        Ekle("expenseTotal", Para(v.TotalExpense + v.ShippingFee));
         Ekle("taxTotal", Para((decimal)Math.Round(kdvToplam, 2)));
         Ekle("orderTotal", Para(v.GrandTotal));
         Ekle("paidTotal", kapida ? "0" : Para(v.GrandTotal));

@@ -76,6 +76,9 @@ public class Order : AggregateRoot
     public decimal Subtotal { get; set; }
     public decimal TotalDiscount { get; set; }
     public decimal TotalExpense { get; set; }
+    /// <summary>2026-09-09: kargo bedeli (KargoUcretiKurali ile sunucuda hesaplanır; 0 = ücretsiz).
+    /// TotalExpense'ten AYRI tutulur — TotalExpense kapıda ödeme hizmet bedelidir.</summary>
+    public decimal ShippingFee { get; set; }
     public decimal TotalTax { get; set; }
     public decimal GrandTotal { get; set; }
 

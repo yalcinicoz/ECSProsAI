@@ -188,6 +188,13 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
     target?.settings?.['codServiceFee'] != null ? String(target.settings['codServiceFee']) : '50')
   const [codMax, setCodMax] = useState(
     target?.settings?.['codMaxOrderTotal'] != null ? String(target.settings['codMaxOrderTotal']) : '3000')
+  // Kargo ücreti (2026-09-09, kullanıcı kararı): kanal başına TEK sabit bedel + ücretsiz kargo
+  // eşiği. Eşik İNDİRİMLER SONRASI ödenecek ürün tutarına bakar. Kargo kampanyası varsa
+  // ücreti düşürür/kaldırır; kampanya koşulu tutmazsa bu ayarlar geçerlidir.
+  const [shippingFee, setShippingFee] = useState(
+    target?.settings?.['shippingFee'] != null ? String(target.settings['shippingFee']) : '0')
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(
+    target?.settings?.['freeShippingThreshold'] != null ? String(target.settings['freeShippingThreshold']) : '0')
   // Eski sistem (ECSGYE) platform eşlemesi (2026-08-04, GEÇİCİ — sipariş senkronu için):
   // tozlu=1, julude=2, olurbutik=12, mishar=41. Boş = bu kanal eskiye senkronlanmaz.
   const [legacyPlatformId, setLegacyPlatformId] = useState(
@@ -233,7 +240,7 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
       // Şema dışı mevcut anahtarlar korunur (stockControlEnabled, tema/domain vb. —
       // backend Settings/Credentials'ı olduğu gibi değiştirir, merge etmez)
       // Stok görünürlüğü anahtarları burada özel ele alınıyor — genel korumadan hariç tut.
-      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince', 'paymentMethods', 'codServiceFee', 'codMaxOrderTotal', 'legacyPlatformId', 'cargoDispatchEnabled', 'customerCargoSelection'])
+      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince', 'paymentMethods', 'codServiceFee', 'codMaxOrderTotal', 'legacyPlatformId', 'cargoDispatchEnabled', 'customerCargoSelection', 'shippingFee', 'freeShippingThreshold'])
       if (target) {
         const schemaKeys = new Set(schema.map(f => f.key))
         for (const [k, v] of Object.entries(target.credentials ?? {})) if (v != null && !schemaKeys.has(k)) credentials[k] = v
@@ -245,6 +252,8 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
       settings['codServiceFee'] = parseFloat(codFee) >= 0 ? parseFloat(codFee) : 50
       settings['codMaxOrderTotal'] = parseFloat(codMax) >= 0 ? parseFloat(codMax) : 3000
       if (legacyPlatformId && parseInt(legacyPlatformId) > 0) settings['legacyPlatformId'] = parseInt(legacyPlatformId)
+      settings['shippingFee'] = parseFloat(shippingFee) >= 0 ? parseFloat(shippingFee) : 0
+      settings['freeShippingThreshold'] = parseFloat(freeShippingThreshold) >= 0 ? parseFloat(freeShippingThreshold) : 0
       settings['cargoDispatchEnabled'] = cargoDispatch
       settings['customerCargoSelection'] = customerCargoSelection
       for (const f of schema) {
@@ -454,6 +463,28 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
         )}
         <p className="text-xs" style={{ color: 'var(--text-s)' }}>
           Kapalı yöntem sitede hiç gösterilmez; sunucu da bu yöntemle siparişi reddeder. Değişiklik ~1 dk içinde siteye yansır.
+        </p>
+      </div>
+
+      {/* Kargo ücreti (kanal ayarı, 2026-09-09) */}
+      <div className="space-y-2 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Kargo Ücreti</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="flbl">Kargo ücreti (TL, 0 = ücretsiz)</label>
+            <input type="number" min="0" step="0.01" className="inp" value={shippingFee}
+              onChange={e => setShippingFee(e.target.value)} />
+          </div>
+          <div>
+            <label className="flbl">Ücretsiz kargo sepet limiti (TL, 0 = yok)</label>
+            <input type="number" min="0" step="0.01" className="inp" value={freeShippingThreshold}
+              onChange={e => setFreeShippingThreshold(e.target.value)} />
+          </div>
+        </div>
+        <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+          Limit, indirimler (kupon + kampanya) düşüldükten sonraki ürün tutarına bakar. Kargo kampanyası
+          varsa ücreti düşürür ya da kaldırır; kampanya koşulu sağlanmazsa bu ayarlar geçerlidir.
+          Değişiklik ~1 dk içinde siteye yansır.
         </p>
       </div>
 
