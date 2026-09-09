@@ -30,6 +30,10 @@ using ECSPros.Inventory.Application.Queries.GetTransfers;
 using ECSPros.Inventory.Application.Queries.GetWarehouses;
 using ECSPros.Inventory.Infrastructure.Persistence;
 using ECSPros.Order.Application.Queries.GetGiftCards;
+using ECSPros.Core.Application.Queries.GetUiTranslations;
+using ECSPros.Storefront.Application.Queries.GetCardMessages;
+using ECSPros.Catalog.Application.Queries.GetImageSets;
+using ECSPros.Order.Application.Queries.GetInvoiceSeries;
 using ECSPros.Order.Application.Queries.GetInvoices;
 using ECSPros.Order.Application.Queries.GetOrders;
 using ECSPros.Order.Application.Queries.GetQuotes;
@@ -129,12 +133,14 @@ public sealed class GridSchemasDbTests
             hatalar.AddRange(await ExerciseAsync("returns", ReturnGrid.Schema, db.Returns.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("quotes", QuoteGrid.Schema, db.Quotes.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("gift-cards", GiftCardGrid.Schema, db.GiftCards.AsNoTracking()));
+            hatalar.AddRange(await ExerciseAsync("invoice-series", InvoiceSeriesGrid.Schema, db.InvoiceSeries.AsNoTracking()));
         }
         await using (var db = new CatalogDbContext(Opt<CatalogDbContext>(ds)))
         {
             hatalar.AddRange(await ExerciseAsync("products", ProductGrid.Schema, db.Products.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("product-groups", ProductGroupGrid.Schema, db.ProductGroups.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("attribute-types", AttributeTypeGrid.Schema, db.AttributeTypes.AsNoTracking()));
+            hatalar.AddRange(await ExerciseAsync("image-sets", ImageSetGrid.Schema, db.ImageSets.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("product-submissions", ProductSubmissionGrid.Schema, db.ProductSubmissions.AsNoTracking()));
             // Kanal Ürünleri: liste tabanı CATALOG ürünleri (kanal durumu bellekte çözülür, şemada yok).
             hatalar.AddRange(await ExerciseAsync("channel-products", ChannelProductGrid.Schema, db.Products.AsNoTracking()));
@@ -144,6 +150,7 @@ public sealed class GridSchemasDbTests
             hatalar.AddRange(await ExerciseAsync("firms", FirmGrid.Schema, db.Firms.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("platform-types", PlatformTypeGrid.Schema, db.PlatformTypes.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("integration-services", IntegrationServiceGrid.Schema, db.IntegrationServices.AsNoTracking()));
+            hatalar.AddRange(await ExerciseAsync("ui-translations", UiTranslationGrid.Schema, db.UiTranslations.AsNoTracking()));
         }
         await using (var db = new CrmDbContext(Opt<CrmDbContext>(ds)))
         {
@@ -171,6 +178,7 @@ public sealed class GridSchemasDbTests
             hatalar.AddRange(await ExerciseAsync("audit-logs", AuditLogGrid.Schema, db.AuditLogs.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("permission-logs", YetkiLogGrid.Schema, YetkiLogGrid.YalnizYetkiOlaylari(db.AuditLogs.AsNoTracking())));
             hatalar.AddRange(await ExerciseAsync("permission-catalog", YetkiKatalogGrid.Schema, db.Permissions.AsNoTracking()));
+            hatalar.AddRange(await ExerciseAsync("permission-groups", YetkiGrubuGrid.Schema, db.Roles.AsNoTracking()));
         }
         await using (var db = new FinanceDbContext(Opt<FinanceDbContext>(ds)))
             hatalar.AddRange(await ExerciseAsync("supplier-invoices", SupplierInvoiceGrid.Schema, db.SupplierInvoices.AsNoTracking()));
@@ -192,6 +200,7 @@ public sealed class GridSchemasDbTests
             hatalar.AddRange(await ExerciseAsync("channel-categories", ChannelCategoryGrid.Schema, db.ChannelCategories.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("stock-alerts", StockAlertGrid.Schema, db.StockAlerts.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("saved-searches", SavedSearchGrid.Schema, db.SavedSearches.AsNoTracking()));
+            hatalar.AddRange(await ExerciseAsync("card-messages", CardMessageGrid.Schema, db.CardMessages.AsNoTracking()));
         }
         await using (var db = new ProcurementDbContext(Opt<ProcurementDbContext>(ds)))
         {

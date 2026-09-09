@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Check, Trash2 } from 'lucide-react'
+import { Plus, Check, Trash2 } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText as gridErrText } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -25,6 +27,9 @@ interface ImageSet {
   fallbackSetName: string | null
   sortPriority: number
   isActive: boolean
+  /** Grid satırında gelir (tam listede yok): set silinebilir mi sorusunun yanıtı. */
+  gorselSayisi?: number
+  cdnBaseUrl?: string | null
 }
 
 // ── Image Server Keys ─────────────────────────────────────────────────────────
@@ -200,13 +205,24 @@ function ImageSetsTab() {
   const [form, setForm] = useState<ImageSetFormState>(emptyForm())
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  const { data: sets = [], isLoading } = useQuery<ImageSet[]>({
+  // DataGrid (2026-09-09, tur 12): sunucu filtre/sıralama/arama (ImageSetGrid.Schema) + Excel + görünümler.
+  // ★ Ayrı uç: /catalog/image-sets TAM liste döner (ürün Resimler sekmesi, toplu yükleme ve AŞAĞIDAKİ
+  // "yedek set" seçicisinin kaynağı) → tam liste burada da tutulur; SATIRLAR sayfalı grid ucundan gelir.
+  const grid = useGridState('image-sets', { defaultPageSize: 50, defaultSort: 'sortPriority', defaultDir: 'asc' })
+  const { data: tumSetler = [] } = useQuery<ImageSet[]>({
     queryKey: ['image-sets', false],
     queryFn: async () => {
       const { data } = await api.get('/catalog/image-sets?activeOnly=false')
       return data.data as ImageSet[]
     },
   })
+  const { data, isLoading, isFetching, error: listError } = useQuery<{ items: ImageSet[]; totalCount: number }>({
+    queryKey: ['image-sets-grid', ...grid.queryKey],
+    queryFn: async () => (await api.get(`/catalog/image-sets/grid?${grid.toParams()}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
+  })
+  const sets = data?.items ?? []
 
   const openCreate = () => { setForm(emptyForm()); setModal({ mode: 'create' }) }
   const openEdit = (s: ImageSet) => {
@@ -223,7 +239,8 @@ function ImageSetsTab() {
       await api.delete(`/catalog/image-sets/${modal!.set!.id}`)
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['image-sets'] })
+      qc.invalidateQueries({ queryKey: ['image-sets'] })        // tam liste (seçiciler)
+      qc.invalidateQueries({ queryKey: ['image-sets-grid'] })   // bu sekmenin sayfalı listesi
       setModal(null)
     },
   })
@@ -248,87 +265,82 @@ function ImageSetsTab() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['image-sets'] })
+      qc.invalidateQueries({ queryKey: ['image-sets-grid'] })
       setModal(null)
     },
   })
 
   const canSave = form.name.trim().length > 0 && (modal?.mode === 'edit' || form.code.trim().length > 0)
 
-  const otherSets = sets.filter(s => s.id !== modal?.set?.id)
+  // Yedek set seçicisi TAM listeden: sayfalı satırlar seçenekleri kırpardı.
+  const otherSets = tumSetler.filter(s => s.id !== modal?.set?.id)
 
-  if (isLoading) return <PageSpinner />
+  const columns: GridColumn<ImageSet>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 160,
+      filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      cell: s => <span className="flex items-center gap-2 font-mono text-xs" style={{ color: 'var(--text-m)' }}>
+        {s.code}
+        {s.isDefault && <Badge variant="success">Varsayılan</Badge>}
+      </span> },
+    { key: 'name', header: 'AD', priority: 1, sortable: true, minWidth: 200,
+      filter: { type: 'text', label: 'Ad' },
+      cell: s => <span className="font-medium text-sm" style={{ color: 'var(--text)' }}>{s.name}</span> },
+    { key: 'fallback', header: 'YEDEK SET', priority: 2, sortable: true, minWidth: 160,
+      filter: { type: 'text', label: 'Yedek set adı' },
+      filters: [{ field: 'fallbackVar', label: 'Yedek seti var', type: 'boolean' }],
+      cell: s => <span className="text-xs" style={{ color: 'var(--text-m)' }}>
+        {s.fallbackSetName ?? <span style={{ color: 'var(--text-s)' }}>—</span>}</span> },
+    { key: 'gorselSayisi', header: 'GÖRSEL', priority: 2, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Görsel sayısı' },
+      filters: [{ field: 'kullanildi', label: 'Görseli var (silinemez)', type: 'boolean' }],
+      cell: s => <span className="text-xs tabular-nums" style={{ color: 'var(--text-m)' }}>
+        {(s.gorselSayisi ?? 0).toLocaleString('tr-TR')}</span> },
+    { key: 'sortPriority', header: 'ÖNCELİK', priority: 2, align: 'center', sortable: true,
+      filter: { type: 'number', label: 'Öncelik' },
+      cell: s => <span className="text-xs" style={{ color: 'var(--text-m)' }}>{s.sortPriority}</span> },
+    { key: 'cdnBaseUrl', header: 'CDN ADRESİ', priority: 3, defaultVisible: false, minWidth: 200,
+      filter: { type: 'text', label: 'CDN adresi' },
+      cell: s => <span className="text-xs font-mono" style={{ color: 'var(--text-s)' }}>{s.cdnBaseUrl ?? '—'}</span> },
+    { key: 'isActive', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      filters: [{ field: 'isDefault', label: 'Varsayılan set', type: 'boolean' }],
+      cell: s => <Badge variant={s.isActive ? 'success' : 'neutral'}>{s.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+  ]
 
   return (
     <>
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm" style={{ color: 'var(--text-s)' }}>
-          {sets.length} set tanımlı
+          {(data?.totalCount ?? 0).toLocaleString('tr-TR')} set{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}
         </p>
         <Button size="sm" onClick={openCreate}>
           <Plus size={14} className="mr-1.5" /> Yeni Set
         </Button>
       </div>
 
-      <div className="card p-0 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--text-s)' }}>KOD</th>
-              <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--text-s)' }}>AD</th>
-              <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--text-s)' }}>FALLBACK</th>
-              <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--text-s)' }}>ÖNCELİK</th>
-              <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--text-s)' }}>DURUM</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {sets.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                  Henüz resim seti tanımlanmamış.
-                </td>
-              </tr>
-            ) : (
-              sets
-                .sort((a, b) => a.sortPriority - b.sortPriority || a.name.localeCompare(b.name))
-                .map(s => (
-                  <tr
-                    key={s.id}
-                    className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                    style={{ borderBottom: '1px solid var(--border)' }}
-                    onClick={() => openEdit(s)}
-                  >
-                    <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-m)' }}>
-                      <span className="flex items-center gap-2">
-                        {s.code}
-                        {s.isDefault && <Badge variant="success">Varsayılan</Badge>}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-medium">{s.name}</td>
-                    <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-m)' }}>
-                      {s.fallbackSetName ?? <span style={{ color: 'var(--text-s)' }}>—</span>}
-                    </td>
-                    <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-m)' }}>{s.sortPriority}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={s.isActive ? 'success' : 'neutral'}>
-                        {s.isActive ? 'Aktif' : 'Pasif'}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={e => { e.stopPropagation(); openEdit(s) }}
-                        className="p-1.5 rounded-lg hover:bg-[var(--brand-bg)] transition-colors"
-                        style={{ color: 'var(--text-s)' }}
-                      >
-                        <Pencil size={13} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid<ImageSet>
+        gridId="image-sets"
+        views
+        grid={grid}
+        columns={columns}
+        rows={sets}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? gridErrText(listError) : null}
+        onRowClick={s => openEdit(s)}
+        empty="Ölçütlere uyan resim seti yok."
+        search={{ placeholder: 'Set kodu veya adı ara…' }}
+        minWidth={980}
+        pageSizes={[50, 100, 200]}
+        export={{ endpoint: '/catalog/image-sets/export', fallbackFileName: 'resim-setleri.xlsx' }}
+        compact={{
+          title: s => s.name,
+          subtitle: s => `${s.code}${s.fallbackSetName ? ` → ${s.fallbackSetName}` : ''}`,
+          right: s => `${(s.gorselSayisi ?? 0).toLocaleString('tr-TR')} görsel`,
+          badge: s => <Badge variant={s.isActive ? 'success' : 'neutral'}>{s.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
+      />
 
       {/* Create / Edit Modal */}
       <Modal

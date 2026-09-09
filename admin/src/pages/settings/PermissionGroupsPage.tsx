@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText as gridErrText } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 
 /**
@@ -39,6 +42,7 @@ interface GecisDurumu {
   aktifYetkiSayisi: number; dikkatGerektiren: GecisKullanicisi[]
 }
 interface Kullanici { id: string; firstName: string; lastName: string; email?: string }
+interface Sayfali<T> { items: T[]; totalCount: number; page: number; pageSize: number }
 
 const BOS_KANAL: Kanal[] = []
 const turEtiketi = (t: string) => (t === 'page' ? 'Sayfa' : t === 'field' ? 'Alan' : 'İşlem')
@@ -285,10 +289,26 @@ export function PermissionGroupsPage() {
   const [silinecek, setSilinecek] = useState<Grup | null>(null)
   const [ad, setAd] = useState(''); const [aciklama, setAciklama] = useState(''); const [hata, setHata] = useState('')
 
-  const { data: gruplar = [], isLoading } = useQuery<Grup[]>({
-    queryKey: ['yetki-gruplari'],
-    queryFn: async () => (await api.get('/iam/permission-groups')).data.data,
+  // DataGrid (2026-09-09, tur 11): sunucu filtre/sıralama/arama (YetkiGrubuGrid.Schema) + Excel + görünümler.
+  // ★ Ayrı uç: /iam/permission-groups TAM liste döner (Kullanıcı Yetkileri ekranının grup kaynağı);
+  // bu ekran sayfalı /iam/permission-groups/grid kullanır.
+  const [sp] = useSearchParams()
+  const yalnizAktif = sp.get('activeOnly') === 'true'
+  const sistemHaric = sp.get('sistemHaric') === 'true'
+  const grid = useGridState('permission-groups', { defaultPageSize: 50, defaultSort: 'ad', defaultDir: 'asc' })
+  const setNamed = (k: string, v: string) => grid.mutate(n => { if (v) n.set(k, v); else n.delete(k) })
+  const named = () => ({
+    activeOnly: yalnizAktif ? 'true' : undefined,
+    sistemHaric: sistemHaric ? 'true' : undefined,
   })
+
+  const { data, isLoading, isFetching, error: listError } = useQuery<Sayfali<Grup>>({
+    queryKey: ['yetki-gruplari-grid', yalnizAktif, sistemHaric, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/iam/permission-groups/grid?${grid.toParams(named())}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
+  })
+  const gruplar = data?.items ?? []
   const { data: sablonlar = [] } = useQuery<Sablon[]>({
     queryKey: ['grup-sablonlari'],
     queryFn: async () => (await api.get('/iam/group-templates')).data.data,
@@ -299,7 +319,8 @@ export function PermissionGroupsPage() {
   })
 
   const yenile = () => {
-    qc.invalidateQueries({ queryKey: ['yetki-gruplari'] })
+    qc.invalidateQueries({ queryKey: ['yetki-gruplari'] })       // düz liste (Kullanıcı Yetkileri kaynağı)
+    qc.invalidateQueries({ queryKey: ['yetki-gruplari-grid'] })  // bu ekranın sayfalı listesi
     qc.invalidateQueries({ queryKey: ['grup-sablonlari'] })
     qc.invalidateQueries({ queryKey: ['gecis-durumu'] })
   }
@@ -326,13 +347,57 @@ export function PermissionGroupsPage() {
     onError: (e: unknown) => setHata(hataMetni(e)),
   })
 
+  const columns: GridColumn<Grup>[] = [
+    { key: 'ad', header: 'GRUP', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 260,
+      filter: { type: 'text', label: 'Grup adı' },
+      filters: [{ field: 'code', label: 'Kod', type: 'text' }],
+      cell: g => <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm" style={{ color: 'var(--text)' }}>{g.ad}</span>
+        {g.gecisGrubu && <Badge variant="warning">geçici</Badge>}
+        {g.sistem && <Badge variant="info">sistem</Badge>}
+        {gecis && g.yetkiSayisi >= gecis.aktifYetkiSayisi && <Badge variant="warning">tam erişim</Badge>}
+      </div> },
+    { key: 'aciklama', header: 'AÇIKLAMA', priority: 2, sortable: true, minWidth: 240,
+      filter: { type: 'text', label: 'Açıklama' },
+      cell: g => <span className="text-sm" style={{ color: 'var(--text-s)' }}>{g.aciklama ?? '—'}</span> },
+    { key: 'kullaniciSayisi', header: 'KULLANICI', priority: 1, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Kullanıcı sayısı' },
+      filters: [{ field: 'bosGrup', label: 'Üyesi olmayan', type: 'boolean' }],
+      cell: g => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{g.kullaniciSayisi}</span> },
+    { key: 'yetkiSayisi', header: 'YETKİ', priority: 1, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Yetki sayısı' },
+      cell: g => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{g.yetkiSayisi}</span> },
+    { key: 'aktif', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      filters: [
+        { field: 'sistem', label: 'Sistem grubu', type: 'boolean' },
+        { field: 'gecisGrubu', label: 'Geçici grup', type: 'boolean' }],
+      cell: g => <Badge variant={g.aktif ? 'success' : 'neutral'}>{g.aktif ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'islem', header: '', priority: 2, align: 'right', exportable: false, stopRowClick: true, minWidth: 190,
+      cell: g => <span className="whitespace-nowrap">
+        <button className="text-xs mr-3 hover:underline" style={{ color: 'var(--text-s)' }}
+          onClick={() => { setHata(''); setKopyaGrup(g); setKopyaAd(`${g.ad} (kopya)`) }}>
+          Kopyala
+        </button>
+        {!g.sistem && (
+          <button className="text-xs mr-3 hover:underline"
+            style={{ color: g.kullaniciSayisi > 0 ? 'var(--text-s)' : '#dc2626', opacity: g.kullaniciSayisi > 0 ? 0.5 : 1 }}
+            title={g.kullaniciSayisi > 0 ? 'Önce kullanıcıları başka gruba taşıyın' : 'Grubu kaldır'}
+            onClick={() => { if (g.kullaniciSayisi === 0) { setHata(''); setSilinecek(g) } }}>
+            Kaldır
+          </button>
+        )}
+        <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span>
+      </span> },
+  ]
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Yetki Grupları</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
-            {gruplar.length} grup — grup, kullanıcılara toplu yetki vermenin kolay yoludur
+            {(data?.totalCount ?? 0).toLocaleString('tr-TR')} grup{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''} — grup, kullanıcılara toplu yetki vermenin kolay yoludur
           </p>
         </div>
         <div className="flex gap-2">
@@ -383,56 +448,43 @@ export function PermissionGroupsPage() {
         </div>
       )}
 
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['GRUP', 'AÇIKLAMA', 'KULLANICI', 'YETKİ', 'DURUM', ''].map(h => (
-                <th key={h} className="px-4 py-3 text-xs font-semibold text-left" style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && <tr><td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor…</td></tr>}
-            {!isLoading && gruplar.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Grup yok. "+ Yeni Grup" ile departman gruplarınızı oluşturun.
-              </td></tr>
-            )}
-            {gruplar.map(g => (
-              <tr key={g.id} onClick={() => setDetayId(g.id)}
-                className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text)' }}>
-                  {g.ad}
-                  {g.gecisGrubu && <Badge variant="warning">geçici</Badge>}
-                  {g.sistem && <Badge variant="info">sistem</Badge>}
-                  {gecis && g.yetkiSayisi >= gecis.aktifYetkiSayisi && <Badge variant="warning">tam erişim</Badge>}
-                </td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-s)' }}>{g.aciklama ?? '—'}</td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>{g.kullaniciSayisi}</td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>{g.yetkiSayisi}</td>
-                <td className="px-4 py-3"><Badge variant={g.aktif ? 'success' : 'neutral'}>{g.aktif ? 'Aktif' : 'Pasif'}</Badge></td>
-                <td className="px-4 py-3 text-right whitespace-nowrap">
-                  <button className="text-xs mr-3 hover:underline" style={{ color: 'var(--text-s)' }}
-                    onClick={e => { e.stopPropagation(); setHata(''); setKopyaGrup(g); setKopyaAd(`${g.ad} (kopya)`) }}>
-                    Kopyala
-                  </button>
-                  {!g.sistem && (
-                    <button className="text-xs mr-3 hover:underline"
-                      style={{ color: g.kullaniciSayisi > 0 ? 'var(--text-s)' : '#dc2626', opacity: g.kullaniciSayisi > 0 ? 0.5 : 1 }}
-                      title={g.kullaniciSayisi > 0 ? 'Önce kullanıcıları başka gruba taşıyın' : 'Grubu kaldır'}
-                      onClick={e => { e.stopPropagation(); if (g.kullaniciSayisi === 0) { setHata(''); setSilinecek(g) } }}>
-                      Kaldır
-                    </button>
-                  )}
-                  <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid<Grup>
+        gridId="permission-groups"
+        views
+        grid={grid}
+        columns={columns}
+        rows={gruplar}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? gridErrText(listError) : null}
+        onRowClick={g => setDetayId(g.id)}
+        empty='Ölçütlere uyan grup yok. "+ Yeni Grup" ile departman gruplarınızı oluşturun.'
+        search={{ placeholder: 'Grup adı, kodu veya açıklaması ara…' }}
+        minWidth={1040}
+        pageSizes={[50, 100, 200]}
+        filterLeading={
+          <>
+            <label className="flex items-center gap-1.5 text-sm whitespace-nowrap" style={{ color: 'var(--text)' }}>
+              <input type="checkbox" checked={yalnizAktif}
+                onChange={e => setNamed('activeOnly', e.target.checked ? 'true' : '')} />
+              Yalnız aktif
+            </label>
+            <label className="flex items-center gap-1.5 text-sm whitespace-nowrap" style={{ color: 'var(--text)' }}>
+              <input type="checkbox" checked={sistemHaric}
+                onChange={e => setNamed('sistemHaric', e.target.checked ? 'true' : '')} />
+              Sistem gruplarını gizle
+            </label>
+          </>
+        }
+        export={{ endpoint: '/iam/permission-groups/export', named, fallbackFileName: 'yetki-gruplari.xlsx' }}
+        compact={{
+          title: g => g.ad,
+          subtitle: g => `${g.kullaniciSayisi} kullanıcı · ${g.yetkiSayisi} yetki`,
+          right: g => g.code,
+          badge: g => <Badge variant={g.aktif ? 'success' : 'neutral'}>{g.aktif ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
+      />
 
       {detayId && <GrupDetayModal grupId={detayId} onClose={() => setDetayId(null)} />}
 

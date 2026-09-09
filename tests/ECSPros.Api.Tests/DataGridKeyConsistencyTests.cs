@@ -66,6 +66,13 @@ public sealed class DataGridKeyConsistencyTests
         ["admin/src/pages/promotion/CouponsPage.tsx"] = new[] { "src/Modules/Promotion/ECSPros.Promotion.Application/Queries/GetCoupons/CouponGrid.cs" },
         ["admin/src/pages/requests/RequestsPage.tsx"] = new[] { "src/Modules/Requests/ECSPros.Requests.Application/Queries/GetRequests/RequestGrid.cs" },
         ["admin/src/pages/settings/PermissionCatalogPage.tsx"] = new[] { "src/Modules/Iam/ECSPros.Iam.Application/Yetkilendirme/YetkiKatalogGrid.cs" },
+        ["admin/src/pages/settings/PermissionGroupsPage.tsx"] = new[] { "src/Modules/Iam/ECSPros.Iam.Application/Yetkilendirme/YetkiGrubuGrid.cs" },
+        ["admin/src/pages/orders/InvoiceSeriesPage.tsx"] = new[] { "src/Modules/Order/ECSPros.Order.Application/Queries/GetInvoiceSeries/InvoiceSeriesGrid.cs" },
+        ["admin/src/pages/catalog/CatalogSettingsPage.tsx"] = new[] { "src/Modules/Catalog/ECSPros.Catalog.Application/Queries/GetImageSets/ImageSetGrid.cs" },
+        ["admin/src/pages/settings/TranslationsPage.tsx"] = new[] { "src/Modules/Core/ECSPros.Core.Application/Queries/GetUiTranslations/UiTranslationGrid.cs" },
+        ["admin/src/pages/storefront/ProductCardPage.tsx"] = new[] { "src/Modules/Storefront/ECSPros.Storefront.Application/Queries/GetCardMessages/CardMessageGrid.cs" },
+        ["admin/src/pages/procurement/SortingPage.tsx"] = new[] { "src/Modules/Procurement/ECSPros.Procurement.Application/Queries/GetSortingEntries/SortingEntryGrid.cs" },
+        ["admin/src/pages/finance/CommissionPage.tsx"] = new[] { "src/Modules/Accounts/ECSPros.Accounts.Application/Queries/GetSupplierSettlements/SettlementLineGrid.cs" },
         ["admin/src/pages/settings/PermissionLogsPage.tsx"] = new[] { "src/Modules/Iam/ECSPros.Iam.Application/Yetkilendirme/YetkiLogGrid.cs" },
         ["admin/src/pages/storefront/NewsletterSubscribersPage.tsx"] = new[] { "src/Modules/Storefront/ECSPros.Storefront.Application/Queries/GetNewsletterSubscriptions/NewsletterSubscriptionGrid.cs" },
         ["admin/src/pages/settings/AuditLogsPage.tsx"] = new[] { "src/Modules/Iam/ECSPros.Iam.Application/Queries/GetAuditLogs/AuditLogGrid.cs" },
@@ -175,6 +182,34 @@ public sealed class DataGridKeyConsistencyTests
         Assert.AreEqual(0, hatalar.Count, "İstemci↔sunucu anahtar uyumsuzlukları:\n" + string.Join("\n", hatalar.Distinct()));
     }
 
+    /// <summary>
+    /// YEREL grid sayfaları (useLocalGrid): satır kümesi doğası gereği TAM gelir ve sunucuda
+    /// sayfalanmaz — tablo bir liste değil FORM'dur (kanal başına bir satır, entegrasyon başına
+    /// barkod aralığı…). Bu sayfalarda sunucu şeması YOKTUR, dolayısıyla anahtar eşlemesi de yok.
+    /// Muafiyet SESSİZ olmasın diye burada tek tek sayılır: yeni bir sayfa listeye ancak
+    /// gerçekten sayfalanamayan bir form tablosuysa girer; sayfalı ucu olan liste şema kurar.
+    /// </summary>
+    private static readonly HashSet<string> YerelGridSayfalari = new()
+    {
+        "admin/src/pages/orders/NumberSeriesPage.tsx",
+        "admin/src/pages/marketplaces/MappingPage.tsx",
+    };
+
+    [TestMethod]
+    public void Yerel_grid_sayfalari_gercekten_useLocalGrid_kullaniyor()
+    {
+        var kok = RepoKok().FullName;
+        foreach (var sayfa in YerelGridSayfalari)
+        {
+            var yol = Path.Combine(kok, sayfa.Replace('/', Path.DirectorySeparatorChar));
+            Assert.IsTrue(File.Exists(yol), $"Yerel grid sayfası bulunamadı: {sayfa}");
+            var tsx = File.ReadAllText(yol);
+            Assert.IsTrue(tsx.Contains("useLocalGrid", StringComparison.Ordinal),
+                $"{sayfa} yerel grid muafiyetinde ama useLocalGrid kullanmıyor — sunucu şeması kurup " +
+                "Eslesme'ye ekleyin ya da muafiyet listesinden çıkarın.");
+        }
+    }
+
     [TestMethod]
     public void DataGrid_kullanan_her_sayfa_denetim_eslesmesinde_kayitli()
     {
@@ -184,7 +219,7 @@ public sealed class DataGridKeyConsistencyTests
             .Select(f => Path.GetRelativePath(kok, f).Replace(Path.DirectorySeparatorChar, '/'))
             .ToList();
 
-        var eksik = sayfalar.Where(s => !Eslesme.ContainsKey(s)).ToList();
+        var eksik = sayfalar.Where(s => !Eslesme.ContainsKey(s) && !YerelGridSayfalari.Contains(s)).ToList();
         Assert.AreEqual(0, eksik.Count,
             "Bu DataGrid sayfaları anahtar denetimine kayıtlı değil (Eslesme'ye ekleyin):\n" + string.Join("\n", eksik));
     }

@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle, Plus } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
-import { PageSpinner } from '@/components/ui/Spinner'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText as gridErrText } from '@/components/ui/DataTable.utils'
 import { INVOICE_TYPE_MAP } from './orderConstants'
 import type { InvoiceSeries } from './InvoicesPage'
 
@@ -389,10 +391,21 @@ function ChannelSlotsCard({ channels, series, firms }: { channels: ChannelSettin
 
 export function InvoiceSeriesPage() {
   const queryClient = useQueryClient()
-  const [firmFilter, setFirmFilter] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'active' | 'passive' | ''>('active')
-  const [q, setQ] = useState('')
+  // DataGrid (2026-09-09, tur 11): sunucu filtre/sıralama/arama (InvoiceSeriesGrid.Schema) + Excel + görünümler.
+  // ★ Ayrı uç: /orders/invoice-series TAM liste döner ve AŞAĞIDA hâlâ gerekiyor — kanal yuvası seçicileri,
+  // "pasife alırken yerine geçecek seri" adayları ve kullanan-kanal kodları tam listeden çizilir;
+  // yalnız SATIRLAR sayfalı /orders/invoice-series/grid ucundan gelir.
+  const [sp] = useSearchParams()
+  const firmFilter = sp.get('firmId') ?? ''
+  const typeFilter = sp.get('invoiceType') ?? ''
+  const statusFilter = sp.get('durum') ?? 'active'
+  const grid = useGridState('invoice-series', { defaultPageSize: 50, defaultSort: 'invoiceType', defaultDir: 'asc' })
+  const setNamed = (k: string, v: string) => grid.mutate(n => { if (v) n.set(k, v); else n.delete(k) })
+  const named = () => ({
+    firmId: firmFilter || undefined,
+    invoiceType: typeFilter || undefined,
+    durum: statusFilter === 'active' ? undefined : statusFilter,   // sunucu varsayılanı 'active'
+  })
   const [newOpen, setNewOpen] = useState(false)
   const [editing, setEditing] = useState<InvoiceSeries | null>(null)
   const [deactivating, setDeactivating] = useState<InvoiceSeries | null>(null)
@@ -402,9 +415,16 @@ export function InvoiceSeriesPage() {
     queryKey: ['firms-for-invoice-series'],
     queryFn: async () => (await api.get('/core/firms?activeOnly=false')).data.data ?? [],
   })
-  const { data: series = [], isLoading } = useQuery<InvoiceSeries[]>({
+  // Tam liste: seçiciler + kullanan-kanal kodları + pasife alma adayları (sayfalanmaz).
+  const { data: series = [] } = useQuery<InvoiceSeries[]>({
     queryKey: ['invoice-series'],
     queryFn: async () => (await api.get('/orders/invoice-series?activeOnly=false')).data.data ?? [],
+  })
+  const { data, isLoading, isFetching, error: listError } = useQuery<{ items: InvoiceSeries[]; totalCount: number }>({
+    queryKey: ['invoice-series-grid', firmFilter, typeFilter, statusFilter, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/orders/invoice-series/grid?${grid.toParams(named())}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
   const { data: contracts = [] } = useQuery<ContractRow[]>({
     queryKey: ['einvoice-contracts'],
@@ -417,23 +437,73 @@ export function InvoiceSeriesPage() {
 
   const activate = useMutation({
     mutationFn: async (id: string) => { await api.post(`/orders/invoice-series/${id}/activate`, {}) },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['invoice-series'] }); setError('') },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice-series'] })        // tam liste (seçiciler)
+      queryClient.invalidateQueries({ queryKey: ['invoice-series-grid'] })   // bu ekranın sayfalı listesi
+      setError('')
+    },
     onError: (e: unknown) => setError(apiErrorMessage(e, 'Aktifleştirilemedi.')),
   })
 
   const firmName = (id: string) => { const f = firms.find(x => x.id === id); return f ? trName(f.nameI18n, f.code) : '—' }
   const usedBy = (s: InvoiceSeries) => channels.filter(c => c.bindings.some(b => b.seriesId === s.id))
 
-  const rows = useMemo(() => series.filter(s =>
-    (!firmFilter || s.firmId === firmFilter) &&
-    (!typeFilter || s.invoiceType === typeFilter) &&
-    (!statusFilter || (statusFilter === 'active' ? s.isActive : !s.isActive)) &&
-    (!q || s.serial.includes(q.toUpperCase()) || (s.name ?? '').toLowerCase().includes(q.toLowerCase()))
-  ), [series, firmFilter, typeFilter, statusFilter, q])
+  const rows = data?.items ?? []
 
   const unboundActiveChannels = channels.filter(c => c.channelActive && c.missingTypes.length > 0).length
 
-  if (isLoading) return <PageSpinner />
+  const columns: GridColumn<InvoiceSeries>[] = [
+    { key: 'serial', header: 'SERİ', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 110,
+      filter: { type: 'text', label: 'Seri', ops: ['startswith', 'contains', 'eq'] },
+      cell: s => <span className="font-mono font-semibold" style={{ color: 'var(--text)' }}>{s.serial}</span> },
+    { key: 'firma', header: 'FİRMA', priority: 1, minWidth: 160,
+      // Firma adı Core modülünde çözülür → sıralanamaz; süzgeç üstteki firma seçicisidir (firmId).
+      cell: s => <span className="text-sm whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{firmName(s.firmId)}</span> },
+    { key: 'invoiceType', header: 'TİP', priority: 1, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Tip',
+        options: TYPES.map(t => ({ value: t, label: INVOICE_TYPE_MAP[t] ?? t })) },
+      cell: s => <Badge variant="info">{INVOICE_TYPE_MAP[s.invoiceType] ?? s.invoiceType}</Badge> },
+    { key: 'ad', header: 'AD', priority: 2, sortable: true, minWidth: 200,
+      filter: { type: 'text', label: 'Ad' },
+      filters: [{ field: 'aciklama', label: 'Açıklama', type: 'text' }],
+      cell: s => <div>
+        <span className="text-sm" style={{ color: 'var(--text)' }}>{s.name ?? '—'}</span>
+        {s.description && <span className="block text-xs" style={{ color: 'var(--text-s)' }}>{s.description}</span>}
+      </div> },
+    { key: 'sozlesme', header: 'SÖZLEŞME', priority: 2, minWidth: 150,
+      // Sözleşme adı firma entegrasyonlarından gelir → sıralanamaz; süzgeç "sözleşmesi var mı" bayrağı.
+      filter: { type: 'boolean', label: 'Sözleşmesi var', field: 'sozlesmeVar' },
+      cell: s => <span className="text-xs" style={{ color: 'var(--text-m)' }}>
+        {s.integrationContractId ? (s.integrationContractName ?? 'bağlı') : <Badge variant="danger">sözleşmesiz</Badge>}
+      </span> },
+    { key: 'kanalSayisi', header: 'KULLANAN KANALLAR', priority: 2, sortable: true, minWidth: 170,
+      filter: { type: 'number', label: 'Bağlı kanal sayısı' },
+      filters: [{ field: 'kanalaBagli', label: 'Bir kanala bağlı', type: 'boolean' }],
+      cell: s => {
+        const used = usedBy(s)
+        return <span className="text-xs" style={{ color: 'var(--text-m)' }}>
+          {used.length === 0
+            ? <span style={{ color: 'var(--text-s)' }}>{s.channelCount > 0 ? `${s.channelCount} kanal` : '—'}</span>
+            : used.map(c => <code key={c.firmPlatformId} className="mr-1">{c.channelCode}</code>)}
+        </span>
+      } },
+    { key: 'sonSira', header: 'SON NUMARA', priority: 3, sortable: true, minWidth: 150,
+      filter: { type: 'number', label: 'Son sıra' },
+      filters: [{ field: 'kullanilmis', label: 'Numara tüketmiş', type: 'boolean' }],
+      cell: s => <span className="font-mono text-xs tabular-nums" style={{ color: 'var(--text-m)' }}>
+        {s.lastYear ? `${s.serial}${s.lastYear}${String(s.lastSequence).padStart(9, '0')}` : '—'}</span> },
+    { key: 'sonFatura', header: 'SON FATURA', priority: 3, sortable: true,
+      filter: { type: 'date', label: 'Son fatura tarihi' },
+      cell: s => <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{fmtDate(s.lastInvoiceDate)}</span> },
+    { key: 'aktif', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      cell: s => s.isActive ? <Badge variant="success">Aktif</Badge> : <Badge variant="neutral">Pasif</Badge> },
+    { key: 'islem', header: '', priority: 2, align: 'right', exportable: false, stopRowClick: true, minWidth: 120,
+      cell: s => s.isActive
+        ? <Button size="sm" variant="ghost" onClick={() => setDeactivating(s)}>Pasife Al</Button>
+        : <Button size="sm" variant="ghost" onClick={() => activate.mutate(s.id)}
+            loading={activate.isPending && activate.variables === s.id}>Aktifleştir</Button> },
+  ]
 
   return (
     <div className="p-6 space-y-6">
@@ -449,80 +519,54 @@ export function InvoiceSeriesPage() {
         <Button size="sm" onClick={() => setNewOpen(true)}><Plus size={14} /> Yeni Seri</Button>
       </div>
 
-      <div className="card overflow-hidden p-0">
-        <div className="flex flex-wrap gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-          <select className="inp" style={{ width: 200 }} value={firmFilter} onChange={e => setFirmFilter(e.target.value)}>
-            <option value="">Tüm firmalar</option>
-            {firms.map(f => <option key={f.id} value={f.id}>{trName(f.nameI18n, f.code)}</option>)}
-          </select>
-          <select className="inp" style={{ width: 140 }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-            <option value="">Tüm tipler</option>
-            {TYPES.map(t => <option key={t} value={t}>{INVOICE_TYPE_MAP[t]}</option>)}
-          </select>
-          <select className="inp" style={{ width: 120 }} value={statusFilter} onChange={e => setStatusFilter(e.target.value as 'active' | 'passive' | '')}>
-            <option value="active">Aktif</option>
-            <option value="passive">Pasif</option>
-            <option value="">Tümü</option>
-          </select>
-          <input className="inp" style={{ width: 160 }} value={q} onChange={e => setQ(e.target.value)} placeholder="Seri / ad ara" />
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-                {['FİRMA', 'SERİ', 'TİP', 'AD', 'SÖZLEŞME', 'KULLANAN KANALLAR', 'SON NUMARA', 'SON FATURA', 'DURUM', ''].map(h => (
-                  <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold tracking-wider" style={{ color: 'var(--text-s)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(s => {
-                const used = usedBy(s)
-                return (
-                  <tr key={s.id} className="cursor-pointer hover:bg-[var(--surface2)]" style={{ borderBottom: '1px solid var(--border)' }}
-                    onClick={() => setEditing(s)}>
-                    <td className="px-3 py-2.5 text-sm whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{firmName(s.firmId)}</td>
-                    <td className="px-3 py-2.5 font-mono font-semibold" style={{ color: 'var(--text)' }}>{s.serial}</td>
-                    <td className="px-3 py-2.5"><Badge variant="info">{INVOICE_TYPE_MAP[s.invoiceType] ?? s.invoiceType}</Badge></td>
-                    <td className="px-3 py-2.5 text-sm" style={{ color: 'var(--text)' }}>
-                      {s.name ?? '—'}
-                      {s.description && <span className="block text-xs" style={{ color: 'var(--text-s)' }}>{s.description}</span>}
-                    </td>
-                    <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--text-m)' }}>
-                      {s.integrationContractId
-                        ? (s.integrationContractName ?? 'bağlı')
-                        : <Badge variant="danger">sözleşmesiz</Badge>}
-                    </td>
-                    <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--text-m)' }}>
-                      {used.length === 0 ? <span style={{ color: 'var(--text-s)' }}>—</span>
-                        : used.map(c => <code key={c.firmPlatformId} className="mr-1">{c.channelCode}</code>)}
-                    </td>
-                    <td className="px-3 py-2.5 font-mono text-xs tabular-nums" style={{ color: 'var(--text-m)' }}>
-                      {s.lastYear ? `${s.serial}${s.lastYear}${String(s.lastSequence).padStart(9, '0')}` : '—'}
-                    </td>
-                    <td className="px-3 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{fmtDate(s.lastInvoiceDate)}</td>
-                    <td className="px-3 py-2.5">
-                      {s.isActive ? <Badge variant="success">Aktif</Badge> : <Badge variant="neutral">Pasif</Badge>}
-                    </td>
-                    <td className="px-3 py-2.5 text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                      {s.isActive
-                        ? <Button size="sm" variant="ghost" onClick={() => setDeactivating(s)}>Pasife Al</Button>
-                        : <Button size="sm" variant="ghost" onClick={() => activate.mutate(s.id)} loading={activate.isPending && activate.variables === s.id}>Aktifleştir</Button>}
-                    </td>
-                  </tr>
-                )
-              })}
-              {rows.length === 0 && (
-                <tr><td colSpan={10} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Filtreye uyan seri yok.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {error && <p className="px-4 py-2 text-sm" style={{ color: '#ef4444' }}>{error}</p>}
-        <p className="px-4 py-2 text-xs" style={{ borderTop: '1px solid var(--border)', color: 'var(--text-s)' }}>
-          Bir seri = bir üç harfli ön ek = bir tip = bir numara akışı. Numaralar her yıl 1'den başlar, iptal edilen fatura numarayı tüketir. Seri silinmez, pasife alınır.
-        </p>
-      </div>
+      <DataGrid<InvoiceSeries>
+        gridId="invoice-series"
+        views
+        grid={grid}
+        columns={columns}
+        rows={rows}
+        totalCount={data?.totalCount ?? 0}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? gridErrText(listError) : (error || null)}
+        onRowClick={s => setEditing(s)}
+        empty="Ölçütlere uyan seri yok."
+        search={{ placeholder: 'Seri, ad veya açıklama ara…' }}
+        minWidth={1280}
+        pageSizes={[50, 100, 200]}
+        filterLeading={
+          <>
+            <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={firmFilter} aria-label="Firma"
+              onChange={e => setNamed('firmId', e.target.value)}>
+              <option value="">Tüm firmalar</option>
+              {firms.map(f => <option key={f.id} value={f.id}>{trName(f.nameI18n, f.code)}</option>)}
+            </select>
+            <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={typeFilter} aria-label="Tip"
+              onChange={e => setNamed('invoiceType', e.target.value)}>
+              <option value="">Tüm tipler</option>
+              {TYPES.map(t => <option key={t} value={t}>{INVOICE_TYPE_MAP[t]}</option>)}
+            </select>
+            <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={statusFilter} aria-label="Durum"
+              onChange={e => setNamed('durum', e.target.value)}>
+              <option value="active">Aktif</option>
+              <option value="passive">Pasif</option>
+              <option value="">Tümü</option>
+            </select>
+          </>
+        }
+        export={{ endpoint: '/orders/invoice-series/export', named, fallbackFileName: 'fatura-serileri.xlsx' }}
+        compact={{
+          title: s => s.serial,
+          subtitle: s => `${INVOICE_TYPE_MAP[s.invoiceType] ?? s.invoiceType}${s.name ? ` · ${s.name}` : ''}`,
+          right: s => firmName(s.firmId),
+          badge: s => s.isActive ? <Badge variant="success">Aktif</Badge> : <Badge variant="neutral">Pasif</Badge>,
+        }}
+      />
+
+      <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+        Bir seri = bir üç harfli ön ek = bir tip = bir numara akışı. Numaralar her yıl 1'den başlar,
+        iptal edilen fatura numarayı tüketir. Seri silinmez, pasife alınır.
+      </p>
 
       <ChannelSlotsCard channels={channels} series={series} firms={firms} />
 

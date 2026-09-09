@@ -96,9 +96,41 @@ public class YetkilendirmeController(
             id, req.Ad, req.Aciklama, req.Sayfa, req.Sira, req.Aktif, req.KanalKapsamli, IsleyenId), ct));
 
     // ── Yetki Grupları ────────────────────────────────────────────────────────
+    /// <summary>TAM grup listesi — Kullanıcı Yetkileri ekranının grup seçim kaynağı.
+    /// ⚠ Sayfalanmaz; liste EKRANI için /permission-groups/grid kullanın.</summary>
     [HttpGet("permission-groups")]
     public async Task<IActionResult> Gruplar(CancellationToken ct)
         => Sonuc(await mediator.Send(new GetYetkiGruplariQuery(), ct));
+
+    /// <summary>Yetki grupları liste ekranı (DataGrid): sayfalı + f.* filtreleri + sort/dir.
+    /// ⚠ Düz <c>GET /permission-groups</c> sayfalanmaz — Kullanıcı Yetkileri ekranının grup kaynağı odur.</summary>
+    [HttpGet("permission-groups/grid")]
+    public async Task<IActionResult> GruplarGrid(
+        [FromQuery] bool activeOnly = false, [FromQuery] bool sistemHaric = false,
+        [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        // Grup tanımı kanaldan bağımsızdır (kanal kapsamı grubun VERDİĞİ yetkinin özelliği) → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 50);
+        return Sonuc(await mediator.Send(new GetYetkiGruplariGridQuery(
+            new YetkiGrubuFiltreleri(activeOnly, sistemHaric, search), grid.Page, grid.PageSize, grid), ct));
+    }
+
+    /// <summary>Yetki gruplarını Excel'e aktarır (DataGrid).</summary>
+    [HttpPost("permission-groups/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> GruplarExport(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<YetkilendirmeController> logger, CancellationToken ct)
+    {
+        var filtreler = new YetkiGrubuFiltreleri(
+            body.NamedValue("activeOnly") == "true", body.NamedValue("sistemHaric") == "true", body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger,
+            "permission-groups", "yetki-gruplari", "Yetki Grupları",
+            ECSPros.Api.Grid.YetkiGrubuExportColumns.All,
+            max => mediator.Send(new ExportYetkiGruplariQuery(filtreler, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
+    }
 
     [HttpGet("permission-groups/{id:guid}")]
     public async Task<IActionResult> GrupDetay(Guid id, CancellationToken ct)

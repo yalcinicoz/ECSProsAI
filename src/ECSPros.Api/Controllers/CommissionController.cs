@@ -214,9 +214,13 @@ public class CommissionController(
     // ── Hakediş mutabakatı ──
     [HttpGet("settlements")]
     public async Task<IActionResult> Settlements([FromQuery] Guid supplierAccountId, [FromQuery] string? status,
+        [FromQuery] string? search = null,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetSupplierSettlementsQuery(supplierAccountId, status, null, page, pageSize), ct);
+        // DataGrid (2026-09-09): hakediş satırı satıcıya aittir, kanal kolonu yok → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: pageSize);
+        var result = await mediator.Send(new GetSupplierSettlementsQuery(
+            supplierAccountId, status, null, grid.Page, grid.PageSize, search, grid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }

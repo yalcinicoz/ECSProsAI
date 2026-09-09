@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/api/client'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText as gridErrText } from '@/components/ui/DataTable.utils'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 
@@ -170,15 +172,19 @@ export function CommissionPage() {
   // ── Sekme 4: Hakedişler ──
   const [setSupplier, setSetSupplier] = useState('')
   const [setStatus, setSetStatus] = useState('')
-  const { data: settlements } = useQuery<{ items: SettlementLine[]; totalCount: number }>({
-    queryKey: ['commission-settlements', setSupplier, setStatus],
-    queryFn: async () => {
-      const p = new URLSearchParams({ supplierAccountId: setSupplier, pageSize: '100' })
-      if (setStatus) p.set('status', setStatus)
-      return (await api.get(`/commission/settlements?${p}`)).data.data
-    },
-    enabled: tab === 'settlements' && !!setSupplier,
-  })
+  // DataGrid (2026-09-09, tur 12): sunucu filtre/sıralama/arama (SettlementLineGrid.Schema).
+  // ★ Liste her zaman TEK SATICIYA kilitli (satıcı seçicisi named filtre); şema süzgeçleri onun
+  // üzerine daraltır — kimse başkasının hakediş satırını göremez.
+  const setGrid = useGridState('commission-settlements', { defaultPageSize: 50, defaultSort: 'createdAt', defaultDir: 'desc' })
+  const setNamed = () => ({ supplierAccountId: setSupplier || undefined, status: setStatus || undefined })
+  const { data: settlements, isLoading: setLoading, isFetching: setFetching, error: setError } =
+    useQuery<{ items: SettlementLine[]; totalCount: number }>({
+      queryKey: ['commission-settlements', setSupplier, setStatus, ...setGrid.queryKey],
+      queryFn: async () => (await api.get(`/commission/settlements?${setGrid.toParams(setNamed())}`)).data.data,
+      enabled: tab === 'settlements' && !!setSupplier,
+      placeholderData: prev => prev,
+      retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
+    })
   const { data: statement } = useQuery<{ balance: number; currency: string }>({
     queryKey: ['commission-statement', setSupplier],
     queryFn: async () => (await api.get(`/commission/suppliers/${setSupplier}/statement?pageSize=1`)).data.data,
@@ -193,6 +199,54 @@ export function CommissionPage() {
   })
 
   const supplierOptions = suppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.title}` }))
+
+  const setColumns: GridColumn<SettlementLine>[] = [
+    { key: 'orderNumber', header: 'SİPARİŞ / SKU', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 220,
+      filter: { type: 'text', label: 'Sipariş no' },
+      filters: [
+        { field: 'sku', label: 'SKU', type: 'text' },
+        { field: 'productName', label: 'Ürün adı', type: 'text' },
+        { field: 'iade', label: 'İade ters satırı', type: 'boolean' }],
+      cell: l => <div>
+        <div className="font-medium" style={{ color: 'var(--text)' }}>{l.orderNumber}{l.isReversal && ' (iade)'}</div>
+        <div className="text-xs" style={{ color: 'var(--text-s)' }}>{l.sku} × {l.quantity}</div>
+      </div> },
+    { key: 'grossAmount', header: 'BRÜT', priority: 1, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Brüt tutar' },
+      cell: l => <span className="whitespace-nowrap tabular-nums">{para(l.grossAmount)}</span> },
+    { key: 'commissionRate', header: 'ORAN (KATMAN)', priority: 2, sortable: true, minWidth: 190,
+      filter: { type: 'number', label: 'Oran (%)' },
+      filters: [
+        { field: 'katman', label: 'Katman', type: 'text' },
+        { field: 'kampanyali', label: 'Kampanyalı satış', type: 'boolean' }],
+      cell: l => <span className="text-xs">%{l.commissionRate} — {katmanAdi(l.commissionLayer)}</span> },
+    { key: 'commissionAmount', header: 'KOMİSYON', priority: 1, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Komisyon' },
+      cell: l => <span className="whitespace-nowrap tabular-nums">{para(l.commissionAmount)}</span> },
+    { key: 'discountShare', header: 'İNDİRİM PAYI', priority: 2, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'İndirim payı' },
+      filters: [{ field: 'indirimPayiVar', label: 'İndirim payı var', type: 'boolean' }],
+      cell: l => <span className="whitespace-nowrap tabular-nums">{para(l.campaignDiscountShareAmount)}</span> },
+    { key: 'netAmount', header: 'NET', priority: 1, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Net tutar' },
+      cell: l => <span className="whitespace-nowrap tabular-nums font-medium">{para(l.netAmount)}</span> },
+    { key: 'deliveredAt', header: 'TESLİM', priority: 3, sortable: true, defaultVisible: false,
+      filter: { type: 'date', label: 'Teslim tarihi' },
+      filters: [
+        { field: 'eligibleAt', label: 'Uygunlaşma', type: 'date' },
+        { field: 'paidAt', label: 'Ödeme tarihi', type: 'date' }],
+      cell: l => <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-s)' }}>
+        {new Date(l.deliveredAt).toLocaleDateString('tr-TR')}</span> },
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Durum',
+        options: Object.entries(DURUM_RENK).map(([v, d]) => ({ value: v, label: d.ad })) },
+      filters: [{ field: 'defterdeVar', label: 'Deftere yazıldı', type: 'boolean' }],
+      cell: l => {
+        const d = DURUM_RENK[l.status] ?? DURUM_RENK.pending
+        return <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap"
+          style={{ background: d.bg, color: d.fg }}>{d.ad}</span>
+      } },
+  ]
 
   return (
     <div>
@@ -496,45 +550,32 @@ export function CommissionPage() {
             </div>
           )}
           {setSupplier && (
-            <div className="card p-5 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-wider" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>
-                    <th className="py-2 pr-3 font-semibold">Sipariş / SKU</th>
-                    <th className="py-2 pr-3 font-semibold text-right">Brüt</th>
-                    <th className="py-2 pr-3 font-semibold">Oran (katman)</th>
-                    <th className="py-2 pr-3 font-semibold text-right">Komisyon</th>
-                    <th className="py-2 pr-3 font-semibold text-right">İndirim payı</th>
-                    <th className="py-2 pr-3 font-semibold text-right">Net</th>
-                    <th className="py-2 font-semibold">Durum</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(settlements?.items ?? []).map(l => {
-                    const d = DURUM_RENK[l.status] ?? DURUM_RENK.pending
-                    return (
-                      <tr key={l.id} style={{ borderBottom: '1px solid var(--border)', color: 'var(--text)' }}>
-                        <td className="py-2 pr-3">
-                          <div className="font-medium">{l.orderNumber}{l.isReversal && ' (iade)'}</div>
-                          <div className="text-xs" style={{ color: 'var(--text-s)' }}>{l.sku} × {l.quantity}</div>
-                        </td>
-                        <td className="py-2 pr-3 text-right whitespace-nowrap">{para(l.grossAmount)}</td>
-                        <td className="py-2 pr-3 text-xs">%{l.commissionRate} — {katmanAdi(l.commissionLayer)}</td>
-                        <td className="py-2 pr-3 text-right whitespace-nowrap">{para(l.commissionAmount)}</td>
-                        <td className="py-2 pr-3 text-right whitespace-nowrap">{para(l.campaignDiscountShareAmount)}</td>
-                        <td className="py-2 pr-3 text-right whitespace-nowrap font-medium">{para(l.netAmount)}</td>
-                        <td className="py-2">
-                          <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: d.bg, color: d.fg }}>{d.ad}</span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                  {(settlements?.items ?? []).length === 0 && (
-                    <tr><td colSpan={7} className="py-6 text-center text-sm" style={{ color: 'var(--text-s)' }}>Hakediş satırı yok.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <DataGrid<SettlementLine>
+              gridId="commission-settlements"
+              views
+              grid={setGrid}
+              columns={setColumns}
+              rows={settlements?.items ?? []}
+              totalCount={settlements?.totalCount ?? 0}
+              loading={setLoading}
+              fetching={setFetching}
+              error={setError ? gridErrText(setError) : null}
+              rowKey={l => l.id}
+              empty="Ölçütlere uyan hakediş satırı yok."
+              search={{ placeholder: 'Sipariş no, SKU veya ürün adı ara…' }}
+              minWidth={1180}
+              pageSizes={[50, 100, 200]}
+              compact={{
+                title: l => `${l.orderNumber}${l.isReversal ? ' (iade)' : ''}`,
+                subtitle: l => `${l.sku} × ${l.quantity} · %${l.commissionRate} ${katmanAdi(l.commissionLayer)}`,
+                right: l => para(l.netAmount),
+                badge: l => {
+                  const d = DURUM_RENK[l.status] ?? DURUM_RENK.pending
+                  return <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap"
+                    style={{ background: d.bg, color: d.fg }}>{d.ad}</span>
+                },
+              }}
+            />
           )}
         </div>
       )}

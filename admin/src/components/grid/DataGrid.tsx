@@ -59,6 +59,13 @@ export interface DataGridProps<T> {
   compact?: GridCompactConfig<T>
   /** Satır seçimi (onay kutusu kolonu + seçim çubuğu) */
   selection?: GridSelection
+  /**
+   * Genişleyen satır (2026-09-09, tur 12): satır tıklandığında ALTINA tüm kolonları kaplayan bir
+   * panel açılır (örn. pazaryeri özelliğinin değer eşleme paneli). Hangi satırın açık olduğu
+   * ÇAĞIRANDA tutulur — panel kaydettiğinde açık kalması ve dış olaylarla kapanması gerekiyor.
+   * `onRowClick` ile birlikte kullanılırsa ikisi de çalışır: tıklama hem satır olayını hem paneli tetikler.
+   */
+  expandedRow?: { key: string | null; render: (row: T) => ReactNode; onToggle: (key: string | null) => void }
   /** tablo min genişliği (px) — yatay kaydırmanın her zaman erişilebilir olması için (varsayılan: görünür kolon sayısı × 140) */
   minWidth?: number
   className?: string
@@ -77,7 +84,7 @@ function defaultVisible<T>(c: GridColumn<T>, bp: GridBreakpoint) {
 export function DataGrid<T>({
   gridId, columns, rows, totalCount, grid, loading, fetching, error, onRowClick, rowKey, empty,
   toolbarLeft, toolbarRight, toolbarBelow, frozen, pageSizes, minWidth, className, search, extraFilters, filterLeading, export: exportCfg,
-  views: viewsEnabled, compact, selection,
+  views: viewsEnabled, compact, selection, expandedRow,
 }: DataGridProps<T>) {
   const bp = useBreakpoint()
   const [sp] = useSearchParams()
@@ -383,12 +390,25 @@ export function DataGrid<T>({
                     {empty ?? (filtered ? 'Filtreye uyan kayıt bulunamadı.' : 'Kayıt bulunamadı.')}
                   </td></tr>
                 )}
-                {!loading && !error && rows.map(r => (
-                  <tr key={key(r)}
-                    onClick={onRowClick ? e => rowClick(r, e) : undefined}
-                    onKeyDown={onRowClick ? e => { if (e.key === 'Enter' && e.target === e.currentTarget) rowClick(r, e) } : undefined}
-                    tabIndex={onRowClick ? 0 : undefined}
-                    className={cn('grid-row transition-colors', onRowClick && 'cursor-pointer hover:bg-[var(--surface2)] focus:outline-none focus-visible:bg-[var(--surface2)]')}
+                {!loading && !error && rows.flatMap(r => {
+                  const id = key(r)
+                  const acikMi = !!expandedRow && expandedRow.key === id
+                  // Genişleyen satırda tıklama paneli açar/kapatır; stopRowClick hücreleri (satır içi
+                  // düzenleme alanları) zaten rowClick içinde ayıklanıyor → aynı ayıklama burada da geçerli.
+                  const tikla = (e: React.MouseEvent | React.KeyboardEvent) => {
+                    if (expandedRow) {
+                      const hedef = e.target as HTMLElement
+                      if (!hedef.closest('[data-stop-row-click]')) expandedRow.onToggle(acikMi ? null : id)
+                    }
+                    if (onRowClick) rowClick(r, e)
+                  }
+                  const tiklanabilir = !!onRowClick || !!expandedRow
+                  return [(
+                  <tr key={id}
+                    onClick={tiklanabilir ? e => tikla(e) : undefined}
+                    onKeyDown={tiklanabilir ? e => { if (e.key === 'Enter' && e.target === e.currentTarget) tikla(e) } : undefined}
+                    tabIndex={tiklanabilir ? 0 : undefined}
+                    className={cn('grid-row transition-colors', tiklanabilir && 'cursor-pointer hover:bg-[var(--surface2)] focus:outline-none focus-visible:bg-[var(--surface2)]')}
                     style={{ borderBottom: '1px solid var(--border)' }}>
                     {selection && (
                       <td className="px-3 py-3 w-8" data-stop-row-click=""><input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={selection.selected.has(key(r))} onChange={() => toggleOne(key(r))} aria-label="Satırı seç" /></td>
@@ -404,7 +424,12 @@ export function DataGrid<T>({
                       )
                     })}
                   </tr>
-                ))}
+                  ), acikMi ? (
+                    <tr key={`${id}-panel`}>
+                      <td colSpan={colCount} className="p-0">{expandedRow!.render(r)}</td>
+                    </tr>
+                  ) : null]
+                })}
               </tbody>
             </table>
           </div>

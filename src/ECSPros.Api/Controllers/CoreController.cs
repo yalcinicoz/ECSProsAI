@@ -529,6 +529,39 @@ public class CoreController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Çeviri liste ekranı (DataGrid, 2026-09-09): ANAHTAR bazlı sayfalı pivot + f.* + sort/dir.
+    /// ⚠ Düz <c>GET /ui-translations</c> sayfalanmaz — panelin çeviri sözlüğünü besleyen uç odur.</summary>
+    [HttpGet("ui-translations/grid")]
+    public async Task<IActionResult> GetUiTranslationsGrid(
+        [FromQuery] string? @namespace = null, [FromQuery] string? dil = null,
+        [FromQuery] bool eksikOlanlar = false, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        // Çeviri sözlüğü kanaldan bağımsızdır (panel metinleri) → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 50);
+        var result = await _mediator.Send(new GetUiTranslationsGridQuery(
+            new UiTranslationFiltreleri(@namespace, dil, eksikOlanlar, search), grid.Page, grid.PageSize, grid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Çevirileri Excel'e aktarır (DataGrid) — düz biçim: anahtar × dil.</summary>
+    [HttpPost("ui-translations/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportUiTranslations(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<CoreController> logger, CancellationToken ct)
+    {
+        var filtreler = new UiTranslationFiltreleri(
+            body.NamedValue("namespace"), body.NamedValue("dil"),
+            body.NamedValue("eksikOlanlar") == "true", body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger,
+            "ui-translations", "arayuz-cevirileri", "Arayüz Çevirileri",
+            ECSPros.Api.Grid.UiTranslationExportColumns.All,
+            max => _mediator.Send(new ExportUiTranslationsQuery(filtreler, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
+    }
+
     /// <summary>Çevirileri toplu ekler veya günceller.</summary>
     [HttpPut("ui-translations/batch")]
     [RequirePermission(Permissions.SystemTranslationsManage)]   // Y2

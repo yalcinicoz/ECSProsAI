@@ -1,5 +1,6 @@
 using ECSPros.Accounts.Application.Services;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,9 @@ public record GetSupplierSettlementsQuery(
     string? Status = null,
     DateTime? Since = null,
     int Page = 1,
-    int PageSize = 50) : IRequest<Result<PagedResult<SettlementLineDto>>>;
+    int PageSize = 50,
+    string? Arama = null,           // sipariş no / SKU / ürün adı
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<SettlementLineDto>>>;
 
 public record SettlementLineDto(
     Guid Id,
@@ -69,8 +72,19 @@ public class SupplierSettlementQueryHandlers(IAccountsDbContext db) :
         if (request.Since is { } since)
             q = q.Where(l => l.DeliveredAt >= since);
 
-        var total = await q.CountAsync(ct);
-        var satirlar = await q.OrderByDescending(l => l.CreatedAt)
+        // DataGrid (2026-09-09): başlık süzgeçleri beyaz listeden (SettlementLineGrid.Schema).
+        // Satıcı kilidi YUKARIDA uygulanır; şema onun üzerine daraltır, genişletemez.
+        q = SettlementLineGrid.Schema.ApplyFilters(q, request.Grid);
+        if (!string.IsNullOrWhiteSpace(request.Arama))
+        {
+            var t = request.Arama.Trim().ToLower();
+            q = q.Where(l => l.OrderNumber.ToLower().Contains(t)
+                || l.Sku.ToLower().Contains(t)
+                || l.ProductName.ToLower().Contains(t));
+        }
+
+        var total = await q.CountAsync(ct);   // sayım SAYFALAMADAN ÖNCE
+        var satirlar = await SettlementLineGrid.Schema.ApplySort(q, request.Grid)
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(l => new SettlementLineDto(
                 l.Id, l.OrderNumber, l.Sku, l.ProductName, l.Quantity,

@@ -3,8 +3,11 @@ import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/rea
 import { Save, Plus } from 'lucide-react'
 import api from '@/api/client'
 import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText as gridErrText } from '@/components/ui/DataTable.utils'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { I18nField } from '@/components/ui/I18nField'
 import { useLanguages } from '@/hooks/useLanguages'
@@ -409,13 +412,23 @@ export function ProductCardPage() {
     },
   })
 
-  // ── Kart mesajları ──
-  const { data: messages = [], isLoading: msgLoading } = useQuery<CardMessage[]>({
-    queryKey: ['card-messages', selectedChannelId],
+  // ── Kart mesajları (DataGrid, 2026-09-09 tur 12) ──
+  // ★ Ayrı uç: düz GET kanalın TAM listesini döner; bu sekme sayfalı /card-messages/grid kullanır.
+  // Kanal değişince grid durumu sıfırlanır (çoklu grid dersi): önceki kanalın filtresi yeni kanalda
+  // "sonuç yok" gösteriyordu.
+  const msgGrid = useGridState('card-messages', { defaultPageSize: 50, defaultSort: 'slot', defaultDir: 'asc' })
+  const msgNamed = () => ({ firmPlatformId: selectedChannelId || undefined })
+  const {
+    data: msgData, isLoading: msgLoading, isFetching: msgFetching, error: msgError,
+  } = useQuery<{ items: CardMessage[]; totalCount: number }>({
+    queryKey: ['card-messages-grid', selectedChannelId, ...msgGrid.queryKey],
     queryFn: async () =>
-      (await api.get(`/storefront/card-messages?firmPlatformId=${selectedChannelId}`)).data.data ?? [],
+      (await api.get(`/storefront/card-messages/grid?${msgGrid.toParams(msgNamed())}`)).data.data,
     enabled: !!selectedChannelId,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
+  const messages = msgData?.items ?? []
 
   // Kanal kategorileri (modal kapsam seçimi için)
   const [modalOpen, setModalOpen] = useState(false)
@@ -469,6 +482,7 @@ export function ProductCardPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['card-messages', selectedChannelId] })
+      queryClient.invalidateQueries({ queryKey: ['card-messages-grid', selectedChannelId] })
       setModalOpen(false)
     },
   })
@@ -478,6 +492,7 @@ export function ProductCardPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['card-messages', selectedChannelId] })
+      queryClient.invalidateQueries({ queryKey: ['card-messages-grid', selectedChannelId] })
       setModalOpen(false)
     },
   })
@@ -511,6 +526,48 @@ export function ProductCardPage() {
   const mutErr = (messageMutation.error ?? deleteMutation.error) as
     { response?: { data?: { error?: string } } } | null
 
+  const msgColumns: GridColumn<CardMessage>[] = [
+    { key: 'message', header: 'MESAJ', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 240,
+      filter: { type: 'text', label: 'Mesaj' },
+      cell: m => <span className="font-medium text-sm" style={{ color: 'var(--text)' }}>
+        {getName(m.messageI18n) || <span style={{ color: 'var(--text-s)' }}>—</span>}</span> },
+    { key: 'slot', header: 'ALAN', priority: 1, align: 'center', sortable: true,
+      filter: { type: 'number', label: 'Alan (1/2/3)' },
+      cell: m => <span className="text-sm whitespace-nowrap" style={{ color: 'var(--text-m)' }}>Alan {m.slot}</span> },
+    { key: 'icon', header: 'İKON', priority: 2, sortable: true,
+      filter: { type: 'text', label: 'İkon' },
+      filters: [{ field: 'ikonlu', label: 'İkonu var', type: 'boolean' }],
+      cell: m => m.icon ? <code className="text-xs">{m.icon}</code> : '—' },
+    { key: 'color', header: 'RENK', priority: 2, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Renk',
+        options: [...COLOR_OPTIONS.map(c => ({ value: c.value, label: c.label })), { value: 'yok', label: 'Varsayılan' }] },
+      cell: m => {
+        const opt = COLOR_OPTIONS.find(c => c.value === m.color)
+        return opt
+          ? <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm" style={{ color: 'var(--text-m)' }}>
+              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: opt.dot }} />{opt.label}</span>
+          : <span className="text-sm" style={{ color: 'var(--text-s)' }}>Varsayılan</span>
+      } },
+    { key: 'scopeType', header: 'KAPSAM', priority: 1, sortable: true, minWidth: 160,
+      filter: { type: 'enum', multiple: true, label: 'Kapsam', options: [
+        { value: 'all', label: 'Tüm ürünler' }, { value: 'category', label: 'Kategori' }, { value: 'products', label: 'Ürün listesi' }] },
+      cell: m => <span className="text-sm whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{scopeSummary(m)}</span> },
+    { key: 'startDate', header: 'TARİH', priority: 2, sortable: true, minWidth: 160,
+      filter: { type: 'date', label: 'Başlangıç' },
+      filters: [
+        { field: 'endDate', label: 'Bitiş', type: 'date' },
+        { field: 'suresiz', label: 'Süresiz', type: 'boolean' },
+        { field: 'yayinda', label: 'Şu an sitede görünüyor', type: 'boolean' }],
+      cell: m => <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-s)' }}>
+        {m.startDate || m.endDate ? `${fmtDate(m.startDate) || '…'} – ${fmtDate(m.endDate) || '…'}` : 'Süresiz'}</span> },
+    { key: 'sortOrder', header: 'SIRA', priority: 3, align: 'center', sortable: true,
+      filter: { type: 'number', label: 'Sıra' },
+      cell: m => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{m.sortOrder}</span> },
+    { key: 'isActive', header: 'AKTİF', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      cell: m => <Badge variant={m.isActive ? 'success' : 'neutral'}>{m.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+  ]
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -537,7 +594,16 @@ export function ProductCardPage() {
         <label className="flbl mb-2">Satış Kanalı</label>
         <SearchableSelect
           value={selectedChannelId}
-          onChange={(v) => { if (v) setSelectedChannelId(v) }}
+          onChange={(v) => {
+            if (!v) return
+            setSelectedChannelId(v)
+            // Kanal değişince Kart Mesajları grid'inin sayfası/araması/süzgeci sıfırlanır:
+            // önceki kanalın filtresi yeni kanalda "sonuç yok" gösteriyordu (çoklu grid dersi).
+            msgGrid.mutate(n => {
+              for (const k of [...n.keys()]) if (k.startsWith('f.') || k.startsWith('fq.')) n.delete(k)
+              for (const k of ['page', 'search']) n.delete(k)
+            })
+          }}
           options={channelOptions}
           placeholder={chLoading ? 'Kanallar yükleniyor…' : 'Kanal seçin…'}
           hasValue={!!selectedChannelId}
@@ -679,8 +745,8 @@ export function ProductCardPage() {
                   desc="Kartın temelidir — kapatılamaz" />
               </div>
             ) : activeTab === 'messages' ? (
-              /* ── Sekme 2: Kart Mesajları ── */
-              <div className="card flex-1 min-w-[320px] overflow-hidden">
+              /* ── Sekme 2: Kart Mesajları (DataGrid) ── */
+              <div className="flex-1 min-w-[320px]">
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>
                     Kart Mesajları
@@ -689,73 +755,29 @@ export function ProductCardPage() {
                     <Plus size={14} /> Yeni Mesaj
                   </Button>
                 </div>
-                {msgLoading ? (
-                  <div className="py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor…</div>
-                ) : messages.length === 0 ? (
-                  <div className="py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                    Bu kanalda tanımlı kart mesajı yok. "Yeni Mesaj" ile ekleyin.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-left text-xs uppercase tracking-wider"
-                          style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>
-                          <th className="py-2 pr-3 font-semibold">Mesaj</th>
-                          <th className="py-2 pr-3 font-semibold">Alan</th>
-                          <th className="py-2 pr-3 font-semibold">İkon</th>
-                          <th className="py-2 pr-3 font-semibold">Renk</th>
-                          <th className="py-2 pr-3 font-semibold">Kapsam</th>
-                          <th className="py-2 pr-3 font-semibold">Tarih</th>
-                          <th className="py-2 pr-3 font-semibold">Sıra</th>
-                          <th className="py-2 font-semibold">Aktif</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {messages.map(m => {
-                          const colorOpt = COLOR_OPTIONS.find(c => c.value === m.color)
-                          return (
-                            <tr key={m.id} onClick={() => openEdit(m)}
-                              className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                              style={{ borderBottom: '1px solid var(--border)', color: 'var(--text)' }}>
-                              <td className="py-2.5 pr-3 font-medium">
-                                {getName(m.messageI18n) || <span style={{ color: 'var(--text-s)' }}>—</span>}
-                              </td>
-                              <td className="py-2.5 pr-3 whitespace-nowrap">Alan {m.slot}</td>
-                              <td className="py-2.5 pr-3">
-                                {m.icon ? <code className="text-xs">{m.icon}</code> : '—'}
-                              </td>
-                              <td className="py-2.5 pr-3 whitespace-nowrap">
-                                {colorOpt ? (
-                                  <span className="inline-flex items-center gap-1.5">
-                                    <span className="w-2.5 h-2.5 rounded-full inline-block"
-                                      style={{ background: colorOpt.dot }} />
-                                    {colorOpt.label}
-                                  </span>
-                                ) : 'Varsayılan'}
-                              </td>
-                              <td className="py-2.5 pr-3 whitespace-nowrap">{scopeSummary(m)}</td>
-                              <td className="py-2.5 pr-3 whitespace-nowrap text-xs" style={{ color: 'var(--text-s)' }}>
-                                {m.startDate || m.endDate
-                                  ? `${fmtDate(m.startDate) || '…'} – ${fmtDate(m.endDate) || '…'}`
-                                  : 'Süresiz'}
-                              </td>
-                              <td className="py-2.5 pr-3">{m.sortOrder}</td>
-                              <td className="py-2.5">
-                                <span className="text-xs px-2 py-0.5 rounded-full"
-                                  style={m.isActive
-                                    ? { background: '#dcfce7', color: '#166534' }
-                                    : { background: 'var(--surface2)', color: 'var(--text-s)' }}>
-                                  {m.isActive ? 'Aktif' : 'Pasif'}
-                                </span>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                <DataGrid<CardMessage>
+                  gridId="card-messages"
+                  views
+                  grid={msgGrid}
+                  columns={msgColumns}
+                  rows={messages}
+                  totalCount={msgData?.totalCount ?? 0}
+                  loading={msgLoading}
+                  fetching={msgFetching}
+                  error={msgError ? gridErrText(msgError) : null}
+                  onRowClick={m => openEdit(m)}
+                  empty={'Bu kanalda ölçütlere uyan kart mesajı yok. "Yeni Mesaj" ile ekleyin.'}
+                  search={{ placeholder: 'Mesaj veya ikon ara…' }}
+                  minWidth={1140}
+                  pageSizes={[50, 100, 200]}
+                  export={{ endpoint: '/storefront/card-messages/export', named: msgNamed, fallbackFileName: 'kart-mesajlari.xlsx' }}
+                  compact={{
+                    title: m => getName(m.messageI18n) || '—',
+                    subtitle: m => `Alan ${m.slot} · ${scopeSummary(m)}`,
+                    right: m => (m.startDate || m.endDate) ? `${fmtDate(m.startDate) || '…'} – ${fmtDate(m.endDate) || '…'}` : 'Süresiz',
+                    badge: m => <Badge variant={m.isActive ? 'success' : 'neutral'}>{m.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+                  }}
+                />
               </div>
             ) : (
               /* ── Sekme 3: Sıralama seçenekleri ── */

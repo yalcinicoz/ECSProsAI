@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, ChevronUp, Database, Plus, Search, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import api from '@/api/client'
+import { DataGrid, useGridState, useLocalGrid, type GridColumn } from '@/components/grid'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
@@ -767,6 +768,7 @@ function AttributesTab({
   const [targetId, setTargetId] = useState<string | null>(initialTarget)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [rowMsg, setRowMsg] = useState<Record<string, string>>({})
+  const attrGrid = useGridState('mapping-attributes', { defaultPageSize: 50, defaultSort: 'name', defaultDir: 'asc' })
 
   const erp = isErpTarget(marketplace)
   const { data: mappedTargets = [] } = useQuery<MappedTarget[]>({
@@ -807,6 +809,113 @@ function AttributesTab({
     onError: (err, p) => setRowMsg((m) => ({ ...m, [p.row.externalId]: errText(err, 'Hata') })),
   })
 
+  // DataGrid (2026-09-09, tur 12) — YEREL değerlendirme: özellik listesi hedef kategori başına TAM
+  // gelir (sunucuda sayfalanmaz) ve satırlar SATIR İÇİ DÜZENLENİR (strateji/karşılık/sabit değer);
+  // genişleyen satır değer eşleme panelini taşır. Sıralama/süzgeç yerelde uygulanır.
+  const attrList = view?.attributes ?? []
+  const yerelAttr = useLocalGrid(attrList, attrGrid, {
+    values: {
+      name: (a) => a.name,
+      tip: (a) => (a.valueCount > 0 ? 'liste' : 'serbest'),
+      valueCount: (a) => a.valueCount,
+      isRequired: (a) => a.isRequired,
+      isVariantAxis: (a) => a.isVariantAxis,
+      allowCustom: (a) => a.allowCustom,
+      strategy: (a) => a.strategy ?? 'map_values',
+      eslendi: (a) => !!a.attributeTypeId,
+      gozdenGecir: (a) => !!a.status && a.status !== 'active',
+      mappedValueCount: (a) => a.mappedValueCount,
+      ownValueCount: (a) => a.ownValueCount,
+      eksikDeger: (a) => (a.strategy ?? 'map_values') === 'map_values' && !!a.attributeTypeId
+        && a.mappedValueCount < a.ownValueCount,
+    },
+    search: (a) => a.name,
+  })
+
+  const attrColumns: GridColumn<MpAttributeRow>[] = [
+    { key: 'name', header: 'PAZARYERİ ÖZELLİĞİ', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 260,
+      filter: { type: 'text', label: 'Özellik adı' },
+      filters: [
+        { field: 'isRequired', label: 'Zorunlu', type: 'boolean' },
+        { field: 'isVariantAxis', label: 'Varyant ekseni', type: 'boolean' },
+        { field: 'gozdenGecir', label: 'Gözden geçirilecek', type: 'boolean' }],
+      cell: (a) => <div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="font-medium" style={{ color: 'var(--text)' }}>{a.name}</span>
+          {a.isRequired ? <Badge variant="danger">Zorunlu</Badge> : null}
+          {a.isVariantAxis ? <Badge variant="info">Varyant ekseni</Badge> : null}
+          {a.status && a.status !== 'active' ? <Badge variant="warning">Gözden geçir</Badge> : null}
+        </div>
+        {a.statusNote ? <p className="text-[11px] mt-0.5" style={{ color: '#b45309' }}>{a.statusNote}</p> : null}
+      </div> },
+    { key: 'tip', header: 'TİP', priority: 2, sortable: true, minWidth: 130,
+      filter: { type: 'enum', label: 'Tip', options: [
+        { value: 'liste', label: 'Liste' }, { value: 'serbest', label: 'Serbest' }] },
+      filters: [
+        { field: 'valueCount', label: 'Değer sayısı', type: 'number' },
+        { field: 'allowCustom', label: 'Serbest değere izinli', type: 'boolean' }],
+      cell: (a) => <span className="text-xs" style={{ color: 'var(--text-m)' }}>
+        {a.valueCount > 0 ? `Liste (${a.valueCount})` : 'Serbest'}
+        {a.allowCustom && a.valueCount > 0 ? ' + serbest' : ''}
+      </span> },
+    { key: 'strategy', header: 'BİZİM KARŞILIK', priority: 1, sortable: true, stopRowClick: true, minWidth: 330,
+      filter: { type: 'enum', multiple: true, label: 'Strateji',
+        options: Object.entries(STRATEJI_ADI).map(([v, l]) => ({ value: v, label: l })) },
+      filters: [{ field: 'eslendi', label: 'Karşılığı seçilmiş', type: 'boolean' }],
+      cell: (a) => {
+        const strategy = a.strategy ?? 'map_values'
+        return <div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <select className="inp" style={{ width: 130 }} value={strategy}
+              onChange={(e) => saveAttr.mutate({
+                row: a, strategy: e.target.value,
+                attributeTypeId: e.target.value === 'fixed_value' ? null : a.attributeTypeId,
+                fixedValue: e.target.value === 'fixed_value' ? (a.fixedValue ?? '-') : null,
+              })}>
+              <option value="map_values">Değer eşle</option>
+              <option value="pass_literal" disabled={!a.allowCustom}>Serbest geçir</option>
+              {erp && <option value="ignore">Yok say (katalog özelliği yapılmaz)</option>}
+              <option value="fixed_value">Sabit değer</option>
+            </select>
+            {strategy === 'ignore' ? (
+              <span className="text-xs" style={{ color: 'var(--text-s)' }}>ERP'den gelen bu alan katalog özelliğine yazılmaz.</span>
+            ) : strategy === 'fixed_value' ? (
+              <input className="inp" style={{ width: 140 }} defaultValue={a.fixedValue ?? ''} placeholder="Sabit değer…"
+                onBlur={(e) => {
+                  if (e.target.value !== (a.fixedValue ?? ''))
+                    saveAttr.mutate({ row: a, strategy: 'fixed_value', attributeTypeId: null, fixedValue: e.target.value })
+                }} />
+            ) : (
+              <select className="inp" style={{ width: 150 }} value={a.attributeTypeId ?? ''}
+                onChange={(e) => saveAttr.mutate({ row: a, strategy, attributeTypeId: e.target.value || null, fixedValue: null })}>
+                <option value="">— seç —</option>
+                {ownTypes.map((t) => <option key={t.id} value={t.id}>{pickTr(t.nameI18n, t.code ?? '')}</option>)}
+              </select>
+            )}
+          </div>
+          {rowMsg[a.externalId] ? (
+            <span className="text-[11px]" style={{ color: rowMsg[a.externalId].startsWith('✓') ? 'var(--brand)' : '#ef4444' }}>
+              {rowMsg[a.externalId]}
+            </span>
+          ) : null}
+        </div>
+      } },
+    { key: 'mappedValueCount', header: 'DEĞERLER', priority: 2, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Eşlenen değer' },
+      filters: [
+        { field: 'ownValueCount', label: 'Bizim değer sayısı', type: 'number' },
+        { field: 'eksikDeger', label: 'Eksik değer eşlemesi', type: 'boolean' }],
+      cell: (a) => (a.strategy ?? 'map_values') === 'map_values' && a.attributeTypeId
+        ? <span className="text-xs tabular-nums"
+            style={{ color: a.mappedValueCount >= a.ownValueCount && a.ownValueCount > 0 ? 'var(--brand)' : '#b45309' }}>
+            {a.mappedValueCount}/{a.ownValueCount}
+          </span>
+        : <span className="text-xs" style={{ color: 'var(--text-m)' }}>—</span> },
+    { key: 'ac', header: '', priority: 1, align: 'right', exportable: false, minWidth: 50,
+      cell: (a) => <span style={{ color: 'var(--text-s)' }}>
+        {expanded === a.externalId ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span> },
+  ]
+
   if (targets.length === 0)
     return (
       <div className="card py-16 text-center">
@@ -829,121 +938,36 @@ function AttributesTab({
         </select>
       </div>
 
-      <div className="card p-0 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr style={{ background: 'var(--surface2)' }}>
-              {['Pazaryeri Özelliği', 'Tip', 'Bizim Karşılık', 'Değerler', ''].map((h) => (
-                <th key={h} className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(view?.attributes ?? []).map((a) => {
-              const strategy = a.strategy ?? 'map_values'
-              return [
-                <tr
-                  key={a.externalId}
-                  className="cursor-pointer hover:opacity-90"
-                  style={{ borderTop: '1px solid var(--border)' }}
-                  onClick={() => setExpanded(expanded === a.externalId ? null : a.externalId)}
-                >
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-medium" style={{ color: 'var(--text)' }}>{a.name}</span>
-                      {a.isRequired ? <Badge variant="danger">Zorunlu</Badge> : null}
-                      {a.isVariantAxis ? <Badge variant="info">Varyant ekseni</Badge> : null}
-                      {a.status && a.status !== 'active' ? <Badge variant="warning">Gözden geçir</Badge> : null}
-                    </div>
-                    <div className="min-h-[14px]">
-                      {a.statusNote ? <p className="text-[11px] mt-0.5" style={{ color: '#b45309' }}>{a.statusNote}</p> : null}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-xs" style={{ color: 'var(--text-m)' }}>
-                    {a.valueCount > 0 ? `Liste (${a.valueCount})` : 'Serbest'}
-                    {a.allowCustom && a.valueCount > 0 ? ' + serbest' : ''}
-                  </td>
-                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <select
-                        className="inp"
-                        style={{ width: 130 }}
-                        value={strategy}
-                        onChange={(e) => saveAttr.mutate({
-                          row: a, strategy: e.target.value,
-                          attributeTypeId: e.target.value === 'fixed_value' ? null : a.attributeTypeId,
-                          fixedValue: e.target.value === 'fixed_value' ? (a.fixedValue ?? '-') : null,
-                        })}
-                      >
-                        <option value="map_values">Değer eşle</option>
-                        <option value="pass_literal" disabled={!a.allowCustom}>Serbest geçir</option>
-                        {erp && <option value="ignore">Yok say (katalog özelliği yapılmaz)</option>}
-                        <option value="fixed_value">Sabit değer</option>
-                      </select>
-                      {strategy === 'ignore' ? (
-                        <span className="text-xs" style={{ color: 'var(--text-s)' }}>ERP'den gelen bu alan katalog özelliğine yazılmaz.</span>
-                      ) : strategy === 'fixed_value' ? (
-                        <input
-                          className="inp"
-                          style={{ width: 140 }}
-                          defaultValue={a.fixedValue ?? ''}
-                          placeholder="Sabit değer…"
-                          onBlur={(e) => {
-                            if (e.target.value !== (a.fixedValue ?? ''))
-                              saveAttr.mutate({ row: a, strategy: 'fixed_value', attributeTypeId: null, fixedValue: e.target.value })
-                          }}
-                        />
-                      ) : (
-                        <select
-                          className="inp"
-                          style={{ width: 150 }}
-                          value={a.attributeTypeId ?? ''}
-                          onChange={(e) => saveAttr.mutate({
-                            row: a, strategy, attributeTypeId: e.target.value || null, fixedValue: null,
-                          })}
-                        >
-                          <option value="">— seç —</option>
-                          {ownTypes.map((t) => (
-                            <option key={t.id} value={t.id}>{pickTr(t.nameI18n, t.code ?? '')}</option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                    <div className="min-h-[14px]">
-                      <span className="text-[11px]" style={{ color: rowMsg[a.externalId]?.startsWith('✓') ? 'var(--brand)' : '#ef4444' }}>
-                        {rowMsg[a.externalId] ?? ''}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-xs tabular-nums" style={{ color: 'var(--text-m)' }}>
-                    {strategy === 'map_values' && a.attributeTypeId
-                      ? <span style={{ color: a.mappedValueCount >= a.ownValueCount && a.ownValueCount > 0 ? 'var(--brand)' : '#b45309' }}>
-                          {a.mappedValueCount}/{a.ownValueCount}
-                        </span>
-                      : '—'}
-                  </td>
-                  <td className="px-3 py-2 text-right" style={{ color: 'var(--text-s)' }}>
-                    {expanded === a.externalId ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </td>
-                </tr>,
-                expanded === a.externalId ? (
-                  <tr key={`${a.externalId}-panel`}>
-                    <td colSpan={5} className="p-0">
-                      {strategy === 'map_values' && a.attributeTypeId ? (
-                        <ValuePanel marketplace={marketplace} mpCategoryId={effectiveTarget!} attr={a} onSaved={() => refetch()} />
-                      ) : (
-                        <p className="text-xs px-4 py-3" style={{ background: 'var(--surface2)', color: 'var(--text-s)' }}>
-                          Değer eşlemek için stratejiyi "Değer eşle" yapıp bizim özellik tipini seçin.
-                        </p>
-                      )}
-                    </td>
-                  </tr>
-                ) : null,
-              ]
-            })}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid<MpAttributeRow>
+        gridId="mapping-attributes"
+        grid={attrGrid}
+        columns={attrColumns}
+        rows={yerelAttr.rows}
+        totalCount={yerelAttr.totalCount}
+        rowKey={(a) => a.externalId}
+        empty="Ölçütlere uyan pazaryeri özelliği yok."
+        search={{ placeholder: 'Pazaryeri özelliği ara…' }}
+        minWidth={1080}
+        pageSizes={[50, 100, 200]}
+        expandedRow={{
+          key: expanded,
+          onToggle: setExpanded,
+          render: (a) => (a.strategy ?? 'map_values') === 'map_values' && a.attributeTypeId
+            ? <ValuePanel marketplace={marketplace} mpCategoryId={effectiveTarget!} attr={a} onSaved={() => refetch()} />
+            : <p className="text-xs px-4 py-3" style={{ background: 'var(--surface2)', color: 'var(--text-s)' }}>
+                Değer eşlemek için stratejiyi "Değer eşle" yapıp bizim özellik tipini seçin.
+              </p>,
+        }}
+        compact={{
+          title: (a) => a.name,
+          subtitle: (a) => `${a.valueCount > 0 ? `Liste (${a.valueCount})` : 'Serbest'} · ${STRATEJI_ADI[a.strategy ?? 'map_values'] ?? a.strategy}`,
+          right: (a) => (a.strategy ?? 'map_values') === 'map_values' && a.attributeTypeId
+            ? `${a.mappedValueCount}/${a.ownValueCount}` : '—',
+          badge: (a) => a.status && a.status !== 'active'
+            ? <Badge variant="warning">Gözden geçir</Badge>
+            : a.isRequired ? <Badge variant="danger">Zorunlu</Badge> : null,
+        }}
+      />
     </div>
   )
 }
@@ -952,6 +976,7 @@ function AttributesTab({
 
 function ReviewTab({ marketplace, onGoCategory }: { marketplace: string; onGoCategory: (groupId: string) => void }) {
   const queryClient = useQueryClient()
+  const grid = useGridState('mapping-review', { defaultPageSize: 50, defaultSort: 'status', defaultDir: 'asc' })
   const { data: rows = [], isLoading, refetch } = useQuery<ReviewRow[]>({
     queryKey: ['mapping-review', marketplace],
     queryFn: async () => (await api.get(`/marketplaces/mapping/review?marketplace=${marketplace}`)).data.data ?? [],
@@ -963,47 +988,74 @@ function ReviewTab({ marketplace, onGoCategory }: { marketplace: string; onGoCat
     onSuccess: () => { refetch(); queryClient.invalidateQueries({ queryKey: ['mapping-overview'] }) },
   })
 
-  if (isLoading) return <PageSpinner />
-  if (rows.length === 0)
-    return (
-      <div className="card py-16 text-center">
-        <p className="text-sm" style={{ color: 'var(--text-m)' }}>Gözden geçirilecek eşleme yok — her şey sağlıklı. 🎉</p>
-      </div>
-    )
-
   const TYPE_LABEL: Record<string, string> = { category: 'Kategori', attribute: 'Özellik', value: 'Değer' }
 
+  // DataGrid (2026-09-09, tur 12) — YEREL değerlendirme: gözden geçirme kuyruğu pazaryeri başına
+  // TAM gelir (sunucuda sayfalanmaz) ve satırlar iş listesidir; sıralama/süzgeç yerelde uygulanır.
+  const yerel = useLocalGrid(rows, grid, {
+    values: {
+      status: r => r.status,
+      mappingType: r => r.mappingType,
+      title: r => r.title,
+      note: r => r.note ?? '',
+      notlu: r => !!r.note,
+      kategoriye: r => r.mappingType === 'category' && !!r.productGroupId,
+    },
+    search: r => `${r.title} ${r.note ?? ''}`,
+  })
+
+  const columns: GridColumn<ReviewRow>[] = [
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 130,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: [
+        { value: 'broken', label: 'Kırıldı' }, { value: 'review', label: 'Gözden geçir' }] },
+      cell: r => <Badge variant={r.status === 'broken' ? 'danger' : 'warning'}>
+        {r.status === 'broken' ? 'Kırıldı' : 'Gözden geçir'}</Badge> },
+    { key: 'mappingType', header: 'TÜR', priority: 1, sortable: true, minWidth: 100,
+      filter: { type: 'enum', multiple: true, label: 'Tür',
+        options: Object.entries(TYPE_LABEL).map(([v, l]) => ({ value: v, label: l })) },
+      cell: r => <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+        {TYPE_LABEL[r.mappingType] ?? r.mappingType}</span> },
+    { key: 'title', header: 'EŞLEME', priority: 1, sortable: true, minWidth: 320,
+      filter: { type: 'text', label: 'Eşleme' },
+      filters: [
+        { field: 'note', label: 'Not içeriği', type: 'text' },
+        { field: 'notlu', label: 'Notu var', type: 'boolean' }],
+      cell: r => <div>
+        <p className="font-medium" style={{ color: 'var(--text)' }}>{r.title}</p>
+        {r.note ? <p className="text-xs mt-0.5" style={{ color: 'var(--text-m)' }}>{r.note}</p> : null}
+      </div> },
+    { key: 'islem', header: '', priority: 1, align: 'right', exportable: false, stopRowClick: true, minWidth: 200,
+      cell: r => <span className="whitespace-nowrap">
+        {r.mappingType === 'category' && r.productGroupId ? (
+          <Button size="sm" variant="ghost" onClick={() => onGoCategory(r.productGroupId!)}>Eşlemeye Git</Button>
+        ) : null}
+        <Button size="sm" variant="ghost" onClick={() => ack.mutate(r)} disabled={ack.isPending}>
+          <Check size={13} /> Onayla
+        </Button>
+      </span> },
+  ]
+
   return (
-    <div className="card p-0 overflow-hidden">
-      <table className="w-full text-sm">
-        <tbody>
-          {rows.map((r) => (
-            <tr key={`${r.mappingType}-${r.mappingId}`} style={{ borderTop: '1px solid var(--border)' }}>
-              <td className="px-3 py-2.5 w-24">
-                <Badge variant={r.status === 'broken' ? 'danger' : 'warning'}>
-                  {r.status === 'broken' ? 'Kırıldı' : 'Gözden geçir'}
-                </Badge>
-              </td>
-              <td className="px-3 py-2.5 w-20 text-xs" style={{ color: 'var(--text-s)' }}>{TYPE_LABEL[r.mappingType] ?? r.mappingType}</td>
-              <td className="px-3 py-2.5">
-                <p className="font-medium" style={{ color: 'var(--text)' }}>{r.title}</p>
-                <div className="min-h-[14px]">
-                  {r.note ? <p className="text-xs mt-0.5" style={{ color: 'var(--text-m)' }}>{r.note}</p> : null}
-                </div>
-              </td>
-              <td className="px-3 py-2.5 text-right whitespace-nowrap">
-                {r.mappingType === 'category' && r.productGroupId ? (
-                  <Button size="sm" variant="ghost" onClick={() => onGoCategory(r.productGroupId!)}>Eşlemeye Git</Button>
-                ) : null}
-                <Button size="sm" variant="ghost" onClick={() => ack.mutate(r)} disabled={ack.isPending}>
-                  <Check size={13} /> Onayla
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataGrid<ReviewRow>
+      gridId="mapping-review"
+      grid={grid}
+      columns={columns}
+      rows={yerel.rows}
+      totalCount={yerel.totalCount}
+      loading={isLoading}
+      rowKey={r => `${r.mappingType}-${r.mappingId}`}
+      empty="Gözden geçirilecek eşleme yok — her şey sağlıklı. 🎉"
+      search={{ placeholder: 'Eşleme adı veya not ara…' }}
+      minWidth={960}
+      pageSizes={[50, 100, 200]}
+      compact={{
+        title: r => r.title,
+        subtitle: r => r.note ?? (TYPE_LABEL[r.mappingType] ?? r.mappingType),
+        right: r => TYPE_LABEL[r.mappingType] ?? r.mappingType,
+        badge: r => <Badge variant={r.status === 'broken' ? 'danger' : 'warning'}>
+          {r.status === 'broken' ? 'Kırıldı' : 'Gözden geçir'}</Badge>,
+      }}
+    />
   )
 }
 
@@ -1013,6 +1065,10 @@ function ReviewTab({ marketplace, onGoCategory }: { marketplace: string; onGoCat
 interface ErpItem { id: string; targetSystem: string; kind: string; code: string; name: string; parentCode: string | null; isActive: boolean; source: string; lastSeenAt: string; isMapped: boolean; mappingId?: string | null; mappedProductGroupId?: string | null; mappedProductGroupName?: string | null; mappedTargetId?: string | null; mappedTargetLabel?: string | null; mappingConflict?: boolean; mappingLinks?: { id: string; productGroupId: string; name: string }[] }
 const ERP_KINDS: Record<string, string> = {
   product_group: 'Ürün grubu', variant_axis: 'Varyant ekseni', attribute_type: 'Özellik tipi', attribute_value: 'Özellik değeri', supplier: 'Tedarikçi', color: 'Renk',
+}
+/** Strateji etiketleri — kolon süzgeci ve kompakt görünüm aynı adları kullanır. */
+const STRATEJI_ADI: Record<string, string> = {
+  map_values: 'Değer eşle', pass_literal: 'Serbest geçir', ignore: 'Yok say', fixed_value: 'Sabit değer',
 }
 const isErpTarget = (t: string) => t.startsWith('erp:')
 const ERP_GROUP_LIMIT = 2000

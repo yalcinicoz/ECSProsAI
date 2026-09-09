@@ -256,9 +256,13 @@ public class ProcurementController(IMediator mediator) : ControllerBase
     [RequirePermission(Permissions.ProcurementSort)]
     public async Task<IActionResult> GetSortingEntries([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, 
         [FromQuery] Guid? batchId, [FromQuery] bool? unbatched, [FromQuery] string? putawayStatus,
+        [FromQuery] string? search = null,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetSortingEntriesQuery(batchId, unbatched, putawayStatus, page, pageSize), ct);
+        // DataGrid (2026-09-09): sayım kaydı depo işidir, kanal kolonu yoktur → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: pageSize);
+        var result = await mediator.Send(new GetSortingEntriesQuery(
+            batchId, unbatched, putawayStatus, grid.Page, grid.PageSize, search, grid), ct);
 
         // Y6 (K6): sayım/teslim ekranı DEPO personelinindir; birim maliyet yalnız "Maliyet Gör"
         // yetkisi olana gösterilir (satın alma ekranları kendi modül yetkisiyle korunur).

@@ -434,6 +434,40 @@ public class OrderController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Fatura serileri liste ekranı (DataGrid, 2026-09-09): sayfalı + f.* filtreleri + sort/dir.
+    /// ⚠ Düz <c>GET /invoice-series</c> sayfalanmaz — kanal yuvası, fatura formu ve "yerine geçecek seri"
+    /// seçicilerinin kaynağı odur.</summary>
+    [HttpGet("invoice-series/grid")]
+    public async Task<IActionResult> GetInvoiceSeriesGrid(
+        [FromQuery] Guid? firmId = null, [FromQuery] string? invoiceType = null,
+        [FromQuery] string? durum = "active", [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        // Seri firmaya aittir (kanal kolonu yok) → kanal kısıtı null; kanal bağları yalnız sayı olarak taşınır.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 50);
+        var result = await _mediator.Send(new GetInvoiceSeriesGridQuery(
+            new InvoiceSeriesFiltreleri(firmId, invoiceType, durum, search), grid.Page, grid.PageSize, grid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Fatura serilerini Excel'e aktarır (DataGrid).</summary>
+    [HttpPost("invoice-series/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportInvoiceSeries(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<OrderController> logger, CancellationToken ct)
+    {
+        var filtreler = new InvoiceSeriesFiltreleri(
+            ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "firmId"), body.NamedValue("invoiceType"),
+            body.NamedValue("durum"), body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger,
+            "invoice-series", "fatura-serileri", "Fatura Serileri",
+            ECSPros.Api.Grid.InvoiceSeriesExportColumns.All,
+            max => _mediator.Send(new ExportInvoiceSeriesQuery(filtreler, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
+    }
+
     /// <summary>Yeni fatura serisi tanımlar (FE0: serial + tip zorunlu; aynı harfler firma içinde bir kez).</summary>
     [HttpPost("invoice-series")]
     [RequirePermission(Permissions.OrdersInvoicesManage)]   // Y2

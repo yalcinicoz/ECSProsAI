@@ -4,7 +4,8 @@ import { CheckCircle, Plus } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { PageSpinner } from '@/components/ui/Spinner'
+import { DataGrid, useGridState, useLocalGrid, type GridColumn } from '@/components/grid'
+import { errText as gridErrText } from '@/components/ui/DataTable.utils'
 
 function apiErrorMessage(error: unknown, fallback: string): string {
   if (typeof error !== 'object' || error === null || !('response' in error)) return fallback
@@ -67,7 +68,12 @@ function SeriesTable({ title, hint, endpoint, queryKey, sampleOf }: {
   const [savedId, setSavedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const { data: rows = [], isLoading } = useQuery<SeriesRow[]>({
+  // DataGrid (2026-09-09, tur 12) — YEREL değerlendirme (useLocalGrid): bu tablo bir LİSTE değil
+  // FORM'dur, satır kümesi "kanal başına bir satır"dır ve sunucuda sayfalanmaz (serisiz kanallar da
+  // görünmek zorunda: kaynak sorgu core_firm_platforms LEFT JOIN seri). Sayfalamak formu bölerdi;
+  // buna karşılık her sütunda sıralama/süzgeç ve mobil Kompakt görünüm yerelde sağlanır.
+  const grid = useGridState(queryKey, { defaultPageSize: 50, defaultSort: 'channel', defaultDir: 'asc' })
+  const { data: rows = [], isLoading, isFetching, error: listError } = useQuery<SeriesRow[]>({
     queryKey: [queryKey],
     queryFn: async () => (await api.get(endpoint)).data.data ?? [],
   })
@@ -101,79 +107,96 @@ function SeriesTable({ title, hint, endpoint, queryKey, sampleOf }: {
   const setEdit = (id: string, patch: Partial<{ prefix: string; padLength: string; isActive: boolean }>) =>
     setEdits(prev => ({ ...prev, [id]: { ...(prev[id] ?? edit(rows.find(r => r.firmPlatformId === id)!)), ...patch } }))
 
-  if (isLoading) return <PageSpinner />
+  const yerel = useLocalGrid(rows, grid, {
+    values: {
+      channel: r => r.channelName ?? r.channelCode,
+      channelCode: r => r.channelCode,
+      prefix: r => r.prefix ?? '',
+      padLength: r => r.padLength ?? 0,
+      nextValue: r => Number(r.nextValue ?? 0),
+      hasSeries: r => r.hasSeries,
+      isActive: r => r.isActive ?? false,
+    },
+    search: r => `${r.channelName ?? ''} ${r.channelCode} ${r.prefix ?? ''}`,
+  })
+
+  const columns: GridColumn<SeriesRow>[] = [
+    { key: 'channel', header: 'KANAL', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 220,
+      filter: { type: 'text', label: 'Kanal' },
+      filters: [{ field: 'channelCode', label: 'Kanal kodu', type: 'text' }],
+      cell: r => <span>
+        <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{r.channelName ?? r.channelCode}</span>
+        <code className="text-xs ml-2" style={{ color: 'var(--text-s)' }}>{r.channelCode}</code>
+      </span> },
+    { key: 'prefix', header: 'ÖNEK', priority: 1, sortable: true, stopRowClick: true, minWidth: 110,
+      filter: { type: 'text', label: 'Önek' },
+      cell: r => <input className="inp" style={{ width: 90 }} maxLength={10} value={edit(r).prefix}
+        placeholder="örn. MIS"
+        onChange={ev => setEdit(r.firmPlatformId, { prefix: ev.target.value.toUpperCase() })} /> },
+    { key: 'padLength', header: 'DOLGU', priority: 2, sortable: true, stopRowClick: true,
+      filter: { type: 'number', label: 'Dolgu' },
+      cell: r => <input className="inp" style={{ width: 64 }} type="number" min={4} max={12} value={edit(r).padLength}
+        onChange={ev => setEdit(r.firmPlatformId, { padLength: ev.target.value })} /> },
+    { key: 'ornek', header: 'ÖRNEK', priority: 2, minWidth: 130,
+      cell: r => <code className="text-xs" style={{ color: 'var(--brand)' }}>
+        {sampleOf(edit(r).prefix, Number(edit(r).padLength) || 6)}</code> },
+    { key: 'nextValue', header: 'SIRADAKİ', priority: 2, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Sıradaki değer' },
+      filters: [{ field: 'hasSeries', label: 'Serisi açılmış', type: 'boolean' }],
+      cell: r => <span className="text-sm tabular-nums" style={{ color: 'var(--text-m)' }}>
+        {r.hasSeries ? r.nextValue : '—'}</span> },
+    { key: 'isActive', header: 'AKTİF', priority: 1, align: 'center', sortable: true, stopRowClick: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      cell: r => <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
+        checked={edit(r).isActive}
+        onChange={ev => setEdit(r.firmPlatformId, { isActive: ev.target.checked })} /> },
+    { key: 'islem', header: '', priority: 1, align: 'right', exportable: false, stopRowClick: true, minWidth: 150,
+      cell: r => <span className="whitespace-nowrap">
+        {savedId === r.firmPlatformId && (
+          <span className="inline-flex items-center gap-1 text-xs mr-2" style={{ color: '#16a34a' }}>
+            <CheckCircle size={12} /> Kaydedildi
+          </span>
+        )}
+        <Button size="sm" variant={edits[r.firmPlatformId] ? 'primary' : 'secondary'}
+          disabled={!edits[r.firmPlatformId] && r.hasSeries}
+          loading={save.isPending && save.variables === r}
+          onClick={() => save.mutate(r)}>
+          {r.hasSeries ? 'Kaydet' : 'Seri Aç'}
+        </Button>
+      </span> },
+  ]
 
   return (
-    <div className="card overflow-hidden p-0">
-      <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+    <div>
+      <div className="mb-2">
         <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>{title}</h2>
         <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>{hint}</p>
       </div>
-      <table className="w-full">
-        <thead>
-          <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-            {['KANAL', 'ÖNEK', 'DOLGU', 'ÖRNEK', 'SIRADAKİ', 'AKTİF', ''].map(h => (
-              <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold tracking-wider"
-                style={{ color: 'var(--text-s)' }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(r => {
-            const e = edit(r)
-            const dirty = !!edits[r.firmPlatformId]
-            return (
-              <tr key={r.firmPlatformId} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-2.5">
-                  <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-                    {r.channelName ?? r.channelCode}
-                  </span>
-                  <code className="text-xs ml-2" style={{ color: 'var(--text-s)' }}>{r.channelCode}</code>
-                </td>
-                <td className="px-4 py-2.5">
-                  <input className="inp" style={{ width: 90 }} maxLength={10} value={e.prefix}
-                    placeholder="örn. MIS"
-                    onChange={ev => setEdit(r.firmPlatformId, { prefix: ev.target.value.toUpperCase() })} />
-                </td>
-                <td className="px-4 py-2.5">
-                  <input className="inp" style={{ width: 64 }} type="number" min={4} max={12} value={e.padLength}
-                    onChange={ev => setEdit(r.firmPlatformId, { padLength: ev.target.value })} />
-                </td>
-                <td className="px-4 py-2.5">
-                  <code className="text-xs" style={{ color: 'var(--brand)' }}>
-                    {sampleOf(e.prefix, Number(e.padLength) || 6)}
-                  </code>
-                </td>
-                <td className="px-4 py-2.5">
-                  <span className="text-sm tabular-nums" style={{ color: 'var(--text-m)' }}>
-                    {r.hasSeries ? r.nextValue : '—'}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5">
-                  <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
-                    checked={e.isActive}
-                    onChange={ev => setEdit(r.firmPlatformId, { isActive: ev.target.checked })} />
-                </td>
-                <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                  {savedId === r.firmPlatformId && (
-                    <span className="inline-flex items-center gap-1 text-xs mr-2" style={{ color: '#16a34a' }}>
-                      <CheckCircle size={12} /> Kaydedildi
-                    </span>
-                  )}
-                  <Button size="sm" variant={dirty ? 'primary' : 'secondary'}
-                    disabled={!dirty && r.hasSeries}
-                    loading={save.isPending && save.variables === r}
-                    onClick={() => save.mutate(r)}>
-                    {r.hasSeries ? 'Kaydet' : 'Seri Aç'}
-                  </Button>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      {error && <p className="px-4 py-2 text-sm" style={{ color: '#ef4444' }}>{error}</p>}
-      <p className="px-4 py-2 text-xs" style={{ borderTop: '1px solid var(--border)', color: 'var(--text-s)' }}>
+      <DataGrid<SeriesRow>
+        gridId={queryKey}
+        views
+        grid={grid}
+        columns={columns}
+        rows={yerel.rows}
+        totalCount={yerel.totalCount}
+        loading={isLoading}
+        fetching={isFetching}
+        error={listError ? gridErrText(listError) : (error || null)}
+        rowKey={r => r.firmPlatformId}
+        empty="Ölçütlere uyan kanal yok."
+        search={{ placeholder: 'Kanal adı, kodu veya önek ara…' }}
+        minWidth={1020}
+        pageSizes={[50, 100, 200]}
+        compact={{
+          title: r => r.channelName ?? r.channelCode,
+          subtitle: r => r.hasSeries
+            ? `${r.prefix ?? ''} · dolgu ${r.padLength ?? 6} · sıradaki ${r.nextValue}`
+            : 'seri açılmamış',
+          right: r => sampleOf(edit(r).prefix, Number(edit(r).padLength) || 6),
+          badge: r => <Badge variant={r.isActive ? 'success' : 'neutral'}>{r.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+        }}
+      />
+      <p className="px-1 py-2 text-xs" style={{ color: 'var(--text-s)' }}>
         Sıradaki değer elle değiştirilemez; kullanılan numaralar iptalde bile havuza geri dönmez.
       </p>
     </div>
@@ -202,7 +225,9 @@ function CargoRangesCard() {
       (await api.get(`/core/firms/${firmId}/integrations?serviceType=cargo`)).data.data ?? [],
   })
 
-  const { data: ranges = [] } = useQuery<RangeRow[]>({
+  // Aralıklar entegrasyon başına birkaç satırdır ve tam gelir (sunucuda sayfalanmaz) → yerel grid.
+  const rangeGrid = useGridState('cargo-barcode-ranges', { defaultPageSize: 50, defaultSort: 'rangeStart', defaultDir: 'asc' })
+  const { data: ranges = [], isLoading: rangesLoading, isFetching: rangesFetching } = useQuery<RangeRow[]>({
     queryKey: ['cargo-barcode-ranges', integrationId],
     enabled: !!integrationId,
     queryFn: async () =>
@@ -230,6 +255,59 @@ function CargoRangesCard() {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cargo-barcode-ranges', integrationId] }),
   })
+
+  const doluluk = (r: RangeRow) => r.total > 0 ? Math.round((r.used / r.total) * 100) : 0
+
+  const yerelAralik = useLocalGrid(ranges, rangeGrid, {
+    values: {
+      rangeStart: r => r.rangeStart,
+      rangeEnd: r => r.rangeEnd,
+      used: r => r.used,
+      total: r => r.total,
+      doluluk: r => doluluk(r),
+      isActive: r => r.isActive,
+      tukendi: r => !!r.exhaustedAt,
+    },
+    search: r => `${r.rangeStart} ${r.rangeEnd}`,
+  })
+
+  const rangeColumns: GridColumn<RangeRow>[] = [
+    { key: 'rangeStart', header: 'ARALIK', priority: 1, lockVisible: true, frozen: true, sortable: true, minWidth: 180,
+      filter: { type: 'number', label: 'Başlangıç' },
+      filters: [{ field: 'rangeEnd', label: 'Bitiş', type: 'number' }],
+      cell: r => <code className="text-sm">{r.rangeStart} – {r.rangeEnd}</code> },
+    { key: 'used', header: 'KULLANIM', priority: 1, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Kullanılan' },
+      filters: [{ field: 'total', label: 'Toplam', type: 'number' }],
+      cell: r => <span className="text-sm tabular-nums" style={{ color: 'var(--text-m)' }}>
+        {r.used} / {r.total}</span> },
+    { key: 'doluluk', header: 'DOLULUK', priority: 1, sortable: true, minWidth: 180,
+      filter: { type: 'number', label: 'Doluluk (%)' },
+      cell: r => {
+        const pct = doluluk(r)
+        return <div className="flex items-center gap-2">
+          <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface2)' }}>
+            <div className="h-full rounded-full"
+              style={{ width: `${pct}%`, background: pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : 'var(--brand)' }} />
+          </div>
+          <span className="text-xs tabular-nums" style={{ color: pct >= 90 ? '#ef4444' : 'var(--text-s)' }}>%{pct}</span>
+        </div>
+      } },
+    { key: 'isActive', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'boolean', label: 'Aktif' },
+      filters: [{ field: 'tukendi', label: 'Tükenmiş', type: 'boolean' }],
+      cell: r => r.exhaustedAt
+        ? <Badge variant="danger">Tükendi</Badge>
+        : <Badge variant={r.isActive ? 'success' : 'neutral'}>{r.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'islem', header: '', priority: 2, align: 'right', exportable: false, stopRowClick: true, minWidth: 120,
+      cell: r => !r.exhaustedAt
+        ? <button className="text-xs px-2 py-1 rounded-lg"
+            style={{ color: 'var(--brand)', background: 'var(--surface2)', border: '1px solid var(--border)' }}
+            onClick={() => toggleActive.mutate(r)}>
+            {r.isActive ? 'Pasifleştir' : 'Aktifleştir'}
+          </button>
+        : null },
+  ]
 
   return (
     <div className="card overflow-hidden p-0">
@@ -281,59 +359,30 @@ function CargoRangesCard() {
       {error && <p className="px-4 py-2 text-sm" style={{ color: '#ef4444' }}>{error}</p>}
 
       {integrationId && (
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['ARALIK', 'KULLANIM', 'DOLULUK', 'DURUM', ''].map(h => (
-                <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold tracking-wider"
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {ranges.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Bu entegrasyona tanımlı aralık yok.
-              </td></tr>
-            )}
-            {ranges.map(r => {
-              const pct = r.total > 0 ? Math.round((r.used / r.total) * 100) : 0
-              return (
-                <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-2.5">
-                    <code className="text-sm">{r.rangeStart} – {r.rangeEnd}</code>
-                  </td>
-                  <td className="px-4 py-2.5 text-sm tabular-nums" style={{ color: 'var(--text-m)' }}>
-                    {r.used} / {r.total}
-                  </td>
-                  <td className="px-4 py-2.5" style={{ minWidth: 160 }}>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface2)' }}>
-                        <div className="h-full rounded-full"
-                          style={{ width: `${pct}%`, background: pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : 'var(--brand)' }} />
-                      </div>
-                      <span className="text-xs tabular-nums" style={{ color: pct >= 90 ? '#ef4444' : 'var(--text-s)' }}>%{pct}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {r.exhaustedAt
-                      ? <Badge variant="danger">Tükendi</Badge>
-                      : <Badge variant={r.isActive ? 'success' : 'neutral'}>{r.isActive ? 'Aktif' : 'Pasif'}</Badge>}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    {!r.exhaustedAt && (
-                      <button className="text-xs px-2 py-1 rounded-lg"
-                        style={{ color: 'var(--brand)', background: 'var(--surface2)', border: '1px solid var(--border)' }}
-                        onClick={() => toggleActive.mutate(r)}>
-                        {r.isActive ? 'Pasifleştir' : 'Aktifleştir'}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+        <div className="px-4 pb-4">
+          <DataGrid<RangeRow>
+            gridId="cargo-barcode-ranges"
+            grid={rangeGrid}
+            columns={rangeColumns}
+            rows={yerelAralik.rows}
+            totalCount={yerelAralik.totalCount}
+            loading={rangesLoading}
+            fetching={rangesFetching}
+            rowKey={r => r.id}
+            empty="Bu entegrasyona tanımlı aralık yok."
+            search={{ placeholder: 'Aralık ara…' }}
+            minWidth={860}
+            pageSizes={[50, 100]}
+            compact={{
+              title: r => `${r.rangeStart} – ${r.rangeEnd}`,
+              subtitle: r => `${r.used} / ${r.total} kullanıldı`,
+              right: r => `%${r.total > 0 ? Math.round((r.used / r.total) * 100) : 0}`,
+              badge: r => r.exhaustedAt
+                ? <Badge variant="danger">Tükendi</Badge>
+                : <Badge variant={r.isActive ? 'success' : 'neutral'}>{r.isActive ? 'Aktif' : 'Pasif'}</Badge>,
+            }}
+          />
+        </div>
       )}
     </div>
   )

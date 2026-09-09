@@ -19,6 +19,7 @@ using ECSPros.Catalog.Application.Commands.UpdateProductImageMetadata;
 using ECSPros.Catalog.Application.Commands.UpdateProductVideoMetadata;
 using ECSPros.Catalog.Application.Commands.UpsertProductImageSetMapping;
 using ECSPros.Catalog.Application.Queries.GetImageSets;
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Catalog.Application.Queries.GetMannequins;
 using ECSPros.Catalog.Application.Queries.GetProductImageArchive;
 using ECSPros.Catalog.Application.Queries.GetProductImageCoverageReport;
@@ -53,6 +54,38 @@ public class ProductImageController : ControllerBase
 
     // ─── Image Sets ────────────────────────────────────────────────────────────
 
+    /// <summary>Resim setleri liste ekranı (DataGrid, 2026-09-09): sayfalı + f.* filtreleri + sort/dir.
+    /// ⚠ Düz <c>GET /catalog/image-sets</c> sayfalanmaz — ürün Resimler sekmesi, toplu görsel yükleme ve
+    /// "yedek set" seçicisinin kaynağı odur.</summary>
+    [HttpGet("image-sets/grid")]
+    public async Task<IActionResult> GetImageSetsGrid(
+        [FromQuery] bool activeOnly = false, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        // Resim seti kataloğu kanaldan bağımsızdır (tüm kanallar aynı setleri kullanır) → kanal kısıtı null.
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 50);
+        var result = await _mediator.Send(new GetImageSetsGridQuery(
+            new ImageSetFiltreleri(activeOnly, search), grid.Page, grid.PageSize, grid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Resim setlerini Excel'e aktarır (DataGrid).</summary>
+    [HttpPost("image-sets/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportImageSets(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<ProductImageController> logger, CancellationToken ct)
+    {
+        var filtreler = new ImageSetFiltreleri(body.NamedValue("activeOnly") == "true", body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger,
+            "image-sets", "resim-setleri", "Resim Setleri",
+            ECSPros.Api.Grid.ImageSetExportColumns.All,
+            max => _mediator.Send(new ExportImageSetsQuery(filtreler, body.ToGridRequest(null), max), ct),
+            ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
+    }
+
+    /// <summary>TAM set listesi — ürün Resimler sekmesi / toplu yükleme / yedek set seçicisi. ⚠ Sayfalanmaz.</summary>
     [HttpGet("image-sets")]
     public async Task<IActionResult> GetImageSets([FromQuery] bool activeOnly = true, CancellationToken ct = default)
     {

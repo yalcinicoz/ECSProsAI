@@ -11,7 +11,8 @@ import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
-import { PageSpinner } from '@/components/ui/Spinner'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
+import { errText as gridErrText } from '@/components/ui/DataTable.utils'
 import { apiErrorMessage } from './procurementHelpers'
 
 interface Cand { variantId: string; productCode: string; name: string; sku: string; barcode: string | null; color: string | null; size: string | null; price: number; exact: boolean }
@@ -56,15 +57,20 @@ export function SortingPage() {
     },
   })
 
+  // DataGrid (2026-09-09, tur 12): sunucu filtre/sıralama/arama (SortingEntryGrid.Schema).
+  // ★ Ürün adı/SKU/barkod CATALOG'da çözülür → arama terimi sunucuda VARYANT KİMLİKLERİNE çevrilip
+  // uygulanır (sayfalamadan sonra bellekte süzmek toplam sayıyı bozardı); bu iki kolon sıralanamaz.
+  const entryGrid = useGridState('sorting-entries', { defaultPageSize: 50, defaultSort: 'createdAt', defaultDir: 'desc' })
   const entriesKey = ['sorting-entries', batchId]
-  const { data: entriesData, isLoading: entriesLoading } = useQuery<{ items: Entry[]; totalCount: number }>({
-    queryKey: entriesKey,
-    queryFn: async () => {
-      const p = new URLSearchParams({ pageSize: '50' })
-      if (batchId) p.set('batchId', batchId); else p.set('unbatched', 'true')
-      return (await api.get(`/procurement/sorting/entries?${p}`)).data.data
-    },
-  })
+  const entryNamed = () => (batchId ? { batchId } : { unbatched: 'true' })
+  const { data: entriesData, isLoading: entriesLoading, isFetching: entriesFetching, error: entriesError } =
+    useQuery<{ items: Entry[]; totalCount: number }>({
+      queryKey: [...entriesKey, ...entryGrid.queryKey],
+      queryFn: async () =>
+        (await api.get(`/procurement/sorting/entries?${entryGrid.toParams(entryNamed())}`)).data.data,
+      placeholderData: prev => prev,
+      retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
+    })
   const { data: notices = [] } = useQuery<Notice[]>({
     queryKey: ['missing-cards', batchId],
     queryFn: async () => {
@@ -165,6 +171,56 @@ export function SortingPage() {
 
   const entries = entriesData?.items ?? []
   const toplam = entries.reduce((s, e) => s + e.quantity, 0)
+  const sayfaliMi = (entriesData?.totalCount ?? 0) > entries.length
+
+  const entryColumns: GridColumn<Entry>[] = [
+    { key: 'urun', header: 'ÜRÜN', priority: 1, lockVisible: true, frozen: true, minWidth: 240,
+      // Ad/kod CATALOG'da çözülür → sıralanamaz; arama kutusu bu alanlarda çalışır (sunucu varyanta çevirir).
+      cell: e => <div style={{ color: 'var(--text)' }}>{e.name}
+        <span className="block text-xs" style={{ color: 'var(--text-s)' }}>{e.productCode}</span></div> },
+    { key: 'sku', header: 'SKU / BARKOD', priority: 1, minWidth: 160,
+      cell: e => <div className="font-mono text-xs" style={{ color: 'var(--text-m)' }}>{e.sku}
+        <span className="block">{e.barcode ?? ''}</span></div> },
+    { key: 'quantity', header: 'ADET', priority: 1, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Adet' },
+      cell: e => e.putawayStatus === 'placed' ? <span className="tabular-nums">{e.quantity}</span>
+        : tab === 'yerlestirme' ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="tabular-nums">{e.quantity}</span>
+            {placeSel.has(e.id) && (
+              <input className="inp w-16 !py-1" placeholder="kısmi" value={placeQty[e.id] ?? ''}
+                onChange={ev => setPlaceQty(pq => ({ ...pq, [e.id]: ev.target.value }))} title="Boş = tamamı" />
+            )}
+          </span>
+        ) : (
+          <input className="inp w-20 !py-1" defaultValue={e.quantity} key={`${e.id}-${e.quantity}`}
+            onBlur={ev => { const v = num(ev.target.value); if (v > 0 && v !== e.quantity) editQtyMut.mutate({ id: e.id, quantity: v, unitCost: e.unitCost }) }} />
+        ) },
+    { key: 'unitCost', header: 'MALİYET', priority: 2, align: 'right', sortable: true,
+      filter: { type: 'number', label: 'Birim maliyet' },
+      filters: [{ field: 'maliyetli', label: 'Maliyeti girilmiş', type: 'boolean' }],
+      cell: e => <span style={{ color: 'var(--text-m)' }}>
+        {e.unitCost != null ? `${e.unitCost.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺` : '—'}</span> },
+    { key: 'putawayStatus', header: 'YERLEŞTİRME', priority: 1, sortable: true,
+      filter: { type: 'enum', label: 'Yerleştirme', options: [
+        { value: 'pending', label: 'Bekliyor' }, { value: 'placed', label: 'Yerleşti' }] },
+      filters: [
+        { field: 'labelPrinted', label: 'Etiketi basıldı', type: 'boolean' },
+        { field: 'partisiz', label: 'Partisiz sayım', type: 'boolean' }],
+      cell: e => e.putawayStatus === 'placed'
+        ? <Badge variant="success">Yerleşti</Badge> : <Badge variant="warning">Bekliyor</Badge> },
+    { key: 'createdAt', header: 'SON', priority: 2, sortable: true,
+      filter: { type: 'date', label: 'Sayım tarihi' },
+      cell: e => <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-s)' }}>
+        {new Date(e.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span> },
+    { key: 'islem', header: '', priority: 2, align: 'right', exportable: false, stopRowClick: true,
+      cell: e => e.putawayStatus !== 'placed'
+        ? <button className="p-1 rounded hover:opacity-70" title="Sayımı sil" onClick={() => delMut.mutate(e.id)}>
+            <Trash2 size={14} style={{ color: 'var(--text-s)' }} />
+          </button>
+        : null },
+  ]
+
   const pendingEntries = entries.filter(e => e.putawayStatus !== 'placed')
 
   return (
@@ -306,73 +362,38 @@ export function SortingPage() {
         </div>
       )}
 
-      <div className="card p-0 overflow-x-auto">
-        <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-            {batchId ? 'Bu partinin sayımı' : 'Partisiz sayım'} — {entriesData?.totalCount ?? 0} ürün · {toplam} adet
-          </h2>
-        </div>
-        {entriesLoading ? <div className="py-8"><PageSpinner /></div> : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs" style={{ color: 'var(--text-s)', background: 'var(--surface2)' }}>
-                {tab === 'yerlestirme' && <th className="px-3 py-2.5 w-10"></th>}
-                {['ÜRÜN', 'SKU / BARKOD', 'ADET', 'MALİYET', 'YERLEŞTİRME', 'SON', ''].map(h => <th key={h} className="px-4 py-2.5 font-semibold">{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map(e => (
-                <tr key={e.id} style={{ borderTop: '1px solid var(--border)' }}>
-                  {tab === 'yerlestirme' && (
-                    <td className="px-3 py-2">
-                      {e.putawayStatus !== 'placed' && (
-                        <input type="checkbox" checked={placeSel.has(e.id)}
-                          onChange={() => setPlaceSel(prev => {
-                            const next = new Set(prev)
-                            if (next.has(e.id)) next.delete(e.id)
-                            else next.add(e.id)
-                            return next
-                          })} />
-                      )}
-                    </td>
-                  )}
-                  <td className="px-4 py-2" style={{ color: 'var(--text)' }}>{e.name}<span className="block text-xs" style={{ color: 'var(--text-s)' }}>{e.productCode}</span></td>
-                  <td className="px-4 py-2 font-mono text-xs" style={{ color: 'var(--text-m)' }}>{e.sku}<span className="block">{e.barcode ?? ''}</span></td>
-                  <td className="px-4 py-2">
-                    {e.putawayStatus === 'placed' ? e.quantity
-                      : tab === 'yerlestirme' ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          {e.quantity}
-                          {placeSel.has(e.id) && (
-                            <input className="inp w-16 !py-1" placeholder="kısmi" value={placeQty[e.id] ?? ''}
-                              onChange={ev => setPlaceQty(pq => ({ ...pq, [e.id]: ev.target.value }))} title="Boş = tamamı" />
-                          )}
-                        </span>
-                      ) : (
-                        <input className="inp w-20 !py-1" defaultValue={e.quantity} key={`${e.id}-${e.quantity}`}
-                          onBlur={ev => { const v = num(ev.target.value); if (v > 0 && v !== e.quantity) editQtyMut.mutate({ id: e.id, quantity: v, unitCost: e.unitCost }) }} />
-                      )}
-                  </td>
-                  <td className="px-4 py-2" style={{ color: 'var(--text-m)' }}>{e.unitCost != null ? `${e.unitCost.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺` : '—'}</td>
-                  <td className="px-4 py-2">
-                    {e.putawayStatus === 'placed' ? <Badge variant="success">Yerleşti</Badge> : <Badge variant="warning">Bekliyor</Badge>}
-                  </td>
-                  <td className="px-4 py-2 text-xs whitespace-nowrap" style={{ color: 'var(--text-s)' }}>{new Date(e.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</td>
-                  <td className="px-4 py-2 text-right">
-                    {e.putawayStatus !== 'placed' && (
-                      <button className="p-1 rounded hover:opacity-70" title="Sayımı sil" onClick={() => delMut.mutate(e.id)}>
-                        <Trash2 size={14} style={{ color: 'var(--text-s)' }} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {entries.length === 0 && (
-                <tr><td colSpan={tab === 'yerlestirme' ? 8 : 7} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Henüz sayım yok — barkod okutarak başlayın.</td></tr>
-              )}
-            </tbody>
-          </table>
-        )}
+      <div>
+        <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--text)' }}>
+          {batchId ? 'Bu partinin sayımı' : 'Partisiz sayım'} — {(entriesData?.totalCount ?? 0).toLocaleString('tr-TR')} ürün
+          {' · '}{toplam.toLocaleString('tr-TR')} adet{sayfaliMi ? ' (bu sayfada)' : ''}
+        </h2>
+        <DataGrid<Entry>
+          gridId="sorting-entries"
+          views
+          grid={entryGrid}
+          columns={entryColumns}
+          rows={entries}
+          totalCount={entriesData?.totalCount ?? 0}
+          loading={entriesLoading}
+          fetching={entriesFetching}
+          error={entriesError ? gridErrText(entriesError) : null}
+          rowKey={e => e.id}
+          empty="Henüz sayım yok — barkod okutarak başlayın."
+          search={{ placeholder: 'Ürün adı, kodu, SKU veya barkod ara…' }}
+          minWidth={1080}
+          pageSizes={[50, 100, 200]}
+          selection={tab === 'yerlestirme' ? {
+            selected: placeSel,
+            // Yerleşmiş kayıt seçilemez: yerleştirme yalnız bekleyen sayım içindir.
+            onChange: next => setPlaceSel(new Set(
+              [...next].filter(id => entries.find(e => e.id === id)?.putawayStatus !== 'placed'))),
+            actions: sel => (
+              <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+                {sel.size} kayıt seçili — raf okutup "Seçilenleri Yerleştir" ile stok girin.
+              </span>
+            ),
+          } : undefined}
+        />
       </div>
     </div>
   )
