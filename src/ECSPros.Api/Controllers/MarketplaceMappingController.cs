@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using System.Security.Claims;
 using ECSPros.Api.Services.Marketplace.Mapping;
 using Microsoft.AspNetCore.Authorization;
@@ -14,6 +16,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/marketplaces/mapping")]
 [Authorize]
+[RequirePermission(Permissions.MarketplacesView)]   // Y2: sayfa yetkisi
 public class MarketplaceMappingController(
     MarketplaceMappingService service,
     MappingHealthService health,
@@ -59,6 +62,7 @@ public class MarketplaceMappingController(
 
     /// <summary>EM0: elle sözlük kaydı (upsert).</summary>
     [HttpPost("erp-items")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> UpsertErpItem([FromBody] UpsertErpItemRequest req, CancellationToken ct)
     {
         var (dto, err) = await service.UpsertErpItemAsync(Norm(req.Target), req.Kind, req.Code, req.Name, req.ParentCode, UserId, ct);
@@ -68,6 +72,7 @@ public class MarketplaceMappingController(
 
     /// <summary>EM3: sözlük satırına birebir hedef (supplier → cari, color → değer); targetId null = kaldır.</summary>
     [HttpPut("erp-items/{id:guid}/target")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> SetErpItemTarget(Guid id, [FromBody] SetErpItemTargetRequest req, CancellationToken ct)
     {
         var err = await service.SetErpItemTargetAsync(id, req.TargetKind, req.TargetId, req.Label, UserId, ct);
@@ -77,6 +82,7 @@ public class MarketplaceMappingController(
 
     /// <summary>EM0/EM3: sözlük kaydını siler (eşlemede kullanılan grup silinemez — önce eşleme silinir).</summary>
     [HttpDelete("erp-items/{id:guid}")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> DeleteErpItem(Guid id, CancellationToken ct)
     {
         var err = await service.DeleteErpItemAsync(id, UserId, ct);
@@ -113,6 +119,7 @@ public class MarketplaceMappingController(
 
     /// <summary>RF4: toplu birebir kategori eşleme — kısmi hata işi durdurmaz, öğe bazında raporlanır.</summary>
     [HttpPost("bulk-category")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> BulkSaveCategoryMappings([FromBody] BulkCategoryMappingRequest request, CancellationToken ct)
     {
         if (request.Items is not { Count: > 0 })
@@ -125,6 +132,7 @@ public class MarketplaceMappingController(
     }
 
     [HttpPut("category")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> SaveCategoryMapping([FromBody] SaveCategoryMappingRequest request, CancellationToken ct)
     {
         var (dto, error) = await service.SaveCategoryMappingAsync(
@@ -134,6 +142,7 @@ public class MarketplaceMappingController(
     }
 
     [HttpDelete("category/{id:guid}")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> DeleteCategoryMapping(Guid id, CancellationToken ct)
     {
         if (!await service.DeleteCategoryMappingAsync(id, UserId, ct))
@@ -161,6 +170,7 @@ public class MarketplaceMappingController(
     }
 
     [HttpPut("attribute")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> SaveAttributeMapping([FromBody] SaveAttributeMappingRequest request, CancellationToken ct)
     {
         var error = await service.SaveAttributeMappingAsync(
@@ -182,6 +192,7 @@ public class MarketplaceMappingController(
 
     /// <summary>Değer eşlemelerini toplu kaydeder (hedefi boşaltılan satır eşlemesini siler).</summary>
     [HttpPut("values")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> SaveValueMappings([FromBody] SaveValueMappingsRequest request, CancellationToken ct)
     {
         var changed = await service.SaveValueMappingsAsync(
@@ -202,6 +213,7 @@ public class MarketplaceMappingController(
 
     /// <summary>Gözden geçirme satırını onayla — eşleme durumunu active'e çeker.</summary>
     [HttpPost("review/{id:guid}/acknowledge")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> Acknowledge(Guid id, [FromBody] AcknowledgeRequest request, CancellationToken ct)
     {
         if (!await service.AcknowledgeAsync(request.MappingType, id, UserId, ct))
@@ -213,6 +225,7 @@ public class MarketplaceMappingController(
 
     /// <summary>Yükleme hazırlık denetimini yeniden hesaplar (tüm katalog × pazaryeri).</summary>
     [HttpPost("readiness/recompute")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> RecomputeReadiness(
         [FromQuery] string marketplace, [FromBody] RecomputeReadinessRequest? req = null, CancellationToken ct = default)
     {
@@ -237,6 +250,7 @@ public class MarketplaceMappingController(
     /// <summary>Tamamlama kaydı (tekil veya toplu): kategori ataması istisnaya, özellik
     /// değerleri ürün-özel pazaryeri değerlerine yazılır; ürünler anında yeniden denetlenir.</summary>
     [HttpPut("completion")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> SaveCompletion([FromBody] SaveCompletionRequest request, CancellationToken ct)
     {
         var (result, error) = await completion.SaveAsync(
@@ -247,6 +261,7 @@ public class MarketplaceMappingController(
 
     /// <summary>Sağlık taramasını elle tetikler (senkron sonrası otomatik da çalışır).</summary>
     [HttpPost("health/process")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> ProcessHealth([FromQuery] string marketplace, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(marketplace))

@@ -24,7 +24,7 @@ public class JwtTokenService : IJwtTokenService
         _expiryMinutes = int.TryParse(configuration["Jwt:ExpiryMinutes"], out var m) ? m : 60;
     }
 
-    public string GenerateAccessToken(User user, IEnumerable<string> permissions)
+    public string GenerateAccessToken(User user)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -41,8 +41,13 @@ public class JwtTokenService : IJwtTokenService
         if (user.FirmId.HasValue)
             claims.Add(new Claim("firm_id", user.FirmId.Value.ToString()));
 
-        foreach (var perm in permissions)
-            claims.Add(new Claim("permission", perm));
+        // K5 (2026-09-09): süper admin permission DEĞİL, kullanıcı üzerinde sistem bayrağıdır.
+        // Yetki kontrolleri bu claim'i görünce tüm kontrolleri bypass eder (audit devam eder).
+        if (user.IsSuperAdmin)
+            claims.Add(new Claim("sa", "true"));
+
+        // Y1 (2026-09-09, K3): permission listesi TOKEN'A YAZILMAZ — yetki her istekte
+        // IEtkinYetkiServisi'nden okunur; yetki değişikliği token ömrünü beklemez.
 
         var token = new JwtSecurityToken(
             issuer: _issuer,

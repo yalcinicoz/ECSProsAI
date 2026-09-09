@@ -20,7 +20,7 @@ public sealed class CrmTicketOrderLookup(NpgsqlDataSource dataSource)
         int.TryParse(n, out var legacyId);
         await using var conn = await dataSource.OpenConnectionAsync(ct);
         await using var cmd = new NpgsqlCommand("""
-            SELECT o."Id", o."OrderNumber", o."FirmPlatformId", COALESCE(p."Name", p."Code", ''), o."CreatedAt", o."GrandTotal", o."Status",
+            SELECT o."Id", o."OrderNumber", o."FirmPlatformId", COALESCE(p."NameI18n"->>'tr', p."Code", ''), o."CreatedAt", o."GrandTotal", o."Status",
                    o."MemberId", m."LegacyMemberId",
                    COALESCE(NULLIF(TRIM(m."FirstName" || ' ' || m."LastName"), ''), o."ShippingRecipientName", ''),
                    COALESCE(m."Phone", o."ShippingRecipientPhone", '')

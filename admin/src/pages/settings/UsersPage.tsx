@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
@@ -179,6 +180,7 @@ function UserModal({ user, onClose }: { user: User | 'new'; onClose: () => void 
 
 export function UsersPage() {
   // DataGrid (2026-09-08): sunucu taraflı filtre/sıralama/global arama (UserGrid.Schema) + Excel export; her sütunda başlık filtresi.
+  const navigate = useNavigate()
   const grid = useGridState('users', { defaultPageSize: 20, defaultSort: 'username', defaultDir: 'asc' })
   const [editing, setEditing] = useState<User | 'new' | null>(null)
 
@@ -210,6 +212,12 @@ export function UsersPage() {
     { key: 'lastLoginAt', header: 'SON GİRİŞ', priority: 3, sortable: true, filter: { type: 'date', label: 'Son giriş' }, cell: u => tarihSaat(u.lastLoginAt) },
     { key: 'isActive', header: 'DURUM', priority: 1, sortable: true, filter: { type: 'boolean', label: 'Aktif', quick: true },
       cell: u => <Badge variant={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    // Y4 (tasarım §19): destek sorularının çoğu "şunu neden göremiyor?" olduğundan
+    // kullanıcı listesinden doğrudan yetki ekranına kısayol.
+    { key: 'permissions', header: '', priority: 3, align: 'right', exportable: false, cell: u => (
+      <button className="text-xs underline" style={{ color: 'var(--brand)' }}
+        onClick={e => { e.stopPropagation(); navigate(`/settings/users/${u.id}/permissions`) }}>Yetkileri</button>
+    ) },
     { key: 'edit', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span> },
   ]
 

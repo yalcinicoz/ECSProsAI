@@ -15,6 +15,7 @@ public static class InvoiceGrid
     public static readonly string[] Sources = { "internal", "erp", "marketplace", "integrator" };
 
     public static readonly GridSchema<Invoice> Schema = new GridSchema<Invoice>()
+        .Kanal(i => i.Order.FirmPlatformId)   // Y3 (K2): faturanın kanalı SİPARİŞTEN gelir
         .Text("invoiceNumber", i => i.InvoiceNumber)
         .Text("recipient", i => i.RecipientName)
         .Text("taxNumber", i => i.RecipientTaxNumber)
@@ -57,7 +58,8 @@ public static class InvoiceGrid
     public static IQueryable<Invoice> ApplyAll(IQueryable<Invoice> query, InvoiceListFilters f, GridRequest? grid, bool includeStatus = true)
     {
         query = ApplyNamed(query, f, includeStatus);
-        return includeStatus ? Schema.ApplyFilters(query, grid) : Schema.ApplyFilters(query, grid, "status");
+        // Y3 (K2): kanal kapsamı — kapsam dışı satır listede/sayımda/exportta görünmez.
+        return Schema.ApplyKanalKapsami(includeStatus ? Schema.ApplyFilters(query, grid) : Schema.ApplyFilters(query, grid, "status"), grid?.KanalKisiti);
     }
 
     public static string StatusLabel(string s) => s switch { "created" => "Oluşturuldu", "cancelled" => "İptal", _ => s };

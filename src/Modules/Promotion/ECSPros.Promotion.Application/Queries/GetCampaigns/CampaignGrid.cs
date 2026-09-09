@@ -28,6 +28,7 @@ public static class CampaignGrid
         .Date("createdAt", c => c.CreatedAt)
         .Number("priority", c => c.Priority)
         .Guid("firmPlatformId", c => c.FirmPlatformId)
+        .Kanal(c => c.FirmPlatformId)   // Y3: kanal kapsamı kolonu (K2)
         .Sort("code", c => c.Code)
         .Sort("name", c => GridJson.Text(c.NameI18n, "tr"))
         .Sort("priority", c => c.Priority)
@@ -56,7 +57,8 @@ public static class CampaignGrid
     }
 
     public static IQueryable<Campaign> ApplyAll(IQueryable<Campaign> query, CampaignListFilters f, GridRequest? grid)
-        => Schema.ApplyFilters(ApplyNamed(query, f), grid);
+        // Y3 (K2): kanal kapsamı — erişilmeyen kanalın kampanyası hiçbir yüzeyde görünmez.
+        => Schema.ApplyKanalKapsami(Schema.ApplyFilters(ApplyNamed(query, f), grid), grid?.KanalKisiti);
 
     public static string FillLabel(string s) => s switch { "all" => "Tüm ürünler", "manual" => "Manuel", "filter" => "Filtre", "mixed" => "Karma", _ => s };
 }

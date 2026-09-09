@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Accounts.Application.Commands.PostAccountTransaction;
 using ECSPros.Accounts.Application.Queries.GetSupplierSettlements;
 using ECSPros.Accounts.Application.Services;
@@ -20,6 +22,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/commission")]
 [Authorize]
+[RequirePermission(Permissions.CommissionView)]   // Y2: sayfa yetkisi
 public class CommissionController(
     IMediator mediator,
     IAccountsDbContext accountsDb,
@@ -41,6 +44,7 @@ public class CommissionController(
 
     /// <summary>Varsayılan oranları toplu upsert eder; listede olmayan mevcut kayıtlar SİLİNMEZ.</summary>
     [HttpPut("group-rates")]
+    [RequirePermission(Permissions.CommissionManage)]   // Y2
     public async Task<IActionResult> UpdateGroupRates([FromBody] GroupRatesRequest request, CancellationToken ct)
     {
         if (request.Items.Any(i => i.RatePercent < 0 || i.RatePercent > 100))
@@ -104,6 +108,7 @@ public class CommissionController(
 
     /// <summary>Sözleşmeyi bütün olarak upsert eder (oran listeleri TAM LİSTE — replace).</summary>
     [HttpPut("suppliers/{accountId:guid}/contract")]
+    [RequirePermission(Permissions.CommissionManage)]   // Y2
     public async Task<IActionResult> UpsertContract(Guid accountId, [FromBody] ContractRequest request, CancellationToken ct)
     {
         if (request.SettlementDelayDays is < 0 or > 365)
@@ -190,6 +195,7 @@ public class CommissionController(
     public record CampaignTermsRequest(decimal? SupplierCommissionRate, decimal SupplierDiscountSharePercent, bool RequiresSupplierOptIn);
 
     [HttpPut("campaigns/{id:guid}/supplier-terms")]
+    [RequirePermission(Permissions.CommissionManage)]   // Y2
     public async Task<IActionResult> UpdateCampaignTerms(Guid id, [FromBody] CampaignTermsRequest request, CancellationToken ct)
     {
         if (request.SupplierDiscountSharePercent is < 0 or > 100
@@ -227,6 +233,7 @@ public class CommissionController(
     /// neti hakediş defterinden düşer (settlement_payout). Banka transferi manuel yapılır —
     /// bu kayıt mutabakat izidir.</summary>
     [HttpPost("suppliers/{accountId:guid}/payout")]
+    [RequirePermission(Permissions.CommissionManage)]   // Y2
     public async Task<IActionResult> Payout(Guid accountId, CancellationToken ct)
     {
         var satirlar = await accountsDb.SettlementLines

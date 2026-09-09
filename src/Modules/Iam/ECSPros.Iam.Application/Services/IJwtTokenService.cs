@@ -4,7 +4,9 @@ namespace ECSPros.Iam.Application.Services;
 
 public interface IJwtTokenService
 {
-    string GenerateAccessToken(User user, IEnumerable<string> permissions);
+    /// <summary>Access token — Y1 (K3): yetki listesi TAŞIMAZ; yalnız kimlik + süper admin bayrağı.
+    /// Yetki her istekte IEtkinYetkiServisi'nden okunur.</summary>
+    string GenerateAccessToken(User user);
     string GenerateRefreshToken();
     Guid? ValidateRefreshToken(string tokenHash);
 

@@ -101,6 +101,10 @@ import { CargoReroutePage } from '@/pages/fulfillment/CargoReroutePage'
 import { IntegrationLogsPage } from '@/pages/integrations/IntegrationLogsPage'
 import { UsersPage } from '@/pages/settings/UsersPage'
 import { RolesPage } from '@/pages/settings/RolesPage'
+import { PermissionGroupsPage } from '@/pages/settings/PermissionGroupsPage'
+import { PermissionLogsPage } from '@/pages/settings/PermissionLogsPage'
+import { PermissionCatalogPage } from '@/pages/settings/PermissionCatalogPage'
+import { UserPermissionsPage } from '@/pages/settings/UserPermissionsPage'
 import { AuditLogsPage } from '@/pages/settings/AuditLogsPage'
 import { LanguagesPage } from '@/pages/settings/LanguagesPage'
 import { LookupTypesPage } from '@/pages/settings/LookupTypesPage'
@@ -237,6 +241,10 @@ export const router = createBrowserRouter(
             { path: 'settings/translations',    element: <TranslationsPage /> },
             { path: 'settings/users',           element: <UsersPage /> },
             { path: 'settings/roles',           element: <RolesPage /> },
+            { path: 'settings/permission-groups', element: <PermissionGroupsPage /> },
+            { path: 'settings/permission-logs', element: <PermissionLogsPage /> },
+            { path: 'settings/permissions', element: <PermissionCatalogPage /> },
+            { path: 'settings/users/:id/permissions', element: <UserPermissionsPage /> },
             { path: 'settings/audit-logs',      element: <AuditLogsPage /> },
             { path: 'settings/firms',           element: <FirmsPage /> },
             { path: 'settings/firms/:id',       element: <FirmDetailPage /> },

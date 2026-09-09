@@ -32,6 +32,8 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/fulfillment")]
 [Authorize]
+[RequirePermission(Permissions.FulfillmentView)]   // Y2: sayfa yetkisi
+[KanalKapsamiKontrol(Permissions.FulfillmentView)]   // Y3: kanal parametresi kapsam dışıysa 404
 public class FulfillmentController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -63,6 +65,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Filtreli toplama görev(ler)i oluşturur (tek/çok ürünlü otomatik ayrım).</summary>
     [HttpPost("tasks")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> CreateTasks([FromBody] CreateTasksRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.CreatePickingTasks
@@ -77,6 +80,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Görev satırlarını personele dağıtır.</summary>
     [HttpPost("picking-plans/{id:guid}/assign-lines")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> AssignLines(Guid id, [FromBody] AssignLinesRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.AssignPickingLines
@@ -112,6 +116,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Personel toplama okutması — kendisine atanan satıra +1 (BinBarcode = fiili raf).</summary>
     [HttpPost("picking/{planId:guid}/scan")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> PickScan(Guid planId, [FromBody] PickScanRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.PickLineScan
@@ -123,6 +128,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Satırı "bulunamadı" işaretler.</summary>
     [HttpPost("picking-lines/{lineId:guid}/short")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> MarkLineShort(Guid lineId, CancellationToken ct)
     {
         var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.MarkLineShort
@@ -135,6 +141,7 @@ public class FulfillmentController : ControllerBase
     /// <summary>Tek ürünlü hızlı hat: okut → en eski onaylı siparişe ver → paket + OTOMATİK
     /// fatura → yazdırma URL'leri. Eşleşme yoksa 400 (panel hata sesi çalar, ürün iadeye).</summary>
     [HttpPost("fast-lane/{planId:guid}/scan")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> FastLaneScan(Guid planId, [FromBody] PickScanRequest request, CancellationToken ct)
     {
         var scan = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.SingleItemScan
@@ -183,6 +190,7 @@ public class FulfillmentController : ControllerBase
     /// <summary>Ara ayrıştırma okutması — 5 koşullu sipariş seçimi, koli numarası döner
     /// (panel numarayı seslendirir). Eşleşme yoksa 400 (hata sesi + depo iadesi).</summary>
     [HttpPost("sorting/{planId:guid}/scan")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> SortingScan(Guid planId, [FromBody] PickScanRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.SortingScan
@@ -203,6 +211,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Koliyi zimmete al (paketleme personeli) — süreç bitene dek onda kalır.</summary>
     [HttpPost("sorting-boxes/{boxId:guid}/take")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> TakeSortingBox(Guid boxId, CancellationToken ct)
     {
         var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.TakeSortingBox
@@ -216,6 +225,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Zimmetli koli için masa açar (en küçük boş numara).</summary>
     [HttpPost("sorting-boxes/{boxId:guid}/open-desk")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> OpenDesk(Guid boxId, CancellationToken ct)
     {
         var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.OpenPackingDesk
@@ -228,6 +238,7 @@ public class FulfillmentController : ControllerBase
     /// <summary>Masa son ayrıştırma okutması — slot numarası döner (seslendirilir);
     /// sipariş tamamlanırsa paketle=true (son kontrol modu başlar).</summary>
     [HttpPost("desks/{deskId:guid}/sort-scan")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> DeskSortScan(Guid deskId, [FromBody] PickScanRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.DeskSortScan
@@ -240,6 +251,7 @@ public class FulfillmentController : ControllerBase
     /// <summary>Son kontrol okutması — sipariş tamamlanınca paket + OTOMATİK fatura +
     /// yazdırma URL'leri (fast-lane kalıbı).</summary>
     [HttpPost("desks/{deskId:guid}/final-scan")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> DeskFinalScan(Guid deskId, [FromBody] FinalScanRequest request, CancellationToken ct)
     {
         var scan = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.DeskFinalCheckScan
@@ -275,6 +287,7 @@ public class FulfillmentController : ControllerBase
     /// <summary>Koli + masa kapanışı — paketlenmemişler OBM'ye; force=false'ta sistem
     /// "koliye ürün gelebilir" kontrolü yapar.</summary>
     [HttpPost("sorting-boxes/{boxId:guid}/close")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> CloseBox(Guid boxId, [FromQuery] bool force = false, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.CloseSortingBox
@@ -323,8 +336,26 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Kargo yönlendirme — gönderilmemiş bildirimler hedef taşıyıcıya taşınır (K-9).</summary>
     [HttpPost("cargo-outbox/reroute")]
-    public async Task<IActionResult> RerouteCargo([FromBody] RerouteCargoRequest request, CancellationToken ct)
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
+    public async Task<IActionResult> RerouteCargo(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromServices] ECSPros.Order.Application.Services.IOrderDbContext orderDb,
+        [FromBody] RerouteCargoRequest request, CancellationToken ct)
     {
+        // Y3 (§O.8): toplu işlemde HER siparişin kanalı yeniden doğrulanır — istemci listesine güvenilmez.
+        if (request.OrderIds is { Count: > 0 })
+        {
+            var kapsamDisi = await ECSPros.Api.Authorization.KapsamDogrulama.KapsamDisiSiparisSayisiAsync(
+                kanalKapsami, orderDb, Permissions.OrdersView, request.OrderIds, ct);
+            if (kapsamDisi > 0)
+            {
+                // Y8 (§J.1): kapsam dışı kayda toplu işlemle ulaşma denemesi kaydedilir (örneklenerek).
+                await ECSPros.Api.Authorization.YetkisizErisimLogu.YazAsync(
+                    HttpContext, "kayit", Permissions.OrdersView, durum: StatusCodes.Status404NotFound);
+                return NotFound(new { success = false, error = "Seçili siparişlerden bazıları bulunamadı." });
+            }
+        }
+
         var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.RerouteCargoOutbox
             .RerouteCargoOutboxCommand(request.OutboxIds ?? [], request.TargetIntegrationId,
                 request.TargetName ?? "", AktifKullanici()), ct);
@@ -346,7 +377,7 @@ public class FulfillmentController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null /* Y3: toplama planında kanal kolonu yok — paket üzerinden, sonraki turda */, defaultPageSize: 20);
         var result = await _mediator.Send(new GetPickingPlansQuery(status, warehouseId, page, pageSize, grid), ct);
         return Ok(new { success = true, data = result.Value });
     }
@@ -354,22 +385,41 @@ public class FulfillmentController : ControllerBase
     /// <summary>Toplama planlarını Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: status, warehouseId.</summary>
     [HttpPost("picking-plans/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportPickingPlans([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+    public async Task<IActionResult> ExportPickingPlans([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<FulfillmentController> logger, CancellationToken ct)
     {
         var filters = new PickingPlanListFilters(body.NamedValue("status"), ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "warehouseId"), body.Search);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "picking-plans", "toplama-planlari", "Toplama Planları",
-            ECSPros.Api.Grid.PickingPlanExportColumns.All, max => _mediator.Send(new ExportPickingPlansQuery(filters, body.ToGridRequest(), max), ct), ct);
+            ECSPros.Api.Grid.PickingPlanExportColumns.All, max => _mediator.Send(new ExportPickingPlansQuery(filters, body.ToGridRequest(null /* Y3: toplama planında kanal kolonu yok — sonraki turda */), max), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Yeni toplama planı oluşturur.</summary>
     [HttpPost("picking-plans")]
-    public async Task<IActionResult> CreatePickingPlan([FromBody] CreatePickingPlanRequest request, CancellationToken ct)
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
+    public async Task<IActionResult> CreatePickingPlan(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromServices] ECSPros.Order.Application.Services.IOrderDbContext orderDb,
+        [FromBody] CreatePickingPlanRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
         if (!Guid.TryParse(userId, out var uid))
             return Unauthorized(new { success = false, error = "Geçersiz token." });
+
+        // Y3 (§O.8): plana YALNIZ kapsamdaki siparişler alınabilir (plan kanal taşımaz; kapsam
+        // sipariş üzerinden doğrulanır).
+        if (request.OrderIds is { Count: > 0 })
+        {
+            var kapsamDisi = await ECSPros.Api.Authorization.KapsamDogrulama.KapsamDisiSiparisSayisiAsync(
+                kanalKapsami, orderDb, Permissions.OrdersView, request.OrderIds, ct);
+            if (kapsamDisi > 0)
+            {
+                // Y8 (§J.1): kapsam dışı kayda toplu işlemle ulaşma denemesi kaydedilir (örneklenerek).
+                await ECSPros.Api.Authorization.YetkisizErisimLogu.YazAsync(
+                    HttpContext, "kayit", Permissions.OrdersView, durum: StatusCodes.Status404NotFound);
+                return NotFound(new { success = false, error = "Seçili siparişlerden bazıları bulunamadı." });
+            }
+        }
 
         var result = await _mediator.Send(new CreatePickingPlanCommand(
             request.WarehouseId,
@@ -395,6 +445,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Toplama planını başlatır (pending → picking).</summary>
     [HttpPost("picking-plans/{id:guid}/start")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> StartPickingPlan(Guid id, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -411,6 +462,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Toplama planını tamamlar (picking → completed). Siparişler paketleme kuyruğuna girer.</summary>
     [HttpPost("picking-plans/{id:guid}/complete")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> CompletePickingPlan(Guid id, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -438,6 +490,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Yeni paketleme istasyonu oluşturur.</summary>
     [HttpPost("packing-stations")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> CreatePackingStation([FromBody] CreatePackingStationRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreatePackingStationCommand(
@@ -456,6 +509,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Paketleme istasyonu günceller.</summary>
     [HttpPut("packing-stations/{id:guid}")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> UpdatePackingStation(Guid id, [FromBody] UpdatePackingStationRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -479,6 +533,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Sorting bin durumunu günceller (empty → filling → ready).</summary>
     [HttpPatch("bins/{binId:guid}/status")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> UpdateBinStatus(Guid binId, [FromBody] UpdateBinStatusRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -503,6 +558,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Paket etiketi basıldı olarak işaretler.</summary>
     [HttpPost("packages/{packageId:guid}/print-label")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> PrintPackageLabel(Guid packageId, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -517,6 +573,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Yeni paket oluşturur.</summary>
     [HttpPost("packages")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> CreatePackage([FromBody] CreatePackageRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -544,6 +601,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Siparişi tedarikçiye göre paketlere böler (F2 — karar 2026-07-19).</summary>
     [HttpPost("packages/split")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> SplitOrderIntoPackages([FromBody] SplitOrderPackagesRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -569,6 +627,7 @@ public class FulfillmentController : ControllerBase
     /// <summary>Kanalın paket numarası serisini tanımlar/günceller — sayaç elle
     /// değiştirilemez, numaralar havuza geri dönmez.</summary>
     [HttpPut("package-number-series/{firmPlatformId:guid}")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> UpsertPackageNumberSeries(
         Guid firmPlatformId, [FromBody] UpsertPackageSeriesRequest request, CancellationToken ct)
     {
@@ -582,6 +641,7 @@ public class FulfillmentController : ControllerBase
     /// <summary>Paketin fiziksel bilgilerini günceller (F4) — kimlik alanları
     /// (paket no / kargo kodu) renumber ve cargo-code akışlarından geçer.</summary>
     [HttpPut("packages/{packageId:guid}")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> UpdatePackage(Guid packageId, [FromBody] UpdatePackageRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -599,6 +659,7 @@ public class FulfillmentController : ControllerBase
     /// <summary>Pakete seriden yeni numara verir (F4): gerekçe zorunlu, eski numara
     /// geçmişe yazılır ve havuza geri dönmez; bağlı kargo kodu temizlenir.</summary>
     [HttpPost("packages/{packageId:guid}/renumber")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> RenumberPackage(Guid packageId, [FromBody] RenumberPackageRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -622,6 +683,7 @@ public class FulfillmentController : ControllerBase
     /// <summary>Pakete kargo entegrasyon kodu atar (F3): externalCode verilirse aynen
     /// yazılır; verilmezse seçilen kargo entegrasyonunun stratejisine göre üretilir.</summary>
     [HttpPost("packages/{packageId:guid}/cargo-code")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> AssignCargoCode(Guid packageId, [FromBody] AssignCargoCodeRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -655,6 +717,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Toplama planında ürün tarar — uygun kutya atar.</summary>
     [HttpPost("picking/{planId:guid}/scan-item")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> ScanItem(Guid planId, [FromBody] ScanItemRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -669,6 +732,7 @@ public class FulfillmentController : ControllerBase
 
     /// <summary>Ürünü belirtilen kutya tarar.</summary>
     [HttpPost("sorting/bins/{binId:guid}/scan")]
+    [RequirePermission(Permissions.FulfillmentManage)]   // Y2
     public async Task<IActionResult> ScanToBin(Guid binId, [FromBody] ScanItemRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;

@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Storefront.Application.Commands.ModerateCollection;
 using ECSPros.Storefront.Application.Queries.GetCollectionsForModeration;
 using MediatR;
@@ -11,6 +13,8 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/collections")]
 [Authorize]
+[RequirePermission(Permissions.StorefrontContentView)]   // Y2: sayfa yetkisi
+[KanalKapsamiKontrol(Permissions.StorefrontContentView)]   // Y3: kanal parametresi kapsam dışıysa 404
 public class CollectionsController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
@@ -23,6 +27,7 @@ public class CollectionsController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("{id}/approve")]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     public async Task<IActionResult> Approve(Guid id, CancellationToken ct)
     {
         var result = await mediator.Send(new ModerateCollectionCommand(id, true), ct);
@@ -31,6 +36,7 @@ public class CollectionsController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("{id}/reject")]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     public async Task<IActionResult> Reject(Guid id, CancellationToken ct)
     {
         var result = await mediator.Send(new ModerateCollectionCommand(id, false), ct);

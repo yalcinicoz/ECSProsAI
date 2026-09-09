@@ -57,6 +57,9 @@ public class PermissionConfiguration : IEntityTypeConfiguration<Permission>
         builder.Property(x => x.DescriptionI18n).HasColumnType("jsonb");
         builder.Property(x => x.Module).HasMaxLength(100).IsRequired();
         builder.Property(x => x.PermissionType).HasMaxLength(50).IsRequired();
+        // Y0 (2026-09-09) kod sahipli katalog alanları
+        builder.Property(x => x.Kind).HasMaxLength(20).IsRequired().HasDefaultValue("action");
+        builder.Property(x => x.PageCode).HasMaxLength(100);
         builder.HasIndex(x => x.Code).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
 
@@ -71,6 +74,7 @@ public class RolePermissionConfiguration : IEntityTypeConfiguration<RolePermissi
     {
         builder.ToTable("iam_role_permissions");
         builder.HasKey(x => x.Id);
+        builder.Property(x => x.ChannelIds).HasColumnType("jsonb");
         builder.HasIndex(x => new { x.RoleId, x.PermissionId }).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
@@ -94,7 +98,10 @@ public class UserPermissionConfiguration : IEntityTypeConfiguration<UserPermissi
         builder.ToTable("iam_user_permissions");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.GrantType).HasMaxLength(10).IsRequired();
-        builder.HasIndex(x => new { x.UserId, x.PermissionId, x.FirmId }).IsUnique();
+        builder.Property(x => x.ChannelIds).HasColumnType("jsonb");
+        // Kullanıcı başına permission başına TEK istisna satırı (ver ya da kaldır).
+        // Eski (UserId, PermissionId, FirmId) indeksi FirmId NULL iken tekillik sağlamıyordu.
+        builder.HasIndex(x => new { x.UserId, x.PermissionId }).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

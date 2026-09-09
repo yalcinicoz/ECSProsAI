@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Integration.Application.Adapters;
 using ECSPros.Integration.Application.Commands.CreateCargoShipment;
 using ECSPros.Integration.Application.Commands.FetchMarketplaceOrders;
@@ -17,6 +19,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/integrations")]
 [Authorize]
+[RequirePermission(Permissions.SystemIntegrationsView)]   // Y2: sayfa yetkisi
 public class IntegrationController(
     IMediator mediator,
     ECSPros.Order.Application.Services.IOrderDbContext orderDb,
@@ -36,7 +39,7 @@ public class IntegrationController(
         CancellationToken ct = default)
     {
         // DataGrid (2026-09-08): page/pageSize/search/sort/dir/f.* (IntegrationLogGrid.Schema); adlandırılmış filtreler korunur
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 50);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null /* entegrasyon logları kanaldan bağımsız (katalogda da kapsamsız) */, defaultPageSize: 50);
         var result = await mediator.Send(new GetIntegrationLogsQuery(
             firmIntegrationId, serviceType, operationType, status, from, to, page, pageSize, null, grid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
@@ -46,7 +49,7 @@ public class IntegrationController(
     /// <summary>Entegrasyon loglarını Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: firmIntegrationId, serviceType, operationType, status, from, to.</summary>
     [HttpPost("logs/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportLogs([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+    public async Task<IActionResult> ExportLogs([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<IntegrationController> logger, CancellationToken ct)
     {
@@ -55,7 +58,7 @@ public class IntegrationController(
             body.NamedValue("status"), ECSPros.Api.Grid.GridExportEndpoint.Tarih(body, "from"), ECSPros.Api.Grid.GridExportEndpoint.Tarih(body, "to"),
             null, body.Search);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "integration-logs", "entegrasyon-loglari", "Entegrasyon Logları",
-            ECSPros.Api.Grid.IntegrationLogExportColumns.All, max => mediator.Send(new ExportIntegrationLogsQuery(filters, body.ToGridRequest(), max), ct), ct);
+            ECSPros.Api.Grid.IntegrationLogExportColumns.All, max => mediator.Send(new ExportIntegrationLogsQuery(filters, body.ToGridRequest(null /* entegrasyon logları kanaldan bağımsız */), max), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     // ─── Marketplace ────────────────────────────────────────────────────
@@ -73,6 +76,7 @@ public class IntegrationController(
     }
 
     [HttpPost("marketplace/sync-product")]
+    [RequirePermission(Permissions.SystemIntegrationsManage)]   // Y2
     public async Task<IActionResult> SyncProduct(
         [FromBody] SyncProductRequest request,
         CancellationToken ct = default)
@@ -93,6 +97,7 @@ public class IntegrationController(
     }
 
     [HttpPost("marketplace/update-stock")]
+    [RequirePermission(Permissions.SystemIntegrationsManage)]   // Y2
     public async Task<IActionResult> UpdateStock(
         [FromBody] UpdateStockRequest request,
         CancellationToken ct = default)
@@ -104,6 +109,7 @@ public class IntegrationController(
     }
 
     [HttpPost("marketplace/fetch-orders")]
+    [RequirePermission(Permissions.SystemIntegrationsManage)]   // Y2
     public async Task<IActionResult> FetchOrders(
         [FromBody] FetchOrdersRequest request,
         CancellationToken ct = default)
@@ -116,6 +122,7 @@ public class IntegrationController(
 
     // ─── Cargo ──────────────────────────────────────────────────────────
     [HttpPost("cargo/shipments")]
+    [RequirePermission(Permissions.SystemIntegrationsManage)]   // Y2
     public async Task<IActionResult> CreateShipment(
         [FromBody] CreateShipmentRequest request,
         CancellationToken ct = default)
@@ -160,6 +167,7 @@ public class IntegrationController(
     }
 
     [HttpPost("cargo/shipments/{trackingNumber}/track")]
+    [RequirePermission(Permissions.SystemIntegrationsManage)]   // Y2
     public async Task<IActionResult> TrackShipment(
         string trackingNumber,
         [FromQuery] Guid firmIntegrationId,
@@ -174,6 +182,7 @@ public class IntegrationController(
 
     // ─── e-Invoice ──────────────────────────────────────────────────────
     [HttpPost("einvoice/send")]
+    [RequirePermission(Permissions.SystemIntegrationsManage)]   // Y2
     public async Task<IActionResult> SendEInvoice(
         [FromBody] SendEInvoiceRequest request,
         CancellationToken ct = default)

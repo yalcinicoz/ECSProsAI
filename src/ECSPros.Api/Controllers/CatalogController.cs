@@ -51,6 +51,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/catalog")]
 [Authorize]
+[RequirePermission(Permissions.CatalogProductsView)]   // Y2: sayfa yetkisi
 public class CatalogController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -76,8 +77,9 @@ public class CatalogController : ControllerBase
         CancellationToken ct = default)
     {
         // DataGrid F4 (2026-09-08): sort/dir + f.* filtreleri (ProductGrid.Schema beyaz listesi); page/pageSize merkezi clamp (1..250).
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null /* ürün kartları kanaldan bağımsızdır */, defaultPageSize: 20);
         var result = await _mediator.Send(new GetProductsQuery(search, productGroupId, activeOnly, grid.Page, grid.PageSize, sort, grid), ct);
+        // Not: ürün LİSTESİ maliyet taşımaz (yalnız export satırı taşır, o da alan yetkisine bağlı).
         return Ok(new { success = true, data = result.Value });
     }
 
@@ -88,20 +90,21 @@ public class CatalogController : ControllerBase
     /// </summary>
     [HttpPost("products/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportProducts([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+    public async Task<IActionResult> ExportProducts([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<CatalogController> logger, CancellationToken ct)
     {
-        var grid = body.ToGridRequest();
+        var grid = body.ToGridRequest(null /* ürün kartları kanaldan bağımsızdır */);
         var filters = new ProductListFilters(grid.Search, ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "productGroupId"),
             ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "activeOnly") ?? false);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "products", "urunler", "Ürünler",
             ECSPros.Api.Grid.ProductExportColumns.All,
-            max => _mediator.Send(new ExportProductsQuery(filters, grid, max, body.NamedValue("sort")), ct), ct);
+            max => _mediator.Send(new ExportProductsQuery(filters, grid, max, body.NamedValue("sort")), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Yeni ürün oluşturur.</summary>
     [HttpPost("products")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> CreateProduct([FromBody] CreateProductRequest request, CancellationToken ct)
     {
         var variants = request.Variants?.Select(v => new CreateVariantDto(v.Sku, v.BasePrice, v.BaseCost)).ToList();
@@ -117,13 +120,22 @@ public class CatalogController : ControllerBase
 
     /// <summary>Ürün detayını kod ile getirir.</summary>
     [HttpGet("products/{code}")]
-    public async Task<IActionResult> GetProduct(string code, CancellationToken ct)
+    public async Task<IActionResult> GetProduct(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, string code, CancellationToken ct)
     {
         var result = await _mediator.Send(new GetProductDetailQuery(code), ct);
         if (result.IsFailure)
             return NotFound(new { success = false, error = result.Error });
 
-        return Ok(new { success = true, data = result.Value });
+        // Y6 (K6): maliyet hassas alandır — ürün ve VARYANT maliyetleri yetkisi olmayana null gider.
+        var izin = await alanYetkileri.IzinlerAsync(ct);
+        var urun = result.Value! with
+        {
+            BaseCost = izin.Maliyetle(result.Value.BaseCost),
+            Variants = result.Value.Variants
+                .Select(v => v with { BaseCost = izin.Maliyetle(v.BaseCost) }).ToList(),
+        };
+        return Ok(new { success = true, data = urun });
     }
 
     /// <summary>V3 gerçek kaynaktan tek ürünü koduyla idempotent yeniler.</summary>
@@ -160,6 +172,7 @@ public class CatalogController : ControllerBase
 
     /// <summary>Ürünü günceller.</summary>
     [HttpPut("products/{id:guid}")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] UpdateProductRequest request, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("sub")?.Value;
@@ -180,6 +193,7 @@ public class CatalogController : ControllerBase
 
     /// <summary>Ürünü aktif eder.</summary>
     [HttpPatch("products/{id:guid}/activate")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> ActivateProduct(Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new SetProductStatusCommand(id, true), ct);
@@ -190,6 +204,7 @@ public class CatalogController : ControllerBase
 
     /// <summary>Ürünü pasif eder.</summary>
     [HttpPatch("products/{id:guid}/deactivate")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> DeactivateProduct(Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new SetProductStatusCommand(id, false), ct);
@@ -199,6 +214,7 @@ public class CatalogController : ControllerBase
     }
 
     [HttpDelete("products/{id:guid}")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> DeleteProduct(Guid id, CancellationToken ct)
     {
         Guid.TryParse(User.FindFirst("sub")?.Value, out var userId);
@@ -210,6 +226,7 @@ public class CatalogController : ControllerBase
 
     /// <summary>Ürün özellik değerlerini toplu kaydeder.</summary>
     [HttpPut("products/{id:guid}/attributes")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> SetProductAttributes(Guid id, [FromBody] SetProductAttributesRequest request, CancellationToken ct)
     {
         var items = request.Attributes
@@ -225,6 +242,7 @@ public class CatalogController : ControllerBase
 
     /// <summary>Ürüne varyant kombinasyonları ekler.</summary>
     [HttpPost("products/{id:guid}/variants")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> AddProductVariants(Guid id, [FromBody] AddProductVariantsRequest request, CancellationToken ct)
     {
         var items = request.Variants.Select(v =>
@@ -261,6 +279,7 @@ public class CatalogController : ControllerBase
 
     /// <summary>Sıralı EAN-13 barkodlar üretir.</summary>
     [HttpPost("barcodes/generate")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> GenerateBarcodes([FromQuery] int count = 1, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new GenerateBarcodesCommand(count), ct);
@@ -281,6 +300,7 @@ public class CatalogController : ControllerBase
 
     /// <summary>Varyantın barkodunu günceller.</summary>
     [HttpPut("variants/{id:guid}/price")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> UpdateVariantPrice(Guid id, [FromBody] UpdateVariantPriceRequest request, CancellationToken ct)
     {
         Guid.TryParse(User.FindFirst("sub")?.Value, out var userId);
@@ -292,6 +312,7 @@ public class CatalogController : ControllerBase
     }
 
     [HttpPatch("variants/{id:guid}/status")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> ToggleVariantStatus(Guid id, [FromBody] ToggleVariantStatusRequest request, CancellationToken ct)
     {
         Guid.TryParse(User.FindFirst("sub")?.Value, out var userId);
@@ -302,6 +323,7 @@ public class CatalogController : ControllerBase
     }
 
     [HttpDelete("variants/{id:guid}")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> DeleteVariant(Guid id, CancellationToken ct)
     {
         Guid.TryParse(User.FindFirst("sub")?.Value, out var userId);
@@ -312,6 +334,7 @@ public class CatalogController : ControllerBase
     }
 
     [HttpPut("variants/{id:guid}/barcode")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> SetVariantBarcode(Guid id, [FromBody] SetVariantBarcodeRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new SetVariantBarcodeCommand(id, request.Barcode), ct);
@@ -322,6 +345,7 @@ public class CatalogController : ControllerBase
 
     /// <summary>Varyanta görsel ekler.</summary>
     [HttpPost("variants/{id:guid}/images")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> AddVariantImage(Guid id, [FromBody] AddVariantImageRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new AddVariantImageCommand(id, request.ImageUrl, request.IsMain, request.SortOrder), ct);
@@ -530,6 +554,7 @@ public class CatalogController : ControllerBase
     // ─── Tags & SEO ────────────────────────────────────────────────────────────
 
     [HttpPut("products/{id:guid}/tags")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> UpdateProductTags(Guid id, [FromBody] UpdateTagsRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new UpdateProductTagsCommand(id, request.Tags ?? []), ct);
@@ -548,6 +573,7 @@ public class CatalogController : ControllerBase
     }
 
     [HttpPut("products/{id:guid}/seo")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> UpdateProductSeo(Guid id, [FromBody] UpdateSeoRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new UpdateProductSeoCommand(
@@ -579,6 +605,7 @@ public class CatalogController : ControllerBase
 
     /// <summary>Kod ve/veya Id listesinden ürünleri toplu çözer (kampanya manuel kapsam vb.).</summary>
     [HttpPost("products/lookup")]
+    [RequirePermission(Permissions.CatalogProductsManage)]   // Y2
     public async Task<IActionResult> LookupProducts([FromBody] LookupProductsRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new LookupProductsQuery(request.Codes, request.Ids), ct);

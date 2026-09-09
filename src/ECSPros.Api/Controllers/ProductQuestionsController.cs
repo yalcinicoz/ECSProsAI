@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Api.Services.Store;
 using ECSPros.Shared.Infrastructure.Messaging;
 using ECSPros.Storefront.Application.Commands.ProductQuestions;
@@ -16,9 +18,11 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/product-questions")]
 [Authorize]
+[RequirePermission(Permissions.StorefrontModerationView)]   // Y2: sayfa yetkisi
 public class ProductQuestionsController(
     IMediator mediator,
     IRealtimeNotificationService realtime,
+    ECSPros.Storefront.Application.Services.IStorefrontDbContext storefrontDb,
     UrunSoruCevapEpostasi cevapEpostasi,
     ILogger<ProductQuestionsController> logger) : ControllerBase
 {
@@ -27,18 +31,20 @@ public class ProductQuestionsController(
 
     /// <summary>Moderasyon listesi — bekleyenler en eski önce; status: pending|answered|hidden.</summary>
     [HttpGet]
-    public async Task<IActionResult> GetList(
+    public async Task<IActionResult> GetList([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, 
         [FromQuery] Guid? firmPlatformId, [FromQuery] string? status,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 30, CancellationToken ct = default)
     {
         var result = await mediator.Send(
-            new GetQuestionsForModerationQuery(firmPlatformId, status, page, pageSize), ct);
+            new GetQuestionsForModerationQuery(firmPlatformId, status, page, pageSize,
+                await kanalKapsami.KanallarAsync(Permissions.StorefrontModerationView, ct)), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
 
     /// <summary>Cevapla (yayına girer) — yayındaki cevap da bu uçla güncellenir.</summary>
     [HttpPost("{id:guid}/answer")]
+    [RequirePermission(Permissions.StorefrontModerationManage)]   // Y2
     public async Task<IActionResult> Answer(Guid id, [FromBody] AnswerQuestionRequest req, [FromServices] ECSPros.Api.Services.Push.PushEtkilesim push, CancellationToken ct)
     {
         var result = await mediator.Send(new AnswerProductQuestionCommand(id, req.Answer ?? "", UserId), ct);
@@ -48,7 +54,13 @@ public class ProductQuestionsController(
         if (result.Value) { cevapEpostasi.ArkaPlandaGonder(id); await push.SoruCevaplandiAsync(id, ct); } // mobil push (question_answered, yalnız ilk cevap)
 
         // Diğer panel kullanıcılarının rozeti/listesi anında tazelensin.
-        try { await realtime.SendQuestionEventAsync("QuestionAnswered", new { id }, ct); }
+        // Y3 (K2): bildirim yalnız sorunun KANALINI görebilen panel kullanıcılarına gider.
+        try
+        {
+            var kanal = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
+                storefrontDb.ProductQuestions.Where(q => q.Id == id).Select(q => (Guid?)q.FirmPlatformId), ct);
+            await realtime.SendQuestionEventAsync("QuestionAnswered", new { id }, kanal, ct);
+        }
         catch (Exception ex) { logger.LogWarning(ex, "Cevap bildirimi hub'a gönderilemedi: {QuestionId}", id); }
 
         return Ok(new { success = true, data = true });
@@ -56,6 +68,7 @@ public class ProductQuestionsController(
 
     /// <summary>Yayından kaldır (hidden=true) ya da geri yayınla (hidden=false, yalnız cevaplıysa).</summary>
     [HttpPost("{id:guid}/visibility")]
+    [RequirePermission(Permissions.StorefrontModerationManage)]   // Y2
     public async Task<IActionResult> SetVisibility(Guid id, [FromBody] QuestionVisibilityRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new SetProductQuestionVisibilityCommand(id, req.Hidden), ct);

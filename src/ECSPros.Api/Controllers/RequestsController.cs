@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using System.Security.Claims;
 using ECSPros.Requests.Application.Commands.AddRequestComment;
 using ECSPros.Requests.Application.Commands.AssignRequest;
@@ -20,6 +22,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/requests")]
 [Authorize]
+[RequirePermission(Permissions.RequestsView)]   // Y2: sayfa yetkisi
 public class RequestsController(IMediator mediator) : ControllerBase
 {
     private (Guid Id, string Ad) MevcutKullanici()
@@ -56,6 +59,7 @@ public class RequestsController(IMediator mediator) : ControllerBase
         DateOnly? DueDate, List<string>? Attachments);
 
     [HttpPost]
+    [RequirePermission(Permissions.RequestsManage)]   // Y2
     public async Task<IActionResult> Create([FromBody] CreateRequestBody body, CancellationToken ct)
     {
         var (userId, userName) = MevcutKullanici();
@@ -70,6 +74,7 @@ public class RequestsController(IMediator mediator) : ControllerBase
         string Title, string Description, string Category, string Priority, DateOnly? DueDate);
 
     [HttpPut("{id:guid}")]
+    [RequirePermission(Permissions.RequestsManage)]   // Y2
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateRequestBody body, CancellationToken ct)
     {
         var (userId, userName) = MevcutKullanici();
@@ -83,6 +88,7 @@ public class RequestsController(IMediator mediator) : ControllerBase
     public record ChangeStatusBody(string Status, string? Comment);
 
     [HttpPost("{id:guid}/status")]
+    [RequirePermission(Permissions.RequestsManage)]   // Y2
     public async Task<IActionResult> ChangeStatus(Guid id, [FromBody] ChangeStatusBody body, CancellationToken ct)
     {
         var (userId, userName) = MevcutKullanici();
@@ -95,6 +101,7 @@ public class RequestsController(IMediator mediator) : ControllerBase
     public record AssignBody(Guid? AssignedTo, string? AssignedToName);
 
     [HttpPost("{id:guid}/assign")]
+    [RequirePermission(Permissions.RequestsManage)]   // Y2
     public async Task<IActionResult> Assign(Guid id, [FromBody] AssignBody body, CancellationToken ct)
     {
         var (userId, userName) = MevcutKullanici();
@@ -107,6 +114,7 @@ public class RequestsController(IMediator mediator) : ControllerBase
     public record CommentBody(string? Comment, List<string>? Attachments);
 
     [HttpPost("{id:guid}/comments")]
+    [RequirePermission(Permissions.RequestsManage)]   // Y2
     public async Task<IActionResult> AddComment(Guid id, [FromBody] CommentBody body, CancellationToken ct)
     {
         var (userId, userName) = MevcutKullanici();
@@ -119,6 +127,7 @@ public class RequestsController(IMediator mediator) : ControllerBase
     /// <summary>Talep eki yükleme — vitrin görsel yükleme deseninin kopyası
     /// (PagesController.UploadMedia); dosyalar media/talepler/yyyyMM altına yazılır.</summary>
     [HttpPost("media")]
+    [RequirePermission(Permissions.RequestsManage)]   // Y2
     [RequestSizeLimit(11_000_000)]
     public async Task<IActionResult> UploadMedia(
         IFormFile? file,

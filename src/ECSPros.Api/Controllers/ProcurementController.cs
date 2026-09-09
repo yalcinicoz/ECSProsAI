@@ -64,6 +64,7 @@ public class ProcurementController(IMediator mediator) : ControllerBase
 
     /// <summary>Yeni satın alma (taslak) oluşturur; kod SA-YYYYAAGG-#### otomatik.</summary>
     [HttpPost("purchase-orders")]
+    [RequirePermission(Permissions.ProcurementManage)]   // Y2
     public async Task<IActionResult> CreatePurchaseOrder([FromBody] CreatePurchaseOrderRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new CreatePurchaseOrderCommand(req.SupplierId, req.OrderDate, req.ExpectedDate, req.Notes), ct);
@@ -73,6 +74,7 @@ public class ProcurementController(IMediator mediator) : ControllerBase
 
     /// <summary>Başlık günceller (tarihler, not).</summary>
     [HttpPut("purchase-orders/{id:guid}")]
+    [RequirePermission(Permissions.ProcurementManage)]   // Y2
     public async Task<IActionResult> UpdatePurchaseOrder(Guid id, [FromBody] UpdatePurchaseOrderRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new UpdatePurchaseOrderCommand(id, req.OrderDate, req.ExpectedDate, req.Notes), ct);
@@ -82,6 +84,7 @@ public class ProcurementController(IMediator mediator) : ControllerBase
 
     /// <summary>Durum geçişi (draft→ordered→receiving→closed; draft/ordered→cancelled; closed→receiving geri açma).</summary>
     [HttpPost("purchase-orders/{id:guid}/status")]
+    [RequirePermission(Permissions.ProcurementManage)]   // Y2
     public async Task<IActionResult> SetStatus(Guid id, [FromBody] SetPurchaseOrderStatusRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new SetPurchaseOrderStatusCommand(id, req.Status), ct);
@@ -91,6 +94,7 @@ public class ProcurementController(IMediator mediator) : ControllerBase
 
     /// <summary>Kalem ekle/güncelle — panoya yapıştırma da bu uca toplu yeni kalem gönderir (K4).</summary>
     [HttpPost("purchase-orders/{id:guid}/items")]
+    [RequirePermission(Permissions.ProcurementManage)]   // Y2
     public async Task<IActionResult> UpsertItems(Guid id, [FromBody] UpsertPurchaseOrderItemsRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new UpsertPurchaseOrderItemsCommand(id, req.Items ?? new()), ct);
@@ -100,6 +104,7 @@ public class ProcurementController(IMediator mediator) : ControllerBase
 
     /// <summary>Kalem siler (soft).</summary>
     [HttpDelete("purchase-orders/{id:guid}/items/{itemId:guid}")]
+    [RequirePermission(Permissions.ProcurementManage)]   // Y2
     public async Task<IActionResult> DeleteItem(Guid id, Guid itemId, CancellationToken ct)
     {
         var result = await mediator.Send(new DeletePurchaseOrderItemCommand(id, itemId), ct);
@@ -130,6 +135,7 @@ public class ProcurementController(IMediator mediator) : ControllerBase
 
     /// <summary>Parti açar (İ2: kalem bilgisi zorunsuz); kod MK-YYYYAAGG-#### otomatik.</summary>
     [HttpPost("receipts")]
+    [RequirePermission(Permissions.ProcurementManage)]   // Y2
     public async Task<IActionResult> CreateReceiptBatch([FromBody] CreateReceiptBatchRequest req, CancellationToken ct)
     {
         Guid? userId = Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -142,6 +148,7 @@ public class ProcurementController(IMediator mediator) : ControllerBase
 
     /// <summary>Başlık günceller (tarih, koli, irsaliye no, fatura bağı, not).</summary>
     [HttpPut("receipts/{id:guid}")]
+    [RequirePermission(Permissions.ProcurementManage)]   // Y2
     public async Task<IActionResult> UpdateReceiptBatch(Guid id, [FromBody] UpdateReceiptBatchRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new UpdateReceiptBatchCommand(
@@ -152,6 +159,7 @@ public class ProcurementController(IMediator mediator) : ControllerBase
 
     /// <summary>Durum: received→sorting→completed; completed→sorting geri açma.</summary>
     [HttpPost("receipts/{id:guid}/status")]
+    [RequirePermission(Permissions.ProcurementManage)]   // Y2
     public async Task<IActionResult> SetReceiptBatchStatus(Guid id, [FromBody] SetPurchaseOrderStatusRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new SetReceiptBatchStatusCommand(id, req.Status), ct);
@@ -161,6 +169,7 @@ public class ProcurementController(IMediator mediator) : ControllerBase
 
     /// <summary>Kaba evrak kalemi ekle/güncelle (opsiyonel — yalnız mutabakat girdisi).</summary>
     [HttpPost("receipts/{id:guid}/items")]
+    [RequirePermission(Permissions.ProcurementManage)]   // Y2
     public async Task<IActionResult> UpsertReceiptItems(Guid id, [FromBody] UpsertReceiptBatchItemsRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new UpsertReceiptBatchItemsCommand(id, req.Items ?? new()), ct);
@@ -170,6 +179,7 @@ public class ProcurementController(IMediator mediator) : ControllerBase
 
     /// <summary>Kaba kalemi siler (soft).</summary>
     [HttpDelete("receipts/{id:guid}/items/{itemId:guid}")]
+    [RequirePermission(Permissions.ProcurementManage)]   // Y2
     public async Task<IActionResult> DeleteReceiptItem(Guid id, Guid itemId, CancellationToken ct)
     {
         var result = await mediator.Send(new DeleteReceiptBatchItemCommand(id, itemId), ct);
@@ -179,6 +189,7 @@ public class ProcurementController(IMediator mediator) : ControllerBase
 
     /// <summary>Parti ↔ SA gevşek bağı: link | unlink (İ3; SA 'ordered' ise bilgi amaçlı 'receiving'e alınır).</summary>
     [HttpPost("receipts/{id:guid}/purchase-orders")]
+    [RequirePermission(Permissions.ProcurementManage)]   // Y2
     public async Task<IActionResult> SetReceiptPurchaseOrders(Guid id, [FromBody] SetReceiptPurchaseOrdersRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new SetReceiptBatchPurchaseOrdersCommand(id, req.PurchaseOrderIds ?? new(), req.Action), ct);
@@ -200,12 +211,21 @@ public class ProcurementController(IMediator mediator) : ControllerBase
     /// <summary>Sayım kayıtları (parti / partisiz / yerleştirme durumu filtreli).</summary>
     [HttpGet("sorting/entries")]
     [RequirePermission(Permissions.ProcurementSort)]
-    public async Task<IActionResult> GetSortingEntries(
+    public async Task<IActionResult> GetSortingEntries([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, 
         [FromQuery] Guid? batchId, [FromQuery] bool? unbatched, [FromQuery] string? putawayStatus,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
     {
         var result = await mediator.Send(new GetSortingEntriesQuery(batchId, unbatched, putawayStatus, page, pageSize), ct);
-        return Ok(new { success = true, data = result.Value });
+
+        // Y6 (K6): sayım/teslim ekranı DEPO personelinindir; birim maliyet yalnız "Maliyet Gör"
+        // yetkisi olana gösterilir (satın alma ekranları kendi modül yetkisiyle korunur).
+        var izin = await alanYetkileri.IzinlerAsync(ct);
+        var sayfa = result.Value!;
+        var maskeli = new ECSPros.Shared.Kernel.Common.PagedResult<
+            ECSPros.Procurement.Application.Queries.GetSortingEntries.SortingEntryRowDto>(
+            sayfa.Items.Select(x => x with { UnitCost = izin.Maliyetle(x.UnitCost) }).ToList(),
+            sayfa.TotalCount, sayfa.Page, sayfa.PageSize);
+        return Ok(new { success = true, data = maskeli });
     }
 
     /// <summary>

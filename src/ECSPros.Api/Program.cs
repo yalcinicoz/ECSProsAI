@@ -314,6 +314,24 @@ ECSPros.Shared.Infrastructure.Http.ResilientHttpClientExtensions.AddResilientHtt
 // (FirmPlatform.Settings, panel Kanallar ekranı) — SSR ödeme sayfası + checkout doğrulaması
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IPaymentOptionsProvider,
     ECSPros.Api.Services.Store.PaymentOptionsProvider>();
+// Y5 (2026-09-09): yetki olaylarının denetim kaydı + istek bağlamı (aktör/IP)
+builder.Services.AddScoped<ECSPros.Iam.Application.Yetkilendirme.IYetkiDenetimBaglami,
+    ECSPros.Api.Authorization.YetkiDenetimBaglami>();
+builder.Services.AddScoped<ECSPros.Iam.Application.Yetkilendirme.IYetkiDenetimi,
+    ECSPros.Iam.Application.Yetkilendirme.YetkiDenetimi>();
+// Y8 (2026-09-09, §J.1): yetkisiz erişim denemelerinin ÖRNEKLENMİŞ kaydı.
+// Örnekleyici SINGLETON'dur — pencere sayaçları istekler arasında yaşamalı, aksi hâlde
+// her istek "ilk deneme" sayılıp örnekleme hiç çalışmazdı.
+builder.Services.AddSingleton<ECSPros.Iam.Application.Yetkilendirme.YetkisizErisimOrnekleyici>();
+builder.Services.AddScoped<ECSPros.Iam.Application.Yetkilendirme.IYetkisizErisimKaydedici,
+    ECSPros.Iam.Application.Yetkilendirme.YetkisizErisimKaydedici>();
+// Y6 (2026-09-09, K6): hassas alan izinleri (maliyet/kâr/telefon/adres/notlar)
+builder.Services.AddScoped<ECSPros.Api.Authorization.IAlanYetkileri, ECSPros.Api.Authorization.AlanYetkileri>();
+// Y3 (2026-09-09, K2): istek bağlamında kullanıcının kanal kapsamı — liste/sayaç/export kısıtı
+builder.Services.AddScoped<ECSPros.Api.Authorization.IKanalKapsami, ECSPros.Api.Authorization.KanalKapsami>();
+// 2026-09-09: kanal bazlı kargo ücreti / ücretsiz kargo eşiği (panel Kanallar ekranı yazar)
+builder.Services.AddScoped<ECSPros.Shared.Contracts.IShippingOptionsProvider,
+    ECSPros.Api.Services.Store.ShippingOptionsProvider>();
 builder.Services.AddScoped<ECSPros.Api.Services.Store.StoreKartZenginlestirici>(); // B1 (2026-09-07)
 
 // ─── Infrastructure Modules ────────────────────────────────────────

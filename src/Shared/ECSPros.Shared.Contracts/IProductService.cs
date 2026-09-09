@@ -32,4 +32,6 @@ public record VariantDisplayInfo(
     Guid ProductId = default,       // kampanya çözümlemesi ürün bazlı (sepet GET)
     string? Sku = null,             // İE-3 (2026-08-22): takip item_id = varyant SKU (feed id ile aynı)
     Guid? ColorValueId = null,      // A2 (2026-09-07): 'renk' ekseni değer kimliği — mobil metin eşleme yapmasın
-    Guid? SizeValueId = null);      // A2: 'beden' ekseni değer kimliği
+    Guid? SizeValueId = null,       // A2: 'beden' ekseni değer kimliği
+    decimal BasePrice = 0m);        // M1 (2026-09-09): varyantın taban fiyatı — sepet, kanal fiyatı
+                                    // yoksa buna düşer; N+1 sorgu yerine TOPLU gelir

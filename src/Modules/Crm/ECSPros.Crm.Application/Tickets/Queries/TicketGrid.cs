@@ -33,6 +33,7 @@ public static class TicketGrid
         .Guid("memberId", t => t.MemberId)
         .Guid("orderId", t => t.OrderId)
         .Guid("firmPlatformId", t => t.FirmPlatformId)
+        .Kanal(t => t.FirmPlatformId)   // Y3: kanal kapsamı kolonu (K2)
         .Guid("createdBy", t => t.CreatedByUserId)
         .Sort("trackingNo", t => t.TrackingNo)
         .Sort("createdAt", t => t.CreatedAt)
@@ -92,7 +93,8 @@ public static class TicketGrid
         q = includeStatus ? Schema.ApplyFilters(q, grid, "readByMe") : Schema.ApplyFilters(q, grid, "status", "readByMe");
         // f.status verilmişse adlandırılmış durum kuralı (gizli olmayanlar) uygulanmaz — grid filtresi kazanır
         if (includeStatus && !(grid?.HasFilter("status") ?? false)) q = ApplyStatus(q, f.StatusCode);
-        return q;
+        // Y3 (K2): kanal kapsamı — erişilmeyen kanalın talebi hiçbir yüzeyde görünmez.
+        return Schema.ApplyKanalKapsami(q, grid?.KanalKisiti);
     }
 
     /// <summary>Eski sıralama sözlüğü ("created_asc" | "activity" | varsayılan) — grid sort verilmemişse.</summary>

@@ -9,7 +9,9 @@ namespace ECSPros.Storefront.Application.Queries.GetReviewsForModeration;
 public record GetReviewsForModerationQuery(
     string? Status = "pending",
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedResult<ModerationReviewDto>>>;
+    int PageSize = 20,
+    // Y3 (K2): kullanıcının görebileceği kanallar; null = kısıt yok, boş = hiçbir kayıt.
+    IReadOnlyCollection<Guid>? KanalKisiti = null) : IRequest<Result<PagedResult<ModerationReviewDto>>>;
 
 public record ModerationReviewDto(
     Guid Id,
@@ -33,6 +35,12 @@ public class GetReviewsForModerationQueryHandler(IStorefrontDbContext db)
         GetReviewsForModerationQuery request, CancellationToken ct)
     {
         var q = db.ProductReviews.AsNoTracking().AsQueryable();
+        // Y3 (K2): kanal kapsamı — kapsam dışı kanalın yorumu moderasyon listesinde görünmez.
+        if (request.KanalKisiti is not null)
+        {
+            var izinli = request.KanalKisiti.ToList();
+            q = q.Where(x => izinli.Contains(x.FirmPlatformId));
+        }
         if (!string.IsNullOrWhiteSpace(request.Status))
             q = q.Where(r => r.Status == request.Status);
 

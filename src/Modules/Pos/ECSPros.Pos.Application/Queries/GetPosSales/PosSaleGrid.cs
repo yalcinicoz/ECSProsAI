@@ -16,6 +16,7 @@ public static class PosSaleGrid
     public static readonly string[] Statuses = { "open", "completed", "cancelled", "refunded" };
 
     public static readonly GridSchema<PosSale> Schema = new GridSchema<PosSale>()
+        .Kanal(s => s.Register.FirmPlatformId)   // Y3 (K2): POS satışının kanalı KASADAN gelir
         .Text("saleNumber", s => s.SaleNumber)
         .Text("register", s => s.Session.Register.Name)
         .Text("notes", s => s.Notes)
@@ -56,7 +57,7 @@ public static class PosSaleGrid
     }
 
     public static IQueryable<PosSale> ApplyAll(IQueryable<PosSale> query, PosSaleListFilters f, GridRequest? grid)
-        => Schema.ApplyFilters(ApplyNamed(query, f), grid);
+        => Schema.ApplyKanalKapsami(Schema.ApplyFilters(ApplyNamed(query, f), grid), grid?.KanalKisiti);
 
     public static string StatusLabel(string s) => s switch
     { "open" => "Açık", "completed" => "Tamamlandı", "cancelled" => "İptal", "refunded" => "İade Edildi", _ => s };

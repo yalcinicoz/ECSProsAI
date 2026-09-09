@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Api.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +9,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/admin")]
 [Authorize]
+[RequirePermission(Permissions.SystemMigrationManage)]   // Y2: yüksek etkili sistem işlemleri
 public class AdminController : ControllerBase
 {
     private readonly IServiceProvider _sp;
@@ -23,6 +26,7 @@ public class AdminController : ControllerBase
     /// Sadece Development ortamında çalışır.
     /// </summary>
     [HttpPost("seed/reset-demo")]
+    [RequirePermission(Permissions.SystemMigrationManage)]   // Y2
     public async Task<IActionResult> ResetDemoData()
     {
         if (!_env.IsDevelopment())

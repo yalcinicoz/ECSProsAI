@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Storefront.Application.Commands.DeleteCardMessage;
 using ECSPros.Storefront.Application.Commands.UpsertCardMessage;
 using ECSPros.Storefront.Application.Queries.GetCardMessages;
@@ -14,6 +16,8 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/storefront/card-messages")]
 [Authorize]
+[RequirePermission(Permissions.StorefrontContentView)]   // Y2: sayfa yetkisi
+[KanalKapsamiKontrol(Permissions.StorefrontContentView)]   // Y3: kanal parametresi kapsam dışıysa 404
 public class CardMessagesController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
@@ -24,6 +28,7 @@ public class CardMessagesController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     public async Task<IActionResult> Create([FromBody] CardMessageRequest request, CancellationToken ct)
     {
         var result = await mediator.Send(request.ToCommand(null), ct);
@@ -33,6 +38,7 @@ public class CardMessagesController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     public async Task<IActionResult> Update(Guid id, [FromBody] CardMessageRequest request, CancellationToken ct)
     {
         var result = await mediator.Send(request.ToCommand(id), ct);
@@ -42,6 +48,7 @@ public class CardMessagesController(IMediator mediator) : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var result = await mediator.Send(new DeleteCardMessageCommand(id), ct);

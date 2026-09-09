@@ -7,9 +7,15 @@ import { QuestionAlerts } from './QuestionAlerts'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
 import { GridScrollProvider } from '@/components/grid/GridScrollRegistry'
+import { NAV_SECTIONS, permittedSections } from './sidebarNavigation'
+import { useAuthStore } from '@/store/auth'
+import { YetkisizKarsilamaPage } from '@/pages/YetkisizKarsilamaPage'
 
 export function MainLayout() {
   const { sidebarCollapsed, sidebarMobileOpen, setSidebarMobileOpen } = useUIStore()
+  // §O.12: hiçbir ekrana yetkisi olmayan kullanıcıya boş panel yerine açıklayıcı karşılama.
+  const hasPermission = useAuthStore((s) => s.hasPermission)
+  const hicYetkiYok = permittedSections(NAV_SECTIONS, hasPermission).length === 0
 
   return (
     <GridScrollProvider>
@@ -54,7 +60,7 @@ export function MainLayout() {
       >
         <Header onMobileMenuOpen={() => setSidebarMobileOpen(true)} />
         <main className="flex-1 flex flex-col overflow-hidden">
-          <Outlet />
+          {hicYetkiYok ? <YetkisizKarsilamaPage /> : <Outlet />}
         </main>
       </div>
 

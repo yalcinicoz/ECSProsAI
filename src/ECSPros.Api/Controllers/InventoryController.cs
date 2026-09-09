@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Inventory.Application.Commands.AddTransferItem;
 using ECSPros.Inventory.Application.Commands.AdjustStock;
 using ECSPros.Inventory.Application.Commands.BulkDeleteLocations;
@@ -24,6 +26,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/inventory")]
 [Authorize]
+[RequirePermission(Permissions.InventoryView)]   // Y2: sayfa yetkisi
 public class InventoryController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -45,6 +48,7 @@ public class InventoryController : ControllerBase
 
     /// <summary>Yeni depo oluşturur.</summary>
     [HttpPost("warehouses")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> CreateWarehouse([FromBody] CreateWarehouseRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreateWarehouseCommand(
@@ -64,6 +68,7 @@ public class InventoryController : ControllerBase
 
     /// <summary>Depo günceller.</summary>
     [HttpPut("warehouses/{id:guid}")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> UpdateWarehouse(Guid id, [FromBody] UpdateWarehouseRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -98,6 +103,7 @@ public class InventoryController : ControllerBase
 
     /// <summary>Depoya kısım ekler.</summary>
     [HttpPost("warehouses/{id:guid}/sections")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> CreateWarehouseSection(Guid id, [FromBody] CreateSectionRequest req, CancellationToken ct)
     {
         var r = await _mediator.Send(new ECSPros.Inventory.Application.Commands.ManageWarehouseSections.CreateWarehouseSectionCommand(
@@ -108,6 +114,7 @@ public class InventoryController : ControllerBase
 
     /// <summary>Kısım günceller (satışa açıklık dahil).</summary>
     [HttpPut("sections/{id:guid}")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> UpdateWarehouseSection(Guid id, [FromBody] UpdateSectionRequest req, CancellationToken ct)
     {
         var r = await _mediator.Send(new ECSPros.Inventory.Application.Commands.ManageWarehouseSections.UpdateWarehouseSectionCommand(
@@ -118,6 +125,7 @@ public class InventoryController : ControllerBase
 
     /// <summary>Kısma birim/raf ekler.</summary>
     [HttpPost("sections/{id:guid}/bins")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> CreateWarehouseBin(Guid id, [FromBody] CreateBinRequest req, CancellationToken ct)
     {
         var r = await _mediator.Send(new ECSPros.Inventory.Application.Commands.ManageWarehouseSections.CreateWarehouseBinCommand(
@@ -128,6 +136,7 @@ public class InventoryController : ControllerBase
 
     /// <summary>Birim/raf günceller.</summary>
     [HttpPut("bins/{id:guid}")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> UpdateWarehouseBin(Guid id, [FromBody] UpdateBinRequest req, CancellationToken ct)
     {
         var r = await _mediator.Send(new ECSPros.Inventory.Application.Commands.ManageWarehouseSections.UpdateWarehouseBinCommand(
@@ -168,7 +177,7 @@ public class InventoryController : ControllerBase
         CancellationToken ct = default)
     {
         // DataGrid F4 (2026-09-08): sort/dir + f.* (StockGrid.Schema beyaz listesi); page/pageSize merkezi clamp
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 30);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null /* stok kanaldan bağımsızdır */, defaultPageSize: 30);
         var result = await _mediator.Send(new ECSPros.Api.Handlers.GetStocksAdminQuery(
             search, warehouseId, availableOnly, grid.Page, grid.PageSize, variantId, sectionId, binId, grid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
@@ -179,7 +188,7 @@ public class InventoryController : ControllerBase
     /// availableOnly, variantId, sectionId, binId) + kolon listesi. Ürün/depo adları satır satır zenginleştirilir (parti 500).</summary>
     [HttpPost("stocks/admin-list/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportStocksAdmin([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+    public async Task<IActionResult> ExportStocksAdmin([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<InventoryController> logger, CancellationToken ct)
     {
@@ -187,7 +196,7 @@ public class InventoryController : ControllerBase
         var filters = new ECSPros.Api.Grid.StockListFilters(body.Search, K(body, "warehouseId"),
             ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "availableOnly") ?? false, K(body, "variantId"), K(body, "sectionId"), K(body, "binId"));
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "stocks", "stok", "Stok",
-            ECSPros.Api.Grid.StockExportColumns.All, max => _mediator.Send(new ECSPros.Api.Grid.ExportStocksQuery(filters, body.ToGridRequest(), max), ct), ct);
+            ECSPros.Api.Grid.StockExportColumns.All, max => _mediator.Send(new ECSPros.Api.Grid.ExportStocksQuery(filters, body.ToGridRequest(null /* stok kanaldan bağımsızdır */), max), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Arama sonucundan türetilen ikincil filtre seçenekleri: bulunan ürünün
@@ -203,13 +212,14 @@ public class InventoryController : ControllerBase
         CancellationToken ct = default)
     {
         var result = await _mediator.Send(new ECSPros.Api.Handlers.GetStocksAdminFacetsQuery(
-            search, warehouseId, availableOnly, variantId, sectionId, binId, ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query)), ct);
+            search, warehouseId, availableOnly, variantId, sectionId, binId, ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null /* stok kanaldan bağımsızdır */)), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
 
     /// <summary>Stok hareketi (giriş/çıkış/düzeltme) kaydeder.</summary>
     [HttpPost("stocks/adjust")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> AdjustStock([FromBody] AdjustStockRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -243,6 +253,7 @@ public class InventoryController : ControllerBase
 
     /// <summary>Depo lokasyonu oluşturur.</summary>
     [HttpPost("warehouses/{id:guid}/locations")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> CreateWarehouseLocation(
         Guid id, [FromBody] CreateWarehouseLocationRequest request, CancellationToken ct)
     {
@@ -258,6 +269,7 @@ public class InventoryController : ControllerBase
 
     /// <summary>Kod aralığındaki lokasyonları toplu siler (dolu lokasyon varsa engeller).</summary>
     [HttpDelete("warehouses/{id:guid}/locations/bulk")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> BulkDeleteLocations(
         Guid id, [FromBody] BulkDeleteLocationsRequest request, CancellationToken ct)
     {
@@ -272,6 +284,7 @@ public class InventoryController : ControllerBase
 
     /// <summary>Depo lokasyonunu günceller.</summary>
     [HttpPut("locations/{id:guid}")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> UpdateWarehouseLocation(
         Guid id, [FromBody] UpdateWarehouseLocationRequest request, CancellationToken ct)
     {
@@ -330,6 +343,7 @@ public class InventoryController : ControllerBase
 
     /// <summary>Yeni transfer talebi oluşturur.</summary>
     [HttpPost("transfers")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> CreateTransfer([FromBody] CreateTransferRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -350,6 +364,7 @@ public class InventoryController : ControllerBase
 
     /// <summary>Transfer talebine kalem ekler (sadece draft durumunda).</summary>
     [HttpPost("transfers/{id:guid}/items")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> AddTransferItem(Guid id, [FromBody] AddTransferItemRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new AddTransferItemCommand(
@@ -363,6 +378,7 @@ public class InventoryController : ControllerBase
 
     /// <summary>Transfer durumunu günceller (draft→pending→picking→picked→in_transit→delivered→completed veya cancelled).</summary>
     [HttpPatch("transfers/{id:guid}/status")]
+    [RequirePermission(Permissions.InventoryManage)]   // Y2
     public async Task<IActionResult> UpdateTransferStatus(
         Guid id, [FromBody] UpdateTransferStatusRequest request, CancellationToken ct)
     {

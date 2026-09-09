@@ -15,14 +15,21 @@ public static class GridExportEndpoint
     public static async Task<IActionResult> RunAsync<TRow>(
         ControllerBase controller, GridExportRequest body, IConfiguration config, IIamDbContext iam, ILogger logger,
         string gridId, string filePrefix, string sheetName, IReadOnlyList<GridExportColumn<TRow>> allColumns,
-        Func<int, Task<Result<GridExportSource<TRow>>>> source, CancellationToken ct)
+        Func<int, Task<Result<GridExportSource<TRow>>>> source, CancellationToken ct,
+        // Y3 (K2): export listeyle AYNI kanal kapsamından geçer. Parametre ZORUNLUDUR —
+        // kanaldan bağımsız listelerde bilinçli olarak null geçilir.
+        IReadOnlyCollection<Guid>? kanalKisiti = null,
+        // Y6 (K6): hassas alan izinleri — yetkisi olmayan kullanıcının export'unda o kolon oluşmaz.
+        ECSPros.Shared.Kernel.Authorization.AlanIzinleri? alanIzinleri = null)
     {
-        var grid = body.ToGridRequest();
+        var grid = body.ToGridRequest(kanalKisiti);
         var sw = Stopwatch.StartNew();
         var max = config.GetValue("Grid:ExportMaxRows", 100_000);
         var src = await source(max);
         if (src.IsFailure) return controller.BadRequest(new { success = false, error = src.Error });
-        var cols = GridExportWriter.Select(allColumns, body.Columns);
+        var izin = alanIzinleri ?? ECSPros.Shared.Kernel.Authorization.AlanIzinleri.Tam;
+        var izinliKolonlar = allColumns.Where(c => izin.KolonGorunur(c.AlanYetkisi)).ToList();
+        var cols = GridExportWriter.Select(izinliKolonlar, body.Columns);
         var file = await GridExportWriter.WriteToTempAsync(src.Value!.Rows.AsEnumerable(), cols, sheetName, ct);
         await GridExportWriter.AuditAsync(iam, controller.HttpContext, gridId, src.Value.Count,
             new { grid.Search, grid.Sort, grid.Dir, filters = grid.Filters.Select(f => $"{f.Field} {f.Op} {f.Value}").ToList(), named = body.Named, columns = cols.Select(c => c.Key).ToList() },

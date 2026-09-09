@@ -25,8 +25,49 @@ public static class CampaignEngine
             // panel şeması vardı, motoru yoktu; bu tipte kampanyalar sessizce çalışmıyordu.
             "discount"            => ApplyDiscount(campaign, name, cartItems, applicableVariantIds, settings),
             "bundle"              => ApplyBundle(campaign, name, cartItems, applicableVariantIds, settings),
+            // free_shipping ürün/sepet indirimi üretmez — kargo bedelini etkiler (KargoUcreti).
             _                     => null
         };
+    }
+
+    // ─── free_shipping (Kargo Kampanyası) ────────────────────────────
+    // Settings: { "thresholdType": "none|cartAmount", "thresholdValue": 750,
+    //             "paymentMethods": "all|credit_card",
+    //             "coverage": "full|percent|amount", "coverageValue": 50 }
+    // 2026-09-09: definition şeması ve HandlerClass adı vardı ama motorda karşılığı YOKTU —
+    // panelde tanımlanan kargo kampanyaları sessizce çalışmıyordu (discount/bundle ile aynı hata).
+    /// <summary>Kampanya sonrası kargo bedeli; kampanya uygulanmıyorsa null.</summary>
+    public static decimal? KargoUcreti(
+        Campaign campaign, decimal odenecekUrunTutari, string? odemeYontemi, decimal kanalKargoUcreti)
+    {
+        var settings = campaign.Settings;
+
+        var esikTipi = GetString(settings, "thresholdType") ?? "none";
+        if (esikTipi == "cartAmount")
+        {
+            var esik = GetDecimal(settings, "thresholdValue");
+            if (esik > 0 && odenecekUrunTutari < esik) return null;
+        }
+
+        // Ödeme yöntemi kısıtı: "all" (varsayılan) her yöntemde geçerli. Kısıtlı kampanya,
+        // yöntem henüz seçilmemişken (sepet adımı) UYGULANMAZ — sonradan tahsil sürprizi olmasın.
+        var yontemKisiti = GetString(settings, "paymentMethods") ?? "all";
+        if (yontemKisiti is not ("all" or ""))
+        {
+            if (string.IsNullOrWhiteSpace(odemeYontemi)) return null;
+            var kartMi = odemeYontemi is "kart" or "kapida-kart" or "credit_card";
+            if (yontemKisiti == "credit_card" && !kartMi) return null;
+        }
+
+        var kapsam = GetString(settings, "coverage") ?? "full";
+        var deger = GetDecimal(settings, "coverageValue");
+        var ucret = kapsam switch
+        {
+            "percent" => deger > 0 ? Math.Round(kanalKargoUcreti * (1 - deger / 100m), 2) : kanalKargoUcreti,
+            "amount"  => deger > 0 ? kanalKargoUcreti - deger : kanalKargoUcreti,
+            _         => 0m,   // full
+        };
+        return Math.Clamp(ucret, 0m, kanalKargoUcreti);
     }
 
     // ─── percentage_discount ─────────────────────────────────────────

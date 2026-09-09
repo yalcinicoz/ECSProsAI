@@ -15,6 +15,12 @@ public class User : BaseEntity
     public string Department { get; set; } = string.Empty;
     public string? JobTitle { get; set; }
     public bool IsActive { get; set; } = true;
+
+    /// <summary>SÜPER ADMİN (2026-09-09, karar K5): permission değil, kullanıcı üzerinde ayrı
+    /// sistem özelliği. Tüm permission/kanal/alan kontrollerini bypass eder — ama işlemleri
+    /// yine audit edilir. Kurallar (tasarım §K): yalnız süper admin atar/kaldırır, kullanıcı
+    /// KENDİ bayrağını kaldıramaz, sistemde en az bir süper admin kalmalıdır.</summary>
+    public bool IsSuperAdmin { get; set; } = false;
     public DateTime? LastLoginAt { get; set; }
     public DateTime? PasswordChangedAt { get; set; }
     public bool MustChangePassword { get; set; } = false;

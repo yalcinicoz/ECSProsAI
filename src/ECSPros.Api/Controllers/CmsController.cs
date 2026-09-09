@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Cms.Application.Commands.CopyPageContent;
 using ECSPros.Cms.Application.Commands.CreatePage;
 using ECSPros.Cms.Application.Commands.ManageSectionItems;
@@ -14,6 +16,8 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/cms")]
 [Authorize]
+[RequirePermission(Permissions.CmsView)]   // Y2: sayfa yetkisi
+[KanalKapsamiKontrol(Permissions.CmsView)]   // Y3: kanal parametresi kapsam dışıysa 404
 public class CmsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -47,6 +51,7 @@ public class CmsController : ControllerBase
 
     /// <summary>Yeni CMS sayfası oluşturur.</summary>
     [HttpPost("pages")]
+    [RequirePermission(Permissions.CmsManage)]   // Y2
     public async Task<IActionResult> CreatePage([FromBody] CreatePageRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreatePageCommand(
@@ -69,6 +74,7 @@ public class CmsController : ControllerBase
 
     /// <summary>CMS sayfasını günceller.</summary>
     [HttpPut("pages/{id:guid}")]
+    [RequirePermission(Permissions.CmsManage)]   // Y2
     public async Task<IActionResult> UpdatePage(Guid id, [FromBody] UpdatePageRequest request, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("sub")?.Value;
@@ -100,6 +106,7 @@ public class CmsController : ControllerBase
 
     /// <summary>rich_text bölümünün HTML içeriğini günceller (P2b).</summary>
     [HttpPut("sections/{id:guid}/content")]
+    [RequirePermission(Permissions.CmsManage)]   // Y2
     public async Task<IActionResult> UpdateSectionContent(Guid id, [FromBody] UpdateSectionContentRequest request, CancellationToken ct)
     {
         if (CurrentUserId == Guid.Empty) return Unauthorized();
@@ -110,6 +117,7 @@ public class CmsController : ControllerBase
 
     /// <summary>Bölüme SSS öğesi ekler (soru=title, cevap=description) (P2b).</summary>
     [HttpPost("sections/{id:guid}/items")]
+    [RequirePermission(Permissions.CmsManage)]   // Y2
     public async Task<IActionResult> CreateSectionItem(Guid id, [FromBody] SectionItemRequest request, CancellationToken ct)
     {
         if (CurrentUserId == Guid.Empty) return Unauthorized();
@@ -121,6 +129,7 @@ public class CmsController : ControllerBase
 
     /// <summary>SSS öğesini günceller (P2b).</summary>
     [HttpPut("section-items/{id:guid}")]
+    [RequirePermission(Permissions.CmsManage)]   // Y2
     public async Task<IActionResult> UpdateSectionItem(Guid id, [FromBody] SectionItemRequest request, CancellationToken ct)
     {
         if (CurrentUserId == Guid.Empty) return Unauthorized();
@@ -132,6 +141,7 @@ public class CmsController : ControllerBase
 
     /// <summary>SSS öğesini siler (soft delete) (P2b).</summary>
     [HttpDelete("section-items/{id:guid}")]
+    [RequirePermission(Permissions.CmsManage)]   // Y2
     public async Task<IActionResult> DeleteSectionItem(Guid id, CancellationToken ct)
     {
         if (CurrentUserId == Guid.Empty) return Unauthorized();
@@ -142,6 +152,7 @@ public class CmsController : ControllerBase
 
     /// <summary>Sayfa içeriğini aynı Code'lu diğer platform sayfalarına kopyalar (P2b, K20).</summary>
     [HttpPost("pages/{id:guid}/copy-content")]
+    [RequirePermission(Permissions.CmsManage)]   // Y2
     public async Task<IActionResult> CopyPageContent(Guid id, [FromBody] CopyPageContentRequest request, CancellationToken ct)
     {
         if (CurrentUserId == Guid.Empty) return Unauthorized();

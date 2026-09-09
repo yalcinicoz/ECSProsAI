@@ -28,6 +28,10 @@ public class Return : BaseEntity
     /// <summary>E8: üyenin talep sırasında yüklediği görsellerin URL'leri (/media/returns/...).</summary>
     public List<string> ImageUrls { get; set; } = new();
 
+    /// <summary>Y3 (2026-09-09): iadenin KANALI siparişten gelir (iade kaydında kanal kolonu yok).
+    /// Navigasyon yalnız kapsam filtresi ve raporlama için; FK (OrderId) zaten vardı, migration gerekmez.</summary>
+    public Order Order { get; set; } = null!;
+
     public ICollection<ReturnItem> Items { get; set; } = new List<ReturnItem>();
     public ICollection<ReturnRefund> Refunds { get; set; } = new List<ReturnRefund>();
 }

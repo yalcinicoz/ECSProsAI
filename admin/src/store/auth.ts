@@ -9,6 +9,8 @@ export interface AuthUser {
   fullName: string
   permissions: string[]
   mustChangePassword: boolean
+  /** K5: süper admin sistem bayrağı — tüm yetki kontrollerini geçer (permission değildir). */
+  isSuperAdmin?: boolean
 }
 
 interface AuthState {
@@ -46,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
             fullName: me.fullName,
             permissions: me.permissions ?? [],
             mustChangePassword: me.mustChangePassword ?? false,
+            isSuperAdmin: me.isSuperAdmin === true,
           },
         })
       },
@@ -72,7 +75,10 @@ export const useAuthStore = create<AuthState>()(
       hasPermission: (permission) => {
         const { user } = get()
         if (!user) return false
-        return user.permissions.includes(permission) || user.permissions.includes('*')
+        // K5 (2026-09-09): süper admin permission değil, kullanıcı üzerinde sistem bayrağıdır;
+        // tüm kontrolleri geçer. ("*" permission'ı hiç var olmadı — eski ölü kontrol kaldırıldı.)
+        if (user.isSuperAdmin) return true
+        return user.permissions.includes(permission)
       },
     }),
     {

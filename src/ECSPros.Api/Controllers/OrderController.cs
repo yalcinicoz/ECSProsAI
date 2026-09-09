@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Order.Application.Commands.AddOrderPayment;
 using ECSPros.Order.Application.Commands.ApproveReturn;
 using ECSPros.Order.Application.Commands.CancelInvoice;
@@ -55,6 +57,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/orders")]
 [Authorize]
+[RequirePermission(Permissions.OrdersView)]   // Y2: sayfa yetkisi
 public class OrderController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -68,7 +71,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Siparişleri sayfalı listeler. `statuses` virgüllü çoklu durum; `to` exclusive üst sınır.</summary>
     [HttpGet]
-    public async Task<IActionResult> GetOrders(
+    public async Task<IActionResult> GetOrders([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, 
         [FromQuery] string? status, [FromQuery] string? statuses, [FromQuery] Guid? memberId,
         [FromQuery] string? search, [FromQuery] DateTime? from, [FromQuery] DateTime? to,
         [FromQuery] Guid? firmPlatformId = null,
@@ -78,7 +81,7 @@ public class OrderController : ControllerBase
     {
         var statusList = SplitCsv(statuses);
         // DataGrid F0 (2026-09-08): sort/dir + f.* filtreleri (OrderGrid.Schema beyaz listesi); page/pageSize merkezi clamp (1..250).
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, await kanalKapsami.KanallarAsync(Permissions.OrdersView, ct), defaultPageSize: 20);
         var result = await _mediator.Send(new GetOrdersQuery(
             status, memberId, search, grid.Page, grid.PageSize,
             statusList, AsUtc(from), AsUtc(to), firmPlatformId, paymentMethod, paymentCollected, grid), ct);
@@ -88,13 +91,13 @@ public class OrderController : ControllerBase
     /// <summary>Durum bazlı sipariş sayıları — yalnız aktif durumlar sayılır (kapalı durumlar milyonlara ulaşır).
     /// Listeyle aynı filtre parametrelerini (search, from/to, paymentMethod, paymentCollected, f.*) alır; durum filtresi hariç uygulanır.</summary>
     [HttpGet("status-counts")]
-    public async Task<IActionResult> GetOrderStatusCounts(
+    public async Task<IActionResult> GetOrderStatusCounts([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, 
         [FromQuery] string? statuses, [FromQuery] string? search = null, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null,
         [FromQuery] Guid? memberId = null, [FromQuery] Guid? firmPlatformId = null,
         [FromQuery] string? paymentMethod = null, [FromQuery] bool? paymentCollected = null, CancellationToken ct = default)
     {
         var statusList = SplitCsv(statuses) ?? new List<string> { "pending", "confirmed", "processing", "shipped" };
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, await kanalKapsami.KanallarAsync(Permissions.OrdersView, ct));
         var filters = new OrderListFilters(null, null, memberId, firmPlatformId, AsUtc(from), AsUtc(to), paymentMethod, paymentCollected, search);
         var result = await _mediator.Send(new GetOrderStatusCountsQuery(statusList, filters, grid), ct);
         return Ok(new { success = true, data = result.Value });
@@ -107,11 +110,13 @@ public class OrderController : ControllerBase
     /// </summary>
     [HttpPost("export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportOrders([FromBody] GridExportRequest body,
+    public async Task<IActionResult> ExportOrders([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<OrderController> logger, CancellationToken ct)
     {
-        var grid = body.ToGridRequest();
+        var kanalKisiti = await kanalKapsami.KanallarAsync(Permissions.OrdersView, ct);   // Y3: export listeyle aynı kapsamdan geçer
+        var grid = body.ToGridRequest(kanalKisiti);
         DateTime? Tarih(string key) => DateTime.TryParse(body.NamedValue(key), System.Globalization.CultureInfo.InvariantCulture,
             System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var d) ? DateTime.SpecifyKind(d, DateTimeKind.Utc) : null;
         Guid? Kimlik(string key) => Guid.TryParse(body.NamedValue(key), out var g) ? g : null;
@@ -122,7 +127,12 @@ public class OrderController : ControllerBase
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var src = await _mediator.Send(new ExportOrdersQuery(filters, grid, config.GetValue("Grid:ExportMaxRows", 100_000)), ct);
         if (src.IsFailure) return BadRequest(new { success = false, error = src.Error });
-        var cols = ECSPros.Api.Grid.GridExportWriter.Select(ECSPros.Api.Grid.OrderExportColumns.All, body.Columns);
+        // Y6 (K6): hassas kolonlar (telefon/adres) yetkisi olmayanın dosyasında HİÇ oluşmaz.
+        // DİKKAT: bu uç merkezî GridExportEndpoint'i kullanmıyor; kolon süzmesi burada elle yapılır.
+        var alanIzin = await alanYetkileri.IzinlerAsync(ct);
+        var izinliKolonlar = ECSPros.Api.Grid.OrderExportColumns.All
+            .Where(c => alanIzin.KolonGorunur(c.AlanYetkisi)).ToList();
+        var cols = ECSPros.Api.Grid.GridExportWriter.Select(izinliKolonlar, body.Columns);
         var file = await ECSPros.Api.Grid.GridExportWriter.WriteToTempAsync(src.Value!.Rows.AsEnumerable(), cols, "Siparişler", ct);
         await ECSPros.Api.Grid.GridExportWriter.AuditAsync(iam, HttpContext, "orders", src.Value.Count,
             new { grid.Search, grid.Sort, grid.Dir, filters = grid.Filters.Select(f => $"{f.Field} {f.Op} {f.Value}").ToList(), named = body.Named, columns = cols.Select(c => c.Key).ToList() },
@@ -139,15 +149,33 @@ public class OrderController : ControllerBase
 
     /// <summary>Sipariş detayını döner.</summary>
     [HttpGet("{orderId:guid}")]
-    public async Task<IActionResult> GetOrderDetail(Guid orderId, CancellationToken ct)
+    public async Task<IActionResult> GetOrderDetail(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri,
+        Guid orderId, CancellationToken ct)
     {
         var result = await _mediator.Send(new GetOrderDetailQuery(orderId), ct);
         if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
+
+        // Y3 (K2 + tasarım §C.2): kapsam dışı kaydın VARLIĞI bile sızmamalı → 403 değil 404.
+        var kanallar = await kanalKapsami.KanallarAsync(Permissions.OrdersView, ct);
+        if (kanallar is not null && !kanallar.Contains(result.Value!.FirmPlatformId))
+            return NotFound(new { success = false, error = "Sipariş bulunamadı." });
+
+        // Y6 (K6): hassas alanlar — müşteri telefonu/adresi ve personel notu yetkiye tabidir.
+        var izin = await alanYetkileri.IzinlerAsync(ct);
+        var siparis = result.Value! with
+        {
+            ShippingRecipientPhone = izin.Telefonla(result.Value.ShippingRecipientPhone) ?? "",
+            ShippingAddressLine = izin.Adresle(result.Value.ShippingAddressLine) ?? "",
+            InternalNotes = izin.Notla(result.Value.InternalNotes),
+        };
+        return Ok(new { success = true, data = siparis });
     }
 
     /// <summary>Yeni sipariş oluşturur.</summary>
     [HttpPost]
+    [RequirePermission(Permissions.OrdersManage)]   // Y2
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request, CancellationToken ct)
     {
         var items = request.Items.Select(i => new OrderItemDto(i.VariantId, i.Quantity, i.UnitPrice, i.UnitType)).ToList();
@@ -164,6 +192,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Siparişi onaylar ve stok rezervasyonu oluşturur.</summary>
     [HttpPost("{orderId:guid}/confirm")]
+    [RequirePermission(Permissions.OrdersManage)]   // Y2
     public async Task<IActionResult> ConfirmOrder(Guid orderId, [FromBody] ConfirmOrderRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -176,6 +205,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Siparişi iptal eder ve stok rezervasyonlarını serbest bırakır.</summary>
     [HttpPost("{orderId:guid}/cancel")]
+    [RequirePermission(Permissions.OrdersManage)]   // Y2
     public async Task<IActionResult> CancelOrder(Guid orderId, [FromBody] CancelOrderRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -188,6 +218,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Siparişi işleme alır (picking planı atanabilir).</summary>
     [HttpPost("{orderId:guid}/start-processing")]
+    [RequirePermission(Permissions.OrdersManage)]   // Y2
     public async Task<IActionResult> StartProcessing(Guid orderId, [FromBody] StartProcessingRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -200,6 +231,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Siparişi kargoya verir, Shipment kaydı oluşturur, stok rezervasyonunu tüketir.</summary>
     [HttpPost("{orderId:guid}/ship")]
+    [RequirePermission(Permissions.OrdersManage)]   // Y2
     public async Task<IActionResult> MarkShipped(Guid orderId, [FromBody] MarkShippedRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -212,6 +244,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Siparişi teslim edildi olarak işaretler.</summary>
     [HttpPost("{orderId:guid}/deliver")]
+    [RequirePermission(Permissions.OrdersManage)]   // Y2
     public async Task<IActionResult> MarkDelivered(Guid orderId, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -226,12 +259,12 @@ public class OrderController : ControllerBase
 
     /// <summary>İade taleplerini listeler.</summary>
     [HttpGet("returns")]
-    public async Task<IActionResult> GetReturns(
+    public async Task<IActionResult> GetReturns([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, 
         [FromQuery] Guid? orderId, [FromQuery] Guid? memberId, [FromQuery] string? status, [FromQuery] string? search = null,
         CancellationToken ct = default)
     {
         // DataGrid F4: page/pageSize/search/sort/dir/f.* (ReturnGrid.Schema beyaz listesi)
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, await kanalKapsami.KanallarAsync(Permissions.OrdersReturnsView, ct), defaultPageSize: 20);
         var result = await _mediator.Send(new GetReturnsQuery(orderId, memberId, status, grid.Page, grid.PageSize, search, grid), ct);
         return Ok(new { success = true, data = result.Value });
     }
@@ -239,14 +272,15 @@ public class OrderController : ControllerBase
     /// <summary>İadeleri Excel'e aktarır (DataGrid F4): gövde search/sort/dir/filters/columns + named: status, orderId, memberId.</summary>
     [HttpPost("returns/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportReturns([FromBody] GridExportRequest body,
+    public async Task<IActionResult> ExportReturns([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, [FromBody] GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<OrderController> logger, CancellationToken ct)
     {
+        var kanalKisiti = await kanalKapsami.KanallarAsync(Permissions.OrdersReturnsView, ct);   // Y3: export listeyle aynı kapsamdan
         var filters = new ReturnListFilters(ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "orderId"),
             ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "memberId"), body.NamedValue("status"), body.Search);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "returns", "iadeler", "İadeler",
-            ECSPros.Api.Grid.ReturnExportColumns.All, max => _mediator.Send(new ExportReturnsQuery(filters, body.ToGridRequest(), max), ct), ct);
+            ECSPros.Api.Grid.ReturnExportColumns.All, max => _mediator.Send(new ExportReturnsQuery(filters, body.ToGridRequest(kanalKisiti), max), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>İade talebi detayını döner.</summary>
@@ -260,6 +294,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Müşteri iade talebi oluşturur.</summary>
     [HttpPost("{orderId:guid}/returns")]
+    [RequirePermission(Permissions.OrdersReturnsManage)]   // Y2
     public async Task<IActionResult> CreateReturn(Guid orderId, [FromBody] CreateReturnRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreateReturnCommand(
@@ -272,6 +307,7 @@ public class OrderController : ControllerBase
 
     /// <summary>İade talebini onaylar.</summary>
     [HttpPost("returns/{returnId:guid}/approve")]
+    [RequirePermission(Permissions.OrdersReturnsManage)]   // Y2
     public async Task<IActionResult> ApproveReturn(Guid returnId, [FromServices] ECSPros.Api.Services.Push.PushEtkilesim push, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -285,6 +321,7 @@ public class OrderController : ControllerBase
 
     /// <summary>İadeyi reddeder (requested → rejected).</summary>
     [HttpPatch("returns/{returnId:guid}/reject")]
+    [RequirePermission(Permissions.OrdersReturnsManage)]   // Y2
     public async Task<IActionResult> RejectReturn(Guid returnId, [FromBody] RejectReturnRequest request, [FromServices] ECSPros.Api.Services.Push.PushEtkilesim push, CancellationToken ct)
     {
         var result = await _mediator.Send(new RejectReturnCommand(returnId, request.Reason), ct);
@@ -295,6 +332,7 @@ public class OrderController : ControllerBase
 
     /// <summary>İade kargosu depoda teslim alındı — stok otomatik geri yüklenir.</summary>
     [HttpPost("returns/{returnId:guid}/receive")]
+    [RequirePermission(Permissions.OrdersReturnsManage)]   // Y2
     public async Task<IActionResult> ReceiveReturn(Guid returnId, [FromBody] ReceiveReturnRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -307,6 +345,7 @@ public class OrderController : ControllerBase
 
     /// <summary>İade bedelini öder — iade tamamlanır.</summary>
     [HttpPost("returns/{returnId:guid}/refund")]
+    [RequirePermission(Permissions.OrdersReturnsManage)]   // Y2
     public async Task<IActionResult> CompleteRefund(Guid returnId, [FromBody] CompleteRefundRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -321,12 +360,12 @@ public class OrderController : ControllerBase
 
     /// <summary>Fatura listesi.</summary>
     [HttpGet("invoices")]
-    public async Task<IActionResult> GetInvoices(
+    public async Task<IActionResult> GetInvoices([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, 
         [FromQuery] Guid? orderId, [FromQuery] string? status, [FromQuery] string? search = null,
         CancellationToken ct = default)
     {
         // DataGrid F4: page/pageSize/search/sort/dir/f.* (InvoiceGrid.Schema beyaz listesi)
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, await kanalKapsami.KanallarAsync(Permissions.OrdersInvoicesView, ct), defaultPageSize: 20);
         var result = await _mediator.Send(new GetInvoicesQuery(orderId, status, grid.Page, grid.PageSize, search, grid), ct);
         return Ok(new { success = true, data = result.Value });
     }
@@ -334,17 +373,19 @@ public class OrderController : ControllerBase
     /// <summary>Faturaları Excel'e aktarır (DataGrid F4): gövde search/sort/dir/filters/columns + named: status, orderId.</summary>
     [HttpPost("invoices/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportInvoices([FromBody] GridExportRequest body,
+    public async Task<IActionResult> ExportInvoices([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, [FromBody] GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<OrderController> logger, CancellationToken ct)
     {
+        var kanalKisiti = await kanalKapsami.KanallarAsync(Permissions.OrdersInvoicesView, ct);   // Y3: export listeyle aynı kapsamdan
         var filters = new InvoiceListFilters(ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "orderId"), body.NamedValue("status"), body.Search);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "invoices", "faturalar", "Faturalar",
-            ECSPros.Api.Grid.InvoiceExportColumns.All, max => _mediator.Send(new ExportInvoicesQuery(filters, body.ToGridRequest(), max), ct), ct);
+            ECSPros.Api.Grid.InvoiceExportColumns.All, max => _mediator.Send(new ExportInvoicesQuery(filters, body.ToGridRequest(kanalKisiti), max), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Sipariş için fatura oluşturur.</summary>
     [HttpPost("{orderId:guid}/invoices")]
+    [RequirePermission(Permissions.OrdersInvoicesManage)]   // Y2
     public async Task<IActionResult> CreateInvoice(Guid orderId, [FromBody] CreateInvoiceRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -373,6 +414,7 @@ public class OrderController : ControllerBase
     /// <summary>Kanalın sipariş numarası serisini tanımlar/günceller —
     /// sayaç (NextValue) elle değiştirilemez, numaralar havuza geri dönmez.</summary>
     [HttpPut("number-series/{firmPlatformId:guid}")]
+    [RequirePermission(Permissions.DefinitionsManage)]   // Y2
     public async Task<IActionResult> UpsertOrderNumberSeries(
         Guid firmPlatformId, [FromBody] UpsertNumberSeriesRequest request, CancellationToken ct)
     {
@@ -394,6 +436,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Yeni fatura serisi tanımlar (FE0: serial + tip zorunlu; aynı harfler firma içinde bir kez).</summary>
     [HttpPost("invoice-series")]
+    [RequirePermission(Permissions.OrdersInvoicesManage)]   // Y2
     public async Task<IActionResult> CreateInvoiceSeries([FromBody] CreateInvoiceSeriesRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -408,6 +451,7 @@ public class OrderController : ControllerBase
 
     /// <summary>FE1: dış numaralı (ERP / pazaryeri / entegratör) fatura kaydı — idempotent (kaynak, numara).</summary>
     [HttpPost("{orderId:guid}/invoices/external")]
+    [RequirePermission(Permissions.OrdersInvoicesManage)]   // Y2
     public async Task<IActionResult> RegisterExternalInvoice(Guid orderId, [FromBody] RegisterExternalInvoiceRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -441,6 +485,7 @@ public class OrderController : ControllerBase
 
     /// <summary>FE4: ölü/engelli gönderim işini yeniden kuyruğa alır.</summary>
     [HttpPost("invoice-dispatches/{id:guid}/retry")]
+    [RequirePermission(Permissions.OrdersInvoicesManage)]   // Y2
     public async Task<IActionResult> RetryInvoiceDispatch(Guid id, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -452,6 +497,7 @@ public class OrderController : ControllerBase
 
     /// <summary>FE4: fatura için yeni gönderim işi açar (bekleyen iş yoksa).</summary>
     [HttpPost("invoices/{invoiceId:guid}/resend")]
+    [RequirePermission(Permissions.OrdersInvoicesManage)]   // Y2
     public async Task<IActionResult> ResendInvoice(Guid invoiceId, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -472,6 +518,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Seri ad/açıklama/sözleşme günceller (serial ve tip değişmez).</summary>
     [HttpPut("invoice-series/{id:guid}")]
+    [RequirePermission(Permissions.OrdersInvoicesManage)]   // Y2
     public async Task<IActionResult> UpdateInvoiceSeries(Guid id, [FromBody] UpdateInvoiceSeriesRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -483,6 +530,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Seriyi pasife alır; kanal bağı varsa yerine geçecek (aynı tip) seri zorunlu, bağlar taşınır.</summary>
     [HttpPost("invoice-series/{id:guid}/deactivate")]
+    [RequirePermission(Permissions.OrdersInvoicesManage)]   // Y2
     public async Task<IActionResult> DeactivateInvoiceSeries(Guid id, [FromBody] DeactivateInvoiceSeriesRequest? request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -493,6 +541,7 @@ public class OrderController : ControllerBase
     }
 
     [HttpPost("invoice-series/{id:guid}/activate")]
+    [RequirePermission(Permissions.OrdersInvoicesManage)]   // Y2
     public async Task<IActionResult> ActivateInvoiceSeries(Guid id, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -520,6 +569,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Kanal faturalama ayarını yazar — yuva tipi ile seri tipi uyuşmazsa 400.</summary>
     [HttpPut("invoice-settings/channels/{firmPlatformId:guid}")]
+    [RequirePermission(Permissions.OrdersInvoicesManage)]   // Y2
     public async Task<IActionResult> SetChannelInvoiceSettings(Guid firmPlatformId, [FromBody] SetChannelInvoiceSettingsRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -532,6 +582,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Entegratör PDF adresini kaydeder (P1d — storefront "Faturayı Görüntüle" kaynağı).</summary>
     [HttpPatch("invoices/{invoiceId:guid}/integrator-url")]
+    [RequirePermission(Permissions.OrdersInvoicesManage)]   // Y2
     public async Task<IActionResult> SetInvoiceIntegratorUrl(Guid invoiceId, [FromBody] SetInvoiceIntegratorUrlRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -544,6 +595,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Fatura iptali.</summary>
     [HttpPost("invoices/{invoiceId:guid}/cancel")]
+    [RequirePermission(Permissions.OrdersInvoicesManage)]   // Y2
     public async Task<IActionResult> CancelInvoice(Guid invoiceId, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -558,10 +610,10 @@ public class OrderController : ControllerBase
 
     /// <summary>Teklif listesi (DataGrid: page/pageSize/search/sort/dir/f.* — QuoteGrid.Schema; named: memberId, status).</summary>
     [HttpGet("quotes")]
-    public async Task<IActionResult> GetQuotes(
+    public async Task<IActionResult> GetQuotes([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, 
         [FromQuery] Guid? memberId, [FromQuery] string? status, [FromQuery] string? search, CancellationToken ct = default)
     {
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, await kanalKapsami.KanallarAsync(Permissions.OrdersQuotesView, ct), defaultPageSize: 20);
         var result = await _mediator.Send(new GetQuotesQuery(memberId, status, grid.Page, grid.PageSize, search, grid), ct);
         return Ok(new { success = true, data = result.Value });
     }
@@ -569,17 +621,19 @@ public class OrderController : ControllerBase
     /// <summary>Teklifleri Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: memberId, status.</summary>
     [HttpPost("quotes/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportQuotes([FromBody] GridExportRequest body,
+    public async Task<IActionResult> ExportQuotes([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, [FromBody] GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<OrderController> logger, CancellationToken ct)
     {
+        var kanalKisiti = await kanalKapsami.KanallarAsync(Permissions.OrdersQuotesView, ct);   // Y3: export listeyle aynı kapsamdan geçer
         var filters = new QuoteListFilters(ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "memberId"), body.NamedValue("status"), body.Search);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "quotes", "teklifler", "Teklifler",
-            ECSPros.Api.Grid.QuoteExportColumns.All, max => _mediator.Send(new ExportQuotesQuery(filters, body.ToGridRequest(), max), ct), ct);
+            ECSPros.Api.Grid.QuoteExportColumns.All, max => _mediator.Send(new ExportQuotesQuery(filters, body.ToGridRequest(kanalKisiti), max), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Yeni teklif oluşturur.</summary>
     [HttpPost("quotes")]
+    [RequirePermission(Permissions.OrdersQuotesManage)]   // Y2
     public async Task<IActionResult> CreateQuote([FromBody] CreateQuoteRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -598,6 +652,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Teklifi müşteriye gönderir.</summary>
     [HttpPost("quotes/{quoteId:guid}/send")]
+    [RequirePermission(Permissions.OrdersQuotesManage)]   // Y2
     public async Task<IActionResult> SendQuote(Guid quoteId, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -610,6 +665,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Teklifi kabul veya reddeder.</summary>
     [HttpPost("quotes/{quoteId:guid}/respond")]
+    [RequirePermission(Permissions.OrdersQuotesManage)]   // Y2
     public async Task<IActionResult> RespondQuote(Guid quoteId, [FromBody] RespondQuoteRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -622,6 +678,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Kabul edilen teklifi siparişe dönüştürür.</summary>
     [HttpPost("quotes/{quoteId:guid}/convert")]
+    [RequirePermission(Permissions.OrdersQuotesManage)]   // Y2
     public async Task<IActionResult> ConvertQuoteToOrder(Guid quoteId, [FromBody] ConvertQuoteRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -658,6 +715,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Siparişe ödeme ekler.</summary>
     [HttpPost("{id:guid}/payments")]
+    [RequirePermission(Permissions.OrdersManage)]   // Y2
     public async Task<IActionResult> AddOrderPayment(Guid id, [FromBody] AddOrderPaymentRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new AddOrderPaymentCommand(id, request.PaymentMethodId, request.Amount, request.CurrencyCode), ct);
@@ -672,7 +730,7 @@ public class OrderController : ControllerBase
     public async Task<IActionResult> GetGiftCards(
         [FromQuery] string? status, [FromQuery] string? search, CancellationToken ct = default)
     {
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null /* hediye kartı kanaldan bağımsızdır */, defaultPageSize: 20);
         var result = await _mediator.Send(new GetGiftCardsQuery(status, search, grid.Page, grid.PageSize, grid), ct);
         return Ok(new { success = true, data = result.Value });
     }
@@ -680,13 +738,13 @@ public class OrderController : ControllerBase
     /// <summary>Hediye kartlarını Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: status.</summary>
     [HttpPost("gift-cards/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportGiftCards([FromBody] GridExportRequest body,
+    public async Task<IActionResult> ExportGiftCards([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<OrderController> logger, CancellationToken ct)
     {
         var filters = new GiftCardListFilters(body.NamedValue("status"), body.Search);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "gift-cards", "hediye-kartlari", "Hediye Kartları",
-            ECSPros.Api.Grid.GiftCardExportColumns.All, max => _mediator.Send(new ExportGiftCardsQuery(filters, body.ToGridRequest(), max), ct), ct);
+            ECSPros.Api.Grid.GiftCardExportColumns.All, max => _mediator.Send(new ExportGiftCardsQuery(filters, body.ToGridRequest(null /* hediye kartı kanaldan bağımsızdır */), max), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Hediye kartı bakiyesi sorgular.</summary>
@@ -700,6 +758,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Yeni hediye kartı oluşturur.</summary>
     [HttpPost("gift-cards")]
+    [RequirePermission(Permissions.PromotionManage)]   // Y2
     public async Task<IActionResult> CreateGiftCard([FromBody] CreateGiftCardRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -716,6 +775,7 @@ public class OrderController : ControllerBase
 
     /// <summary>Hediye kartını siparişe uygular.</summary>
     [HttpPost("gift-cards/use")]
+    [RequirePermission(Permissions.PromotionManage)]   // Y2
     public async Task<IActionResult> UseGiftCard([FromBody] UseGiftCardRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;

@@ -45,7 +45,11 @@ public record StoreVariantDto(
     bool IsActive,
     List<StoreVariantImageDto> Images,
     List<StoreVariantAttributeDto> Attributes,
-    int StockQty = 0);
+    int StockQty = 0,
+    // M3 (2026-09-09, mobil isteği): hazır seçenek metni — "Renk: Krem, Beden: S".
+    // Sepet/yorum uçlarındaki OptionsText ile aynı biçim; istemci attribute'lardan kendi
+    // metnini kurmak zorunda kalmasın (iki yüzeyde farklı metin çıkıyordu).
+    string? VariantInfo = null);
 
 public record StoreVariantImageDto(Guid Id, string ImageUrl, int SortOrder, bool IsMain);
 

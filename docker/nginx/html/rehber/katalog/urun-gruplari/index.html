@@ -27,7 +27,7 @@ gerekir. Yetki yoksa sayfa başlığının yanında <strong>Salt Okunur</strong>
 <ol>
 <li><strong>Başlık ve kayıt sayısı</strong> — &quot;Ürün Grupları&quot;, yanında (yetki yoksa) Salt Okunur rozeti, altında toplam kayıt sayısı.</li>
 <li><strong>Sağ üst araç çubuğu</strong> — <code>Tümü</code> / <code>Aktif</code> anahtarı ve <strong>Yeni Grup</strong> butonu.</li>
-<li><strong>Tablo</strong> — gruplar Sıra&#39;ya, eşitlikte ada göre sıralı; satıra tıklayınca detay açılır.</li>
+<li><strong>Tablo</strong> — üstte grup adı/kodu arama kutusu ve görünen/toplam grup sayısı; gruplar Sıra&#39;ya, eşitlikte ada göre sıralı; satıra tıklayınca detay açılır.</li>
 </ol>
 <p><figure class="ekran"><a href="/rehber/img/catalog-product-groups-detay.webp" class="buyut" data-alt="Ürün Grubu detayı — özet kartları, Ad (Çeviriler), Özellikler tablosu ve Varyant Ekseni Alt Özellikleri"><img src="/rehber/img/catalog-product-groups-detay.webp" alt="Ürün Grubu detayı — özet kartları, Ad (Çeviriler), Özellikler tablosu ve Varyant Ekseni Alt Özellikleri" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Ürün Grubu detayı — özet kartları, Ad (Çeviriler), Özellikler tablosu ve Varyant Ekseni Alt Özellikleri</figcaption></figure></p>
 <ol>
@@ -85,9 +85,15 @@ gerekir. Yetki yoksa sayfa başlığının yanında <strong>Salt Okunur</strong>
 <td><code>Tümü</code> / <code>Aktif</code> anahtarı</td>
 <td><code>Aktif</code> seçiliyken yalnız aktif gruplar listelenir. Varsayılan <code>Tümü</code>.</td>
 </tr>
+<tr>
+<td>Grup adı veya koduyla ara</td>
+<td>Yazdıkça mevcut listeyi süzer; grup kodu ve ad çevirilerinde arar. Büyük/küçük harf ve Türkçe karakter farkı gözetmez (<code>gomlek</code> → <code>Gömlek</code>). <code>Tümü/Aktif</code> filtresiyle birlikte çalışır.</td>
+</tr>
 </tbody></table>
 <ul>
-<li>Arama kutusu ve sayfalama yoktur; tüm gruplar tek sayfada, <strong>Sıra</strong> (küçükten büyüğe) ve sonra ada göre sıralıdır.</li>
+<li>Sayfalama yoktur; arama mevcut gruplar üzerinde tarayıcıda yapılır, her harfte yeni API isteği gönderilmez. Sonuçlar <strong>Sıra</strong> (küçükten büyüğe) ve sonra ada göre sıralı kalır.</li>
+<li>Arama kutusundaki <strong>×</strong> veya kutudayken <strong>Esc</strong> aramayı temizler; seçili <code>Tümü/Aktif</code> filtresi değişmez. Yanında görünen/toplam grup sayısı gösterilir.</li>
+<li>Aramayla eşleşen kayıt yoksa &quot;Aramanızla eşleşen ürün grubu bulunamadı&quot; yazısı görünür.</li>
 <li><strong>Satıra tıklayınca</strong> grubun detay sayfası açılır (<code>/catalog/product-groups/&lt;id&gt;</code>).</li>
 <li>Kayıt yoksa &quot;Ürün grubu bulunamadı&quot; yazısı görünür.</li>
 </ul>

@@ -86,7 +86,7 @@ public class StoreQuestionsController(
                 question = soruMetni.Length > 200 ? soruMetni[..200] + "…" : soruMetni,
                 memberName = maskeli,
                 createdAt = DateTime.UtcNow
-            }, ct);
+            }, req.FirmPlatformId, ct);
         }
         catch (Exception ex)
         {

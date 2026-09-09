@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Storefront.Application.Commands.ModerateProductReview;
 using ECSPros.Storefront.Application.Queries.GetReviewsForModeration;
 using MediatR;
@@ -11,18 +13,21 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/reviews")]
 [Authorize]
+[RequirePermission(Permissions.StorefrontModerationView)]   // Y2: sayfa yetkisi
 public class ReviewsController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetForModeration(
+    public async Task<IActionResult> GetForModeration([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, 
         [FromQuery] string? status = "pending", [FromQuery] int page = 1, CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetReviewsForModerationQuery(status, page, 20), ct);
+        var result = await mediator.Send(new GetReviewsForModerationQuery(status, page, 20,
+            await kanalKapsami.KanallarAsync(Permissions.StorefrontModerationView, ct)), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
 
     [HttpPost("{id}/approve")]
+    [RequirePermission(Permissions.StorefrontModerationManage)]   // Y2
     public async Task<IActionResult> Approve(Guid id, [FromServices] ECSPros.Api.Services.Push.PushEtkilesim push, CancellationToken ct)
     {
         var result = await mediator.Send(new ModerateProductReviewCommand(id, true), ct);
@@ -32,6 +37,7 @@ public class ReviewsController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("{id}/reject")]
+    [RequirePermission(Permissions.StorefrontModerationManage)]   // Y2
     public async Task<IActionResult> Reject(Guid id, [FromBody] RejectReviewRequest? req, [FromServices] ECSPros.Api.Services.Push.PushEtkilesim push, CancellationToken ct)
     {
         var result = await mediator.Send(new ModerateProductReviewCommand(id, false, req?.Reason), ct);

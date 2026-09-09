@@ -15,7 +15,7 @@ public static class ProductExportColumns
         new("groupCode", "Grup Kodu", r => r.GroupCode),
         new("isSaleOpen", "Satış Durumu", r => r.IsSaleOpen ? "Satışta" : "Satış Kapalı"),
         new("basePrice", "Liste Fiyatı", r => r.BasePrice),
-        new("baseCost", "Maliyet", r => r.BaseCost),
+        new("baseCost", "Maliyet", r => r.BaseCost, AlanYetkisi: "cost"),
         new("taxRate", "KDV %", r => r.TaxRate),
         new("sourceType", "Kaynak", r => ProductGrid.SourceTypeLabel(r.SourceType)),
         new("supplierProductCode", "Tedarikçi Ürün Kodu", r => r.SupplierProductCode),

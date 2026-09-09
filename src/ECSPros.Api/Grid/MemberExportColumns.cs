@@ -9,7 +9,7 @@ public static class MemberExportColumns
     {
         new("name", "Ad Soyad", r => $"{r.FirstName} {r.LastName}".Trim(), Locked: true),
         new("email", "E-posta", r => r.Email, Locked: true),
-        new("phone", "Telefon", r => r.Phone),
+        new("phone", "Telefon", r => r.Phone, AlanYetkisi: "phone"),
         new("isRegistered", "Üyelik", r => r.IsRegistered ? "Kayıtlı" : "Misafir"),
         new("isActive", "Durum", r => r.IsActive ? "Aktif" : "Pasif"),
         new("isEmailVerified", "E-posta Doğrulandı", r => r.IsEmailVerified ? "Evet" : "Hayır"),

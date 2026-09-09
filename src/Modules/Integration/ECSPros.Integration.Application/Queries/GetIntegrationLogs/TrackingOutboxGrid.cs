@@ -27,6 +27,7 @@ public static class TrackingOutboxGrid
         .Bool("hasError", o => o.LastError != null && o.LastError != "")
         .Bool("hasTargets", o => o.TargetsJson != null)
         .Guid("firmPlatformId", o => o.FirmPlatformId)
+        .Kanal(o => o.FirmPlatformId)   // Y3: kanal kapsamı kolonu (K2)
         .Sort("createdAt", o => o.CreatedAt)
         .Sort("occurredAt", o => o.OccurredAt)
         .Sort("processedAt", o => o.ProcessedAt)
@@ -47,7 +48,8 @@ public static class TrackingOutboxGrid
             q = q.Where(o => o.EventName.ToLower().Contains(term) || o.DedupId.ToLower().Contains(term)
                 || (o.LastError != null && o.LastError.ToLower().Contains(term)));
         }
-        return Schema.ApplyFilters(q, grid);
+        // Y3 (K2): kanal kapsamı (uç zaten tek kanalla çalışıyor; kapsam dışı kanal seçilirse boş döner).
+        return Schema.ApplyKanalKapsami(Schema.ApplyFilters(q, grid), grid?.KanalKisiti);
     }
 
     public static string StatusLabel(string s) => s switch

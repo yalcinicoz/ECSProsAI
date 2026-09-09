@@ -312,6 +312,12 @@ namespace ECSPros.Iam.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("ChannelScoped")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ChannelScopedOverridden")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -335,8 +341,18 @@ namespace ECSPros.Iam.Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsCodeDefined")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("action");
 
                     b.Property<string>("Module")
                         .IsRequired()
@@ -346,6 +362,10 @@ namespace ECSPros.Iam.Infrastructure.Migrations
                     b.Property<Dictionary<string, string>>("NameI18n")
                         .IsRequired()
                         .HasColumnType("jsonb");
+
+                    b.Property<string>("PageCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("PermissionType")
                         .IsRequired()
@@ -427,6 +447,9 @@ namespace ECSPros.Iam.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<List<Guid>>("ChannelIds")
+                        .HasColumnType("jsonb");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -630,6 +653,9 @@ namespace ECSPros.Iam.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsSuperAdmin")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("JobTitle")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -688,6 +714,9 @@ namespace ECSPros.Iam.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<List<Guid>>("ChannelIds")
+                        .HasColumnType("jsonb");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -727,7 +756,7 @@ namespace ECSPros.Iam.Infrastructure.Migrations
 
                     b.HasIndex("PermissionId");
 
-                    b.HasIndex("UserId", "PermissionId", "FirmId")
+                    b.HasIndex("UserId", "PermissionId")
                         .IsUnique();
 
                     b.ToTable("iam_user_permissions", "iam");

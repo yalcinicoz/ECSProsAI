@@ -230,6 +230,33 @@
 <td>Eşlemeyi olduğu gibi onaylar, listeden düşer.</td>
 </tr>
 </tbody></table>
+<h3 id="erp-nebim-eslenen-eslenmemis-urun-gruplari">ERP: Nebim — eşlenen/eşlenmemiş ürün grupları<a class="anchor" href="#erp-nebim-eslenen-eslenmemis-urun-gruplari" aria-hidden="true">#</a></h3>
+<p>ERP hedefi seçiliyken <strong>Tedarikçiler</strong> sekmesinin yanında <strong>Eşlenenler (N)</strong> ve
+<strong>Eşlenmemişler (N)</strong> bulunur. Bunlar aktif <strong>ERP ürün grubu kodlarını</strong> süzer;
+özellik/değer ve tedarikçi eşlemeleri kendi sekmelerindedir. Üstteki &quot;Bizim gruplar&quot;
+sayacı farklıdır: bir grubumuz birden fazla ERP koduna bağlı olabilir.</p>
+<ul>
+<li><strong>Eşlenenler:</strong> API&#39;nin sağlıklı eşli olarak bildirdiği kodlar (birebir, kurallı veya havuz).</li>
+<li><strong>Eşlenmemişler:</strong> Eşlemesi bulunmayan veya çakışan aktif kodlar. Çakışan kayıtta
+uyarı görünür; önce mevcut çakışma giderilmelidir. Pasif kodlar bu iki sayaca dahil değildir.</li>
+<li>İki görünümde <strong>Sözlükte ara</strong> alanıyla kod veya adı daraltabilirsiniz. Okuma
+sınırına ulaşılırsa sayı <code>+</code> ile gösterilir; tam envanter için aramayı daraltın.</li>
+</ul>
+<p><strong>Eşleme sırasında yeni ürün grubu oluşturma:</strong></p>
+<ol>
+<li><strong>Eşlenmemişler</strong> → ilgili ERP satırında <strong>Eşle</strong>.</li>
+<li>&quot;Bizim ürün grubu&quot; alanı yanındaki <strong>Yeni Grup</strong>&#39;a basın (<code>catalog.platform.manage</code> yetkisi gerekir).</li>
+<li>ERP adından önerilen adı kontrol edin; gerekirse ad çevirilerini ve sırayı düzenleyin.
+<strong>Özellikleri Kopyala</strong> ile mevcut bir gruptan şablon seçebilirsiniz; önizleme
+ve kayıt davranışı <a href="/rehber/katalog/urun-gruplari/">Ürün Grupları</a> menüsüyle aynıdır.</li>
+<li><strong>Kaydet</strong> grubu oluşturur ve eşleme penceresine geri döner; yeni grup seçili gelir.</li>
+<li>Eşleme kipini/koşullarını kontrol edip ayrıca <strong>Eşle</strong> ile eşlemeyi kaydedin.</li>
+</ol>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Grup oluşturmak tek başına eşleme yapmaz. Sonradan eşlemeden vazgeçerseniz
+oluşturduğunuz grup kalır; otomatik silinmez. Oluşturma formundaki İptal/Esc ise
+mevcut eşleme taslağına döner. Her iki işlem ayrı kullanıcı onayıdır.</p>
+</blockquote>
 <h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
 <ul>
 <li><strong>Eşleme durumları:</strong> <code>active</code> (✓ sağlıklı) · <code>needs_review</code> (⚠ gözden geçirilmeli) · <code>broken</code> (⛔ kırıldı). Kırık ya da gözden geçirilecek eşleme sayaçta &quot;gözden geçirilecek&quot; olarak sayılır; kırık eşlemenin ürünleri denetimde &quot;Kategori eşlemesi kırık&quot; nedeniyle <strong>Eksik</strong> olur.</li>

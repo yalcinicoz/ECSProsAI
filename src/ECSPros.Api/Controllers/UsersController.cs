@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Iam.Application.Commands.AssignRole;
 using ECSPros.Iam.Application.Commands.ChangePassword;
 using ECSPros.Iam.Application.Commands.CreateAdminMenu;
@@ -21,6 +23,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/iam")]
 [Authorize]
+[RequirePermission(Permissions.IamUsersView)]   // Y2: sayfa yetkisi
 public class UsersController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -43,6 +46,7 @@ public class UsersController : ControllerBase
 
     /// <summary>Tek tercih anahtarını yazar (value null → siler). Gövde: { key, value }.</summary>
     [HttpPut("users/me/preferences")]
+    [RequirePermission(Permissions.IamUsersManage)]   // Y2
     public async Task<IActionResult> SetMyPreference([FromBody] SetMyPreferenceRequest req, CancellationToken ct)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var uid))
@@ -66,7 +70,7 @@ public class UsersController : ControllerBase
         CancellationToken ct = default)
     {
         // DataGrid (2026-09-08): f.* filtreleri + sort/dir + role (UserGrid.Schema); eski parametreler korunur, sayfa boyu merkezi clamp
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: pageSize);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null /* kullanıcılar/denetim logları kanaldan bağımsızdır */, defaultPageSize: pageSize);
         var result = await _mediator.Send(new GetUsersQuery(search, activeOnly, grid.Page, grid.PageSize, grid), ct);
         return Ok(new { success = true, data = result.Value });
     }
@@ -74,17 +78,18 @@ public class UsersController : ControllerBase
     /// <summary>Kullanıcıları Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: activeOnly.</summary>
     [HttpPost("users/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportUsers([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+    public async Task<IActionResult> ExportUsers([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<UsersController> logger, CancellationToken ct)
     {
         var filters = new UserListFilters(body.Search, ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "activeOnly") ?? false);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "users", "kullanicilar", "Kullanıcılar",
-            ECSPros.Api.Grid.UserExportColumns.All, max => _mediator.Send(new ExportUsersQuery(filters, body.ToGridRequest(), max), ct), ct);
+            ECSPros.Api.Grid.UserExportColumns.All, max => _mediator.Send(new ExportUsersQuery(filters, body.ToGridRequest(null /* kullanıcılar/denetim logları kanaldan bağımsızdır */), max), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Yeni kullanıcı oluşturur.</summary>
     [HttpPost("users")]
+    [RequirePermission(Permissions.IamUsersManage)]   // Y2
     public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreateUserCommand(
@@ -100,6 +105,7 @@ public class UsersController : ControllerBase
 
     /// <summary>Kullanıcı bilgilerini günceller.</summary>
     [HttpPut("users/{id:guid}")]
+    [RequirePermission(Permissions.IamUsersManage)]   // Y2
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserRequest request, CancellationToken ct)
     {
         var updatedBy = Guid.TryParse(User.FindFirst("sub")?.Value, out var uid) ? uid : Guid.Empty;
@@ -116,6 +122,7 @@ public class UsersController : ControllerBase
 
     /// <summary>Kullanıcı şifresini değiştirir (admin reset).</summary>
     [HttpPost("users/{id:guid}/reset-password")]
+    [RequirePermission(Permissions.IamUsersManage)]   // Y2
     public async Task<IActionResult> ResetPassword(Guid id, [FromBody] ResetPasswordRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new ChangePasswordCommand(id, null, request.NewPassword, IsAdminReset: true), ct);
@@ -128,6 +135,7 @@ public class UsersController : ControllerBase
 
     /// <summary>Kullanıcıya rol atar.</summary>
     [HttpPost("users/{id:guid}/roles")]
+    [RequirePermission(Permissions.IamUsersManage)]   // Y2
     public async Task<IActionResult> AssignRole(Guid id, [FromBody] AssignRoleRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new AssignRoleCommand(id, request.RoleId), ct);
@@ -148,7 +156,7 @@ public class UsersController : ControllerBase
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         // DataGrid (2026-09-08): global arama + f.* filtreleri + sort/dir (AuditLogGrid.Schema); adlandırılmış parametreler korunur
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: pageSize);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null /* kullanıcılar/denetim logları kanaldan bağımsızdır */, defaultPageSize: pageSize);
         var result = await _mediator.Send(new GetAuditLogsQuery(
             userId, entityType, null, action, from, to, grid.Page, grid.PageSize, search, grid), ct);
         return Ok(new { success = true, data = result.Value });
@@ -157,7 +165,7 @@ public class UsersController : ControllerBase
     /// <summary>Denetim loglarını Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: userId/entityType/action/from/to.</summary>
     [HttpPost("audit-logs/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportAuditLogs([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+    public async Task<IActionResult> ExportAuditLogs([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<UsersController> logger, CancellationToken ct)
     {
@@ -165,7 +173,7 @@ public class UsersController : ControllerBase
         var filters = new AuditLogListFilters(g, body.NamedValue("entityType"), null, body.NamedValue("action"),
             ECSPros.Api.Grid.GridExportEndpoint.Tarih(body, "from"), ECSPros.Api.Grid.GridExportEndpoint.Tarih(body, "to"), body.Search);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "audit-logs", "denetim-loglari", "Denetim Logları",
-            ECSPros.Api.Grid.AuditLogExportColumns.All, max => _mediator.Send(new ExportAuditLogsQuery(filters, body.ToGridRequest(), max), ct), ct);
+            ECSPros.Api.Grid.AuditLogExportColumns.All, max => _mediator.Send(new ExportAuditLogsQuery(filters, body.ToGridRequest(null /* kullanıcılar/denetim logları kanaldan bağımsızdır */), max), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     // ─── Roles ─────────────────────────────────────────────────────────────────

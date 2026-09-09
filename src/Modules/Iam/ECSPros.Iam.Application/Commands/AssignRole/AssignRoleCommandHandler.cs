@@ -9,10 +9,12 @@ namespace ECSPros.Iam.Application.Commands.AssignRole;
 public class AssignRoleCommandHandler : IRequestHandler<AssignRoleCommand, Result>
 {
     private readonly IIamDbContext _context;
+    private readonly IEtkinYetkiServisi _yetkiServisi;
 
-    public AssignRoleCommandHandler(IIamDbContext context)
+    public AssignRoleCommandHandler(IIamDbContext context, IEtkinYetkiServisi yetkiServisi)
     {
         _context = context;
+        _yetkiServisi = yetkiServisi;
     }
 
     public async Task<Result> Handle(AssignRoleCommand request, CancellationToken cancellationToken)
@@ -34,6 +36,8 @@ public class AssignRoleCommandHandler : IRequestHandler<AssignRoleCommand, Resul
 
         _context.UserRoles.Add(new UserRole { UserId = request.UserId, RoleId = request.RoleId });
         await _context.SaveChangesAsync(cancellationToken);
+        // K3: yetki değişikliği ANINDA etkili — kullanıcının efektif yetki önbelleği düşürülür.
+        await _yetkiServisi.GecersizKilAsync(request.UserId, cancellationToken);
         return Result.Success();
     }
 }

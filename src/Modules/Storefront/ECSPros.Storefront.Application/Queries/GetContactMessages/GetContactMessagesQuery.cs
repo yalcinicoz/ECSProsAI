@@ -11,7 +11,9 @@ public record GetContactMessagesQuery(
     Guid? FirmPlatformId = null,
     string? Search = null,
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedResult<ContactMessageDto>>>;
+    int PageSize = 20,
+    // Y3 (K2): kullanıcının görebileceği kanallar; null = kısıt yok, boş = hiçbir kayıt.
+    IReadOnlyCollection<Guid>? KanalKisiti = null) : IRequest<Result<PagedResult<ContactMessageDto>>>;
 
 public record ContactMessageDto(
     Guid Id,
@@ -37,6 +39,12 @@ public class GetContactMessagesQueryHandler(IStorefrontDbContext db)
             q = q.Where(m => m.Status == request.Status);
         if (request.FirmPlatformId.HasValue)
             q = q.Where(m => m.FirmPlatformId == request.FirmPlatformId.Value);
+        // Y3 (K2): kanal kapsamı — kullanıcının erişemediği kanalın mesajı listede görünmez.
+        if (request.KanalKisiti is not null)
+        {
+            var izinli = request.KanalKisiti.ToList();
+            q = q.Where(m => izinli.Contains(m.FirmPlatformId));
+        }
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var aranan = request.Search.Trim().ToLower();

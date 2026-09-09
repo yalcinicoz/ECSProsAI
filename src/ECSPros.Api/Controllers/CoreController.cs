@@ -38,6 +38,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/core")]
 [Authorize]
+[RequirePermission(Permissions.DefinitionsView)]   // Y2: sayfa yetkisi
 public class CoreController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -82,6 +83,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Yeni platform tipi oluşturur.</summary>
     [HttpPost("platform-types")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> CreatePlatformType([FromBody] CreatePlatformTypeRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -93,6 +95,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Platform tipini günceller.</summary>
     [HttpPut("platform-types/{id:guid}")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> UpdatePlatformType(Guid id, [FromBody] UpdatePlatformTypeRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -185,6 +188,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Kargo entegrasyonuna tahsisli barkod aralığı tanımlar.</summary>
     [HttpPost("cargo-barcode-ranges")]
+    [RequirePermission(Permissions.DefinitionsManage)]   // Y2
     public async Task<IActionResult> CreateCargoBarcodeRange(
         [FromBody] CreateCargoBarcodeRangeRequest request, CancellationToken ct)
     {
@@ -198,6 +202,7 @@ public class CoreController : ControllerBase
     /// <summary>Aralığı aktif/pasif yapar — sınırlar ve sayaç değiştirilemez
     /// (tahsis edilen barkod havuza geri dönmez).</summary>
     [HttpPut("cargo-barcode-ranges/{id:guid}/active")]
+    [RequirePermission(Permissions.DefinitionsManage)]   // Y2
     public async Task<IActionResult> SetCargoBarcodeRangeActive(
         Guid id, [FromBody] SetCargoBarcodeRangeActiveRequest request, CancellationToken ct)
     {
@@ -218,6 +223,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Yeni masraf tipi oluşturur.</summary>
     [HttpPost("expense-types")]
+    [RequirePermission(Permissions.DefinitionsManage)]   // Y2
     public async Task<IActionResult> CreateExpenseType([FromBody] CreateExpenseTypeRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -249,6 +255,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Yeni firma oluşturur.</summary>
     [HttpPost("firms")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> CreateFirm([FromBody] CreateFirmRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -261,6 +268,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Firma bilgilerini günceller.</summary>
     [HttpPut("firms/{id:guid}")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> UpdateFirm(Guid id, [FromBody] UpdateFirmRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -283,6 +291,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Firmaya yeni platform ekler.</summary>
     [HttpPost("firms/{firmId:guid}/platforms")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> CreateFirmPlatform(Guid firmId, [FromBody] CreateFirmPlatformRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -296,6 +305,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Firma platformunu günceller.</summary>
     [HttpPut("firm-platforms/{id:guid}")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> UpdateFirmPlatform(Guid id, [FromBody] UpdateFirmPlatformRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -321,6 +331,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Firmaya yeni servis entegrasyonu ekler.</summary>
     [HttpPost("firms/{firmId:guid}/integrations")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> CreateFirmPlatformIntegration(Guid firmId, [FromBody] CreateFirmPlatformIntegrationRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -356,6 +367,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Servis entegrasyonunu günceller (maskeli credential alanları korunur).</summary>
     [HttpPut("firm-integrations/{id:guid}")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> UpdateFirmPlatformIntegration(Guid id, [FromBody] UpdateFirmPlatformIntegrationRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -380,6 +392,7 @@ public class CoreController : ControllerBase
     /// <summary>Mahalle-kargo atama ekranı (2026-07-22): bir kapsamın (firma geneli
     /// "default" / tek mahalle "neighborhood") kural listesini komple değiştirir.</summary>
     [HttpPut("firms/{firmId:guid}/cargo-rules")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> UpsertCargoRules(Guid firmId, [FromBody] UpsertCargoRulesRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new ECSPros.Core.Application.Commands.UpsertCargoRules.UpsertCargoRulesCommand(
@@ -393,6 +406,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Firmaya yeni kargo kuralı ekler.</summary>
     [HttpPost("firms/{firmId:guid}/cargo-rules")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> CreateCargoRule(Guid firmId, [FromBody] CreateCargoRuleRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -418,6 +432,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Çevirileri toplu ekler veya günceller.</summary>
     [HttpPut("ui-translations/batch")]
+    [RequirePermission(Permissions.SystemTranslationsManage)]   // Y2
     public async Task<IActionResult> UpsertUiTranslations(
         [FromBody] UpsertUiTranslationsRequest request, CancellationToken ct)
     {
@@ -443,6 +458,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Bildirim şablonu ekle/güncelle — (tip, kanal, dil) başına tek kayıt.</summary>
     [HttpPut("notification-templates")]
+    [RequirePermission(Permissions.DefinitionsManage)]   // Y2
     public async Task<IActionResult> UpsertNotificationTemplate([FromBody] UpsertNotificationTemplateRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -456,6 +472,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Ürün kartı görünüm ayarları — platform Settings'e yalnız "productCard" anahtarı merge edilir.</summary>
     [HttpPut("firm-platforms/{id:guid}/product-card-settings")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> UpdateProductCardSettings(Guid id, [FromBody] ProductCardSettingsRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -471,6 +488,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Ürün listesi sıralama seçenekleri — platform Settings'e yalnız "productList" anahtarı merge edilir.</summary>
     [HttpPut("firm-platforms/{id:guid}/product-list-settings")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> UpdateProductListSettings(Guid id, [FromBody] ProductListSettingsRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -483,6 +501,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Site navigasyon ayarları (mega menü hover) — platform Settings'e yalnız "navigation" anahtarı merge edilir.</summary>
     [HttpPut("firm-platforms/{id:guid}/navigation-settings")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> UpdateNavigationSettings(Guid id, [FromBody] NavigationSettingsRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -497,6 +516,7 @@ public class CoreController : ControllerBase
     /// anahtarı merge edilir. purchaseAt: confirmed|created. Consent banner/varsayılan sabittir
     /// (EU kararı: banner açık, default deny) — istekte alınmaz.</summary>
     [HttpPut("firm-platforms/{id:guid}/tracking-settings")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> UpdateTrackingSettings(Guid id, [FromBody] TrackingSettingsRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -509,6 +529,7 @@ public class CoreController : ControllerBase
 
     /// <summary>Sipariş onay politikası — platform Settings'e yalnız ilgili anahtarlar merge edilir.</summary>
     [HttpPut("firm-platforms/{id:guid}/order-confirm-settings")]
+    [RequirePermission(Permissions.SystemFirmsManage)]   // Y2
     public async Task<IActionResult> UpdateOrderConfirmSettings(Guid id, [FromBody] OrderConfirmSettingsRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(

@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Crm.Application.Commands.AddMemberAddress;
 using ECSPros.Crm.Application.Commands.CreateMember;
 using ECSPros.Crm.Application.Commands.CreateMemberGroup;
@@ -22,6 +24,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/crm")]
 [Authorize]
+[RequirePermission(Permissions.CrmMembersView)]   // Y2: sayfa yetkisi
 public class CrmController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -33,7 +36,7 @@ public class CrmController : ControllerBase
 
     /// <summary>Üyeleri sayfalı listeler.</summary>
     [HttpGet("members")]
-    public async Task<IActionResult> GetMembers(
+    public async Task<IActionResult> GetMembers([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, 
         [FromQuery] string? search,
         [FromQuery] bool activeOnly = true,
         [FromQuery] int page = 1,
@@ -41,9 +44,13 @@ public class CrmController : ControllerBase
         CancellationToken ct = default)
     {
         // DataGrid F4 (2026-09-08): sort/dir + f.* filtreleri (MemberGrid.Schema beyaz listesi); page/pageSize merkezi clamp (1..250).
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null /* üyeler kanaldan bağımsızdır */, defaultPageSize: 20);
         var result = await _mediator.Send(new GetMembersQuery(search, activeOnly, grid.Page, grid.PageSize, grid), ct);
-        return Ok(new { success = true, data = result.Value });
+        // Y6 (K6): telefon hassas alandır — yetkisi olmayana DEĞER GÖNDERİLMEZ (maske).
+        var izin = await alanYetkileri.IzinlerAsync(ct);
+        var sayfa = result.Value!;
+        var maskeli = sayfa with { Items = sayfa.Items.Select(m => m with { Phone = izin.Telefonla(m.Phone) }).ToList() };
+        return Ok(new { success = true, data = maskeli });
     }
 
     /// <summary>
@@ -52,29 +59,35 @@ public class CrmController : ControllerBase
     /// </summary>
     [HttpPost("members/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportMembers([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+    public async Task<IActionResult> ExportMembers([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<CrmController> logger, CancellationToken ct)
     {
-        var grid = body.ToGridRequest();
+        var grid = body.ToGridRequest(null /* üyeler kanaldan bağımsızdır */);
         var filters = new MemberListFilters(grid.Search, ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "activeOnly") ?? false);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "members", "uyeler", "Üyeler",
             ECSPros.Api.Grid.MemberExportColumns.All,
-            max => _mediator.Send(new ExportMembersQuery(filters, grid, max), ct), ct);
+            max => _mediator.Send(new ExportMembersQuery(filters, grid, max), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>Üye detayını döner.</summary>
     [HttpGet("members/{id:guid}")]
-    public async Task<IActionResult> GetMemberDetail(Guid id, CancellationToken ct)
+    public async Task<IActionResult> GetMemberDetail(
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new GetMemberDetailQuery(id), ct);
         if (result.IsFailure)
             return NotFound(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
+
+        // Y6 (K6): telefon hassas alan.
+        var izin = await alanYetkileri.IzinlerAsync(ct);
+        var uye = result.Value! with { Phone = izin.Telefonla(result.Value.Phone) };
+        return Ok(new { success = true, data = uye });
     }
 
     /// <summary>Yeni üye oluşturur.</summary>
     [HttpPost("members")]
+    [RequirePermission(Permissions.CrmMembersManage)]   // Y2
     public async Task<IActionResult> CreateMember([FromBody] CreateMemberRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreateMemberCommand(
@@ -91,6 +104,7 @@ public class CrmController : ControllerBase
 
     /// <summary>Üye bilgilerini günceller.</summary>
     [HttpPut("members/{id:guid}")]
+    [RequirePermission(Permissions.CrmMembersManage)]   // Y2
     public async Task<IActionResult> UpdateMember(Guid id, [FromBody] UpdateMemberRequest request, CancellationToken ct)
     {
         var updatedBy = Guid.TryParse(User.FindFirst("sub")?.Value, out var uid) ? uid : Guid.Empty;
@@ -119,6 +133,7 @@ public class CrmController : ControllerBase
 
     /// <summary>Üyeye adres ekler.</summary>
     [HttpPost("members/{id:guid}/addresses")]
+    [RequirePermission(Permissions.CrmMembersManage)]   // Y2
     public async Task<IActionResult> AddMemberAddress(Guid id, [FromBody] AddMemberAddressRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new AddMemberAddressCommand(
@@ -139,6 +154,7 @@ public class CrmController : ControllerBase
 
     /// <summary>Üye adresini siler (soft delete).</summary>
     [HttpDelete("members/{memberId:guid}/addresses/{addressId:guid}")]
+    [RequirePermission(Permissions.CrmMembersManage)]   // Y2
     public async Task<IActionResult> DeleteMemberAddress(Guid memberId, Guid addressId, CancellationToken ct)
     {
         var result = await _mediator.Send(new DeleteMemberAddressCommand(memberId, addressId), ct);
@@ -161,6 +177,7 @@ public class CrmController : ControllerBase
 
     /// <summary>Manuel cüzdan düzeltmesi (panel) — credit bakiye artırır, debit azaltır.</summary>
     [HttpPost("members/{id:guid}/wallet/adjust")]
+    [RequirePermission(Permissions.CrmMembersManage)]   // Y2
     public async Task<IActionResult> AdjustMemberWallet(Guid id, [FromBody] AdjustWalletRequest req,
         [FromServices] ECSPros.Api.Services.Push.PushKuyruk pushKuyruk, [FromServices] ILogger<CrmController> logger, CancellationToken ct)
     {
@@ -228,6 +245,7 @@ public class CrmController : ControllerBase
 
     /// <summary>Üye grubu oluşturur.</summary>
     [HttpPost("member-groups")]
+    [RequirePermission(Permissions.CrmMembersManage)]   // Y2
     public async Task<IActionResult> CreateMemberGroup([FromBody] CreateMemberGroupRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreateMemberGroupCommand(
@@ -243,6 +261,7 @@ public class CrmController : ControllerBase
 
     /// <summary>Üye grubunu günceller.</summary>
     [HttpPut("member-groups/{id:guid}")]
+    [RequirePermission(Permissions.CrmMembersManage)]   // Y2
     public async Task<IActionResult> UpdateMemberGroup(Guid id, [FromBody] UpdateMemberGroupRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new UpdateMemberGroupCommand(

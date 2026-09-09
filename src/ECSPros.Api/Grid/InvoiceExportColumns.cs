@@ -17,7 +17,7 @@ public static class InvoiceExportColumns
         new("companyName", "Firma", r => r.RecipientCompanyName),
         new("taxNumber", "Vergi No / TCKN", r => r.RecipientTaxNumber),
         new("taxOffice", "Vergi Dairesi", r => r.RecipientTaxOffice),
-        new("address", "Adres", r => r.RecipientAddress),
+        new("address", "Adres", r => r.RecipientAddress, AlanYetkisi: "address"),
         new("subtotal", "Ara Toplam", r => r.Subtotal),
         new("totalDiscount", "İndirim", r => r.TotalDiscount),
         new("totalTax", "KDV", r => r.TotalTax),

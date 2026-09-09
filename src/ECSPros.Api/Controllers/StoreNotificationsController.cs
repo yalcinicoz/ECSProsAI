@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Api.Services.Store;
 using ECSPros.Storefront.Application.Queries.GetNewsletterSubscriptions;
 using ECSPros.Storefront.Application.Queries.GetSavedSearchesForAdmin;
@@ -19,11 +21,14 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/store-notifications")]
 [Authorize]
+[RequirePermission(Permissions.StorefrontNotificationsView)]   // Y2: sayfa yetkisi
+[KanalKapsamiKontrol(Permissions.StorefrontNotificationsView)]   // Y3: kanal parametresi kapsam dışıysa 404
 public class StoreNotificationsController(
     ISavedSearchNotifier savedSearchNotifier,
     IMediator mediator) : ControllerBase
 {
     [HttpPost("saved-search-scan")]
+    [RequirePermission(Permissions.StorefrontNotificationsManage)]   // Y2
     public async Task<IActionResult> RunSavedSearchScan(CancellationToken ct)
     {
         var gonderilen = await savedSearchNotifier.RunOnceAsync(ct);
@@ -89,6 +94,7 @@ public class StoreNotificationsController(
         bool? Inbox = null, string? Icon = null, int? ExpiresDays = null, bool? DismissOnOpen = null);
 
     [HttpPut("push-templates/{type}")]
+    [RequirePermission(Permissions.StorefrontNotificationsManage)]   // Y2
     public async Task<IActionResult> SavePushTemplate(string type, [FromBody] PushTemplateBody b, [FromServices] ECSPros.Storefront.Application.Services.IStorefrontDbContext sdb, CancellationToken ct)
     {
         var t = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(sdb.PushTemplates, x => x.Type == type, ct);
@@ -130,6 +136,7 @@ public class StoreNotificationsController(
 
     /// <summary>§9 test: TEK cihaza (deviceId) ya da üyenin cihazlarına deneme bildirimi; şablon tipi verilirse şablon metni, yoksa serbest metin. Konsoldan toplu kampanya ASLA.</summary>
     [HttpPost("push-test")]
+    [RequirePermission(Permissions.StorefrontNotificationsManage)]   // Y2
     public async Task<IActionResult> PushTest([FromBody] PushTestBody b, [FromServices] ECSPros.Api.Services.Push.PushKuyruk kuyruk, CancellationToken ct)
     {
         if (b.DeviceId is null && b.MemberId is null) return BadRequest(new { success = false, error = "deviceId ya da memberId gerekli." });

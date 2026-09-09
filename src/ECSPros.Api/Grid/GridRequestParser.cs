@@ -9,7 +9,10 @@ namespace ECSPros.Api.Grid;
 /// </summary>
 public static class GridRequestParser
 {
-    public static GridRequest Parse(IQueryCollection q, int defaultPageSize = 50)
+    /// <param name="kanalKisiti">Y3 (K2): kullanıcının bu listede görebileceği kanallar.
+    /// null verilirse kısıt uygulanmaz — kanaldan bağımsız listelerde (ürün, üye, depo…) bilinçli
+    /// olarak null geçilir. Parametre ZORUNLUDUR: her liste ucu kapsam kararını açıkça verir.</param>
+    public static GridRequest Parse(IQueryCollection q, IReadOnlyCollection<Guid>? kanalKisiti, int defaultPageSize = 50)
     {
         var filters = new List<GridFilter>();
         foreach (var (key, values) in q)
@@ -36,6 +39,7 @@ public static class GridRequestParser
             Sort = q["sort"].ToString(),
             Dir = q["dir"].ToString(),
             Filters = filters,
+            KanalKisiti = kanalKisiti,
         }.Normalize(defaultPageSize);
     }
 

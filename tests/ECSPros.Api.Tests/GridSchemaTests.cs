@@ -140,7 +140,7 @@ public sealed class GridSchemaTests
             ["f.status"] = "in:pending,confirmed", ["f.total"] = "gt:1000", ["f.customer"] = "ahmet",
             ["f.createdAt"] = "2026-09-01T00:00:00Z", ["fq.createdAt"] = "last7", ["f."] = "x",
         });
-        var r = GridRequestParser.Parse(q, defaultPageSize: 20);
+        var r = GridRequestParser.Parse(q, kanalKisiti: null, defaultPageSize: 20);
         Assert.AreEqual(1, r.Page);
         Assert.AreEqual(GridRequest.MaxPageSize, r.PageSize);
         Assert.AreEqual("ahmet", r.Search);
@@ -151,7 +151,7 @@ public sealed class GridSchemaTests
         var tarih = r.Filters.Single(f => f.Field == "createdAt");
         Assert.AreEqual("auto", tarih.Op, "ISO değerdeki ':' operatör sanılmamalı");
         Assert.AreEqual("2026-09-01T00:00:00Z", tarih.Value);
-        var bos = GridRequestParser.Parse(new QueryCollection(), 20);
+        var bos = GridRequestParser.Parse(new QueryCollection(), null, 20);
         Assert.AreEqual(20, bos.PageSize); Assert.IsTrue(bos.IsEmpty);
     }
 
@@ -159,7 +159,7 @@ public sealed class GridSchemaTests
     public void Export_request_maps_to_grid_request_without_paging()
     {
         var e = new GridExportRequest { Search = "x", Sort = "total", Dir = "desc", Filters = new() { new("status", "in", "pending") }, Named = new() { ["from"] = "2026-09-01" } };
-        var g = e.ToGridRequest();
+        var g = e.ToGridRequest(null);
         Assert.AreEqual(1, g.Page); Assert.AreEqual(GridRequest.MaxPageSize, g.PageSize);
         Assert.AreEqual("2026-09-01", e.NamedValue("from")); Assert.IsNull(e.NamedValue("to"));
         Assert.AreEqual(0, g.Without("status").Filters.Count);

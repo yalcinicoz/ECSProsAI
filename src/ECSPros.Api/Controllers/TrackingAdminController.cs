@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Api.Services.Store;
 using ECSPros.Api.Services.Tracking;
 using ECSPros.Integration.Application.Queries.GetIntegrationLogs;
@@ -17,6 +19,8 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/tracking")]
 [Authorize]
+[RequirePermission(Permissions.MarketingTrackingView)]   // Y2: sayfa yetkisi
+[KanalKapsamiKontrol(Permissions.MarketingTrackingView)]   // Y3: kanal parametresi kapsam dışıysa 404
 public class TrackingAdminController(
     ITrackingSettingsProvider settings,
     IIntegrationDbContext integrationDb,
@@ -127,6 +131,7 @@ public class TrackingAdminController(
 
     /// <summary>İE-5: feed'i şimdi üret (worker kuyruğu — saniyeler/dakikalar içinde biter, feed-status ile izlenir).</summary>
     [HttpPost("feed/generate")]
+    [RequirePermission(Permissions.MarketingTrackingManage)]   // Y2
     public async Task<IActionResult> FeedGenerate([FromBody] TrackingTestEventRequest req,
         [FromServices] ECSPros.Api.Services.Tracking.Feed.IFeedTrigger trigger, CancellationToken ct)
     {
@@ -160,10 +165,10 @@ public class TrackingAdminController(
 
     /// <summary>Outbox listesi. DataGrid (2026-09-08): page/pageSize/search/sort/dir/f.* (TrackingOutboxGrid.Schema); firmPlatformId + status adlandırılmış.</summary>
     [HttpGet("outbox")]
-    public async Task<IActionResult> Outbox([FromQuery] Guid firmPlatformId, [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    public async Task<IActionResult> Outbox([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, [FromQuery] Guid firmPlatformId, [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
     {
         if (firmPlatformId == Guid.Empty) return BadRequest(new { success = false, error = "firmPlatformId gerekli." });
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 50);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, await kanalKapsami.KanallarAsync(Permissions.MarketingTrackingView, ct), defaultPageSize: 50);
         page = grid.Page; pageSize = grid.PageSize;
         var q = TrackingOutboxGrid.ApplyAll(integrationDb.TrackingEventOutbox.AsNoTracking(), firmPlatformId, status, grid.Search, grid);
         var total = await q.CountAsync(ct);
@@ -180,16 +185,17 @@ public class TrackingAdminController(
     /// <summary>Outbox'ı Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: firmPlatformId (zorunlu), status.</summary>
     [HttpPost("outbox/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportOutbox([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
-        [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam, [FromServices] ILogger<TrackingAdminController> logger, CancellationToken ct)
+    public async Task<IActionResult> ExportOutbox([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam, [FromServices] ILogger<TrackingAdminController> logger, [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, CancellationToken ct)
     {
+        var kanalKisiti = await kanalKapsami.KanallarAsync(Permissions.MarketingTrackingView, ct);   // Y3: export listeyle aynı kapsamdan geçer
         var firmPlatformId = ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "firmPlatformId") ?? Guid.Empty;
         if (firmPlatformId == Guid.Empty) return BadRequest(new { success = false, error = "firmPlatformId gerekli." });
         var status = body.NamedValue("status");
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "tracking-outbox", "takip-kuyrugu", "Takip Kuyruğu",
             ECSPros.Api.Grid.TrackingOutboxExportColumns.All, async max =>
             {
-                var grid = body.ToGridRequest();
+                var grid = body.ToGridRequest(kanalKisiti);
                 var q = TrackingOutboxGrid.ApplyAll(integrationDb.TrackingEventOutbox.AsNoTracking(), firmPlatformId, status, grid.Search, grid);
                 var count = await q.CountAsync(ct);
                 if (count > max)
@@ -197,10 +203,11 @@ public class TrackingAdminController(
                 var rows = TrackingOutboxGrid.Schema.ApplySort(q, grid).Select(o => new TrackingOutboxExportRow(
                     o.CreatedAt, o.OccurredAt, o.EventName, o.DedupId, o.Source, o.Status, o.AttemptCount, o.NextAttemptAt, o.ProcessedAt, o.LastError, o.TargetsJson));
                 return ECSPros.Shared.Kernel.Common.Result.Success(new ECSPros.Shared.Kernel.Grid.GridExportSource<TrackingOutboxExportRow>(count, rows));
-            }, ct);
+            }, ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     [HttpPost("outbox/{id:guid}/retry")]
+    [RequirePermission(Permissions.MarketingTrackingManage)]   // Y2
     public async Task<IActionResult> Retry(Guid id, CancellationToken ct)
     {
         var satir = await integrationDb.TrackingEventOutbox.FirstOrDefaultAsync(o => o.Id == id, ct);
@@ -213,6 +220,7 @@ public class TrackingAdminController(
     /// <summary>Test event — order_completed, consent GRANT, örnek kalem, Extra.test=true. Meta/TikTok adapter'ı
     /// yalnız testEventCode doluysa gönderir; GA4 debug ucuna gider. Tracking kapalıysa 400.</summary>
     [HttpPost("test-event")]
+    [RequirePermission(Permissions.MarketingTrackingManage)]   // Y2
     public async Task<IActionResult> TestEvent([FromBody] TrackingTestEventRequest req, CancellationToken ct)
     {
         if (req.FirmPlatformId == Guid.Empty) return BadRequest(new { success = false, error = "firmPlatformId gerekli." });

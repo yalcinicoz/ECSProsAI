@@ -34,20 +34,9 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
         if (string.IsNullOrEmpty(user.PasswordHash) || !_passwordHasher.Verify(request.Password, user.PasswordHash))
             return Result.Failure<LoginResponse>("Kullanıcı adı veya şifre hatalı.");
 
-        var permissions = await _context.UserRoles
-            .Where(ur => ur.UserId == user.Id && !ur.IsDeleted)
-            .SelectMany(ur => _context.RolePermissions
-                .Where(rp => rp.RoleId == ur.RoleId && !rp.IsDeleted)
-                .Select(rp => rp.PermissionId))
-            .Union(_context.UserPermissions
-                .Where(up => up.UserId == user.Id && up.GrantType == "grant" && !up.IsDeleted)
-                .Select(up => up.PermissionId))
-            .Distinct()
-            .Join(_context.Permissions.Where(p => p.IsActive && !p.IsDeleted),
-                id => id, p => p.Id, (id, p) => p.Code)
-            .ToListAsync(cancellationToken);
-
-        var accessToken = _jwtTokenService.GenerateAccessToken(user, permissions);
+        // Y1 (K3): yetki listesi token'a yazılmaz — her istekte IEtkinYetkiServisi'nden okunur.
+        // Girişte permission sorgusu da yapılmaz (gereksiz sorgu kalktı).
+        var accessToken = _jwtTokenService.GenerateAccessToken(user);
         var refreshTokenRaw = _jwtTokenService.GenerateRefreshToken();
 
         // Refresh token'ı SHA256 ile hash'le (BCrypt gerek yok)

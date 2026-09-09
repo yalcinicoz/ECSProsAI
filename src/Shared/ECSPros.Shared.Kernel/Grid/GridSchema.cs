@@ -23,11 +23,16 @@ public sealed class GridSchema<T>
     private LambdaExpression? _defaultSort;
     private bool _defaultDesc = true;
     private LambdaExpression? _tieBreaker;
+    private Expression<Func<T, Guid>>? _kanalSecici;
+    private Expression<Func<T, Guid?>>? _kanalSeciciNullable;
 
     public IReadOnlyCollection<string> SortableFields => _sorts.Keys;
     public IReadOnlyCollection<string> FilterableFields => _filters.Keys;
     /// <summary>Alan tipi (testler/istemci meta için); bilinmeyen alan → null.</summary>
     public GridFieldType? FieldTypeOf(string key) => _filters.TryGetValue(key, out var f) ? f.Type : null;
+    /// <summary>Y3: liste kanal kapsamına tabi mi (şemada kanal kolonu bildirildi mi)?</summary>
+    public bool KanalKapsamli => _kanalSecici is not null || _kanalSeciciNullable is not null;
+
     /// <summary>Enum alanının izinli değerleri (tanımlı değilse null).</summary>
     public IReadOnlyCollection<string>? AllowedValuesOf(string key) => _filters.TryGetValue(key, out var f) ? f.Allowed?.ToList() : null;
 
@@ -59,6 +64,52 @@ public sealed class GridSchema<T>
 
     public GridSchema<T> Guid<TValue>(string key, Expression<Func<T, TValue>> selector)
     { _filters[key] = new(GridFieldType.Guid, selector, null, null, null); return this; }
+
+    /// <summary>
+    /// Y3 (2026-09-09, K2): listenin KANAL kolonu. Bildirildiğinde, kullanıcının erişemediği
+    /// kanalların satırları listeye/sayıma/exporta HİÇ girmez (yetki kontrolü ayrı; bu veri kısıtıdır).
+    /// Bildirilmeyen şema "kanaldan bağımsız liste" sayılır (ürün, üye, depo… gibi).
+    /// </summary>
+    public GridSchema<T> Kanal(Expression<Func<T, Guid>> selector) { _kanalSecici = selector; return this; }
+
+    /// <summary>Kanalı boş olabilen kayıtlar için (null kanal = kanala bağlı olmayan kayıt;
+    /// kapsam kısıtlıyken bu satırlar da GİZLENİR — aksi hâlde sızıntı olur).</summary>
+    public GridSchema<T> Kanal(Expression<Func<T, Guid?>> selector) { _kanalSeciciNullable = selector; return this; }
+
+    /// <summary>
+    /// Kanal kapsamını uygular. <paramref name="izinliKanallar"/> null → kısıt yok
+    /// (süper admin ya da kanal kapsamsız yetki). Boş liste → HİÇBİR satır (default deny).
+    /// </summary>
+    public IQueryable<T> ApplyKanalKapsami(IQueryable<T> query, IReadOnlyCollection<Guid>? izinliKanallar)
+    {
+        if (izinliKanallar is null) return query;
+        if (!KanalKapsamli)
+            throw new InvalidOperationException(
+                $"Kanal kapsamı istendi ama {typeof(T).Name} şemasında Kanal(...) bildirilmemiş.");
+
+        var liste = izinliKanallar as IList<Guid> ?? izinliKanallar.ToList();
+        if (liste.Count == 0) return query.Where(_ => false);
+
+        if (_kanalSecici is not null)
+        {
+            var p = _kanalSecici.Parameters[0];
+            var body = Expression.Call(
+                typeof(Enumerable), nameof(Enumerable.Contains), [typeof(Guid)],
+                Expression.Constant(liste), _kanalSecici.Body);
+            return query.Where(Expression.Lambda<Func<T, bool>>(body, p));
+        }
+        else
+        {
+            var p = _kanalSeciciNullable!.Parameters[0];
+            // Nullable kanal: NULL satır kapsam kısıtlıyken gizlenir.
+            var deger = Expression.Property(_kanalSeciciNullable.Body, "Value");
+            var doluMu = Expression.Property(_kanalSeciciNullable.Body, "HasValue");
+            var contains = Expression.Call(
+                typeof(Enumerable), nameof(Enumerable.Contains), [typeof(Guid)],
+                Expression.Constant(liste), deger);
+            return query.Where(Expression.Lambda<Func<T, bool>>(Expression.AndAlso(doluMu, contains), p));
+        }
+    }
 
     // ── uygulama ──
     public IQueryable<T> ApplyFilters(IQueryable<T> query, GridRequest? request, params string[] skipFields)

@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Storefront.Application.Commands.AddChannelCategoryProduct;
 using ECSPros.Storefront.Application.Commands.CreateChannelCategory;
 using ECSPros.Storefront.Application.Commands.CreateNavigationMenu;
@@ -28,6 +30,8 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/navigation")]
 [Authorize]
+[RequirePermission(Permissions.StorefrontChannelsView)]   // Y2: sayfa yetkisi
+[KanalKapsamiKontrol(Permissions.StorefrontChannelsView)]   // Y3: kanal parametresi kapsam dışıysa 404
 public class NavigationController(IMediator mediator) : ControllerBase
 {
     // ─── Navigation Menus ────────────────────────────────────────────────────
@@ -51,6 +55,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("menus")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> CreateMenu([FromBody] CreateMenuRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new CreateNavigationMenuCommand(
@@ -60,6 +65,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("menus/{id:guid}")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> UpdateMenu(Guid id, [FromBody] UpdateMenuRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new UpdateNavigationMenuCommand(
@@ -69,6 +75,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("menus/{id:guid}/nodes")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> SaveNodes(Guid id, [FromBody] SaveNodesRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new SaveNavNodesCommand(id, req.Nodes), ct);
@@ -78,6 +85,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
 
     /// <summary>Menü düğümü görselini ayrı storefront/menus CDN ağacına yükler.</summary>
     [HttpPost("menus/media")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     [RequestSizeLimit(6_000_000)]
     public async Task<IActionResult> UploadMenuMedia(
         IFormFile? file,
@@ -110,6 +118,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     }
 
     [HttpDelete("menus/{id:guid}")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> DeleteMenu(Guid id, CancellationToken ct)
     {
         var result = await mediator.Send(new DeleteNavigationMenuCommand(id), ct);
@@ -138,6 +147,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("channel-categories")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> CreateChannelCategory(
         [FromBody] CreateChannelCategoryRequest req, CancellationToken ct)
     {
@@ -151,6 +161,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("channel-categories/{id:guid}")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> UpdateChannelCategory(
         Guid id, [FromBody] UpdateChannelCategoryRequest req, CancellationToken ct)
     {
@@ -164,6 +175,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     }
 
     [HttpDelete("channel-categories/{id:guid}")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> DeleteChannelCategory(Guid id, CancellationToken ct)
     {
         var result = await mediator.Send(new DeleteChannelCategoryCommand(id), ct);
@@ -184,6 +196,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("channel-categories/{id:guid}/products")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> AddChannelCategoryProduct(
         Guid id, [FromBody] AddChannelCategoryProductRequest req, CancellationToken ct)
     {
@@ -194,6 +207,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     }
 
     [HttpDelete("channel-categories/{id:guid}/products/{productId:guid}")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> RemoveChannelCategoryProduct(
         Guid id, Guid productId, CancellationToken ct)
     {
@@ -203,6 +217,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("channel-categories/{id:guid}/groups")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> SaveChannelCategoryGroups(
         Guid id, [FromBody] SaveChannelCategoryGroupsRequest req, CancellationToken ct)
     {
@@ -214,6 +229,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("channel-categories/{id:guid}/sync")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> SyncChannelCategoryProducts(Guid id, CancellationToken ct)
     {
         var result = await mediator.Send(new SyncChannelCategoryProductsCommand(id), ct);
@@ -234,6 +250,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("channel-product-groups")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> UpsertChannelProductGroup(
         [FromBody] UpsertChannelProductGroupRequest req, CancellationToken ct)
     {
@@ -257,6 +274,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
 
     /// <summary>Kanal varyant fiyatı oluşturur veya günceller (upsert).</summary>
     [HttpPut("channel-variants/{firmPlatformId:guid}/variants/{variantId:guid}/price")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> SetChannelVariantPrice(
         Guid firmPlatformId, Guid variantId, [FromBody] SetChannelVariantPriceRequest req, CancellationToken ct)
     {
@@ -285,6 +303,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
 
     /// <summary>B11 (K8): kanal ürününe tarih aralıklı "öne çıkar" bayrağı atar; featuredFrom null = kaldır.</summary>
     [HttpPut("channel-products/{firmPlatformId:guid}/products/{productId:guid}/featured")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> SetChannelProductFeatured(
         Guid firmPlatformId, Guid productId, [FromBody] SetChannelProductFeaturedRequest req, CancellationToken ct)
     {
@@ -341,6 +360,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
 
     /// <summary>M2: verilen ürünleri kanala alır (selected=true) / kanaldan çıkarır (false).</summary>
     [HttpPost("channel-products/{firmPlatformId:guid}/bulk-select")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> BulkSetChannelProductSelection(
         Guid firmPlatformId, [FromBody] BulkSelectRequest req, CancellationToken ct)
     {
@@ -353,6 +373,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
 
     /// <summary>M3: verilen ürünlerin satışını durdurur (from/until) veya durdurmayı temizler (from null).</summary>
     [HttpPost("channel-products/{firmPlatformId:guid}/bulk-stop")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> BulkSetChannelProductStop(
         Guid firmPlatformId, [FromBody] BulkStopRequest req, CancellationToken ct)
     {
@@ -376,6 +397,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
 
     /// <summary>Kapsam tanımını kaydeder (all|filter|mixed + filtre) ve hemen günceller. Yanıt: eşleşen ürün sayısı.</summary>
     [HttpPut("channel-products/{firmPlatformId:guid}/scope")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> UpsertChannelScope(Guid firmPlatformId, [FromBody] ChannelScopeRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new ECSPros.Storefront.Application.Commands.UpsertChannelScope.UpsertChannelScopeCommand(
@@ -396,6 +418,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
 
     /// <summary>Kapsamı yeniden hesaplar (filter|mixed kanal).</summary>
     [HttpPost("channel-products/{firmPlatformId:guid}/scope/sync")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> SyncChannelScope(Guid firmPlatformId, CancellationToken ct)
     {
         var result = await mediator.Send(new ECSPros.Storefront.Application.Commands.SyncChannelScope.SyncChannelScopeCommand(firmPlatformId), ct);
@@ -405,6 +428,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
 
     /// <summary>Kapsamda manuel işlem: include (kapsama ekle) | exclude (kalıcı hariç tut) | clear (manuel kararı kaldır).</summary>
     [HttpPost("channel-products/{firmPlatformId:guid}/scope/manual")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> SetChannelScopeManual(Guid firmPlatformId, [FromBody] ChannelScopeManualRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new ECSPros.Storefront.Application.Commands.SetChannelScopeManual.SetChannelScopeManualCommand(
@@ -447,6 +471,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
 
     /// <summary>Verilen ürünlerin bu kanaldaki listeleme durumu + sebepleri (liste sayfası rozetleri).</summary>
     [HttpPost("channel-products/{firmPlatformId:guid}/listing-status")]
+    [RequirePermission(Permissions.StorefrontChannelsManage)]   // Y2
     public async Task<IActionResult> GetListingStatuses(
         Guid firmPlatformId, [FromBody] ListingStatusRequest req,
         [FromServices] ECSPros.Api.Services.ChannelListingStatusService svc, CancellationToken ct)

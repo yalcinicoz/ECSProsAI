@@ -8,10 +8,12 @@ namespace ECSPros.Iam.Application.Commands.UpdateUser;
 public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Result>
 {
     private readonly IIamDbContext _context;
+    private readonly IEtkinYetkiServisi _yetkiServisi;
 
-    public UpdateUserCommandHandler(IIamDbContext context)
+    public UpdateUserCommandHandler(IIamDbContext context, IEtkinYetkiServisi yetkiServisi)
     {
         _context = context;
+        _yetkiServisi = yetkiServisi;
     }
 
     public async Task<Result> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
@@ -30,6 +32,8 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Resul
         user.UpdatedBy = request.UpdatedBy;
 
         await _context.SaveChangesAsync(cancellationToken);
+        // Pasife alınan kullanıcının efektif yetkisi BOŞTUR (K3): önbellek anında düşürülür.
+        await _yetkiServisi.GecersizKilAsync(request.Id, cancellationToken);
         return Result.Success();
     }
 }

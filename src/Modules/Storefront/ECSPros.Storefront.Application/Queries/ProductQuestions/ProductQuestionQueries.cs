@@ -46,7 +46,9 @@ public class GetMemberQuestionsQueryHandler(IStorefrontDbContext db)
 
 /// <summary>Panel moderasyonu: durum filtresi + sayfalı; bekleyenler en eski önce (SLA).</summary>
 public record GetQuestionsForModerationQuery(
-    Guid? FirmPlatformId = null, string? Status = null, int Page = 1, int PageSize = 30)
+    Guid? FirmPlatformId = null, string? Status = null, int Page = 1, int PageSize = 30,
+    // Y3 (K2): kullanıcının görebileceği kanallar; null = kısıt yok, boş = hiçbir kayıt.
+    IReadOnlyCollection<Guid>? KanalKisiti = null)
     : IRequest<Result<PagedResult<ProductQuestionDto>>>;
 
 public class GetQuestionsForModerationQueryHandler(IStorefrontDbContext db)
@@ -56,6 +58,12 @@ public class GetQuestionsForModerationQueryHandler(IStorefrontDbContext db)
     {
         var q = db.ProductQuestions.AsNoTracking().AsQueryable();
         if (request.FirmPlatformId is { } fp) q = q.Where(x => x.FirmPlatformId == fp);
+        // Y3 (K2): kanal kapsamı — kapsam dışı kanalın sorusu moderasyon listesinde görünmez.
+        if (request.KanalKisiti is not null)
+        {
+            var izinli = request.KanalKisiti.ToList();
+            q = q.Where(x => izinli.Contains(x.FirmPlatformId));
+        }
         if (!string.IsNullOrWhiteSpace(request.Status))
             q = q.Where(x => x.Status == request.Status);
 

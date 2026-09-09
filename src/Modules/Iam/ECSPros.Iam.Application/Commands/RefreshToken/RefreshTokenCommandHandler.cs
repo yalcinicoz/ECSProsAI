@@ -34,21 +34,8 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
         if (!session.User.IsActive || session.User.IsDeleted)
             return Result.Failure<LoginResponse>("Kullanıcı aktif değil.");
 
-        // İzinleri yükle
-        var permissions = await _context.UserRoles
-            .Where(ur => ur.UserId == session.UserId && !ur.IsDeleted)
-            .SelectMany(ur => _context.RolePermissions
-                .Where(rp => rp.RoleId == ur.RoleId && !rp.IsDeleted)
-                .Select(rp => rp.PermissionId))
-            .Union(_context.UserPermissions
-                .Where(up => up.UserId == session.UserId && up.GrantType == "grant" && !up.IsDeleted)
-                .Select(up => up.PermissionId))
-            .Distinct()
-            .Join(_context.Permissions.Where(p => p.IsActive && !p.IsDeleted),
-                id => id, p => p.Id, (id, p) => p.Code)
-            .ToListAsync(cancellationToken);
-
-        var newAccessToken = _jwtTokenService.GenerateAccessToken(session.User, permissions);
+        // Y1 (K3): yetki token'a gömülmez; refresh de permission sorgusu yapmaz.
+        var newAccessToken = _jwtTokenService.GenerateAccessToken(session.User);
         var newRefreshTokenRaw = _jwtTokenService.GenerateRefreshToken();
         var newTokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(newRefreshTokenRaw)));
 

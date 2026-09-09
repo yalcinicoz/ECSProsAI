@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Core.Application.Commands.CreateLookupType;
 using ECSPros.Core.Application.Commands.CreateLookupValue;
 using ECSPros.Core.Application.Commands.UpdateLookupValue;
@@ -13,6 +15,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/lookup")]
 [Authorize]
+[RequirePermission(Permissions.DefinitionsView)]   // Y2: sayfa yetkisi
 public class LookupController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -32,6 +35,7 @@ public class LookupController : ControllerBase
 
     /// <summary>Yeni lookup tipi oluşturur.</summary>
     [HttpPost("types")]
+    [RequirePermission(Permissions.DefinitionsManage)]   // Y2
     public async Task<IActionResult> CreateType([FromBody] CreateLookupTypeRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreateLookupTypeCommand(request.Code, request.NameI18n, request.Description), ct);
@@ -54,6 +58,7 @@ public class LookupController : ControllerBase
 
     /// <summary>Lookup değerini günceller.</summary>
     [HttpPut("values/{id:guid}")]
+    [RequirePermission(Permissions.DefinitionsManage)]   // Y2
     public async Task<IActionResult> UpdateValue(Guid id, [FromBody] UpdateLookupValueRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -78,6 +83,7 @@ public class LookupController : ControllerBase
 
     /// <summary>Lookup tipine yeni değer ekler.</summary>
     [HttpPost("types/{code}/values")]
+    [RequirePermission(Permissions.DefinitionsManage)]   // Y2
     public async Task<IActionResult> CreateValue(string code, [FromBody] CreateLookupValueRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreateLookupValueCommand(

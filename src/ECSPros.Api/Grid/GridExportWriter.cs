@@ -6,7 +6,11 @@ using MiniExcelLibs;
 namespace ECSPros.Api.Grid;
 
 /// <summary>Export kolonu: anahtar (istemcinin görünür-kolon listesiyle eşleşir), Excel başlığı, satırdan değer.</summary>
-public sealed record GridExportColumn<TRow>(string Key, string Header, Func<TRow, object?> Value, bool Locked = false);
+/// <param name="AlanYetkisi">Y6 (K6): kolon hassas bir alansa gerekli yetki etiketi —
+/// "cost" | "margin" | "phone" | "address" | "notes". Yetkisi olmayan kullanıcının
+/// export'unda kolon HİÇ oluşmaz (tasarım §C.3: veri üretilmez).</param>
+public sealed record GridExportColumn<TRow>(string Key, string Header, Func<TRow, object?> Value,
+    bool Locked = false, string? AlanYetkisi = null);
 
 /// <summary>
 /// DataGrid Excel export (plan §2.8): aynı filtre modeliyle sayfalamasız sorgu → MiniExcel akışı (satır satır, bellek sabit).

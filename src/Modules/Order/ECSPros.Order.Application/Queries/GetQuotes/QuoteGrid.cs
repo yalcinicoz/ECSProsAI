@@ -21,6 +21,7 @@ public static class QuoteGrid
         .Date("createdAt", q => q.CreatedAt)
         .Guid("memberId", q => q.MemberId)
         .Guid("firmPlatformId", q => q.FirmPlatformId)
+        .Kanal(q => q.FirmPlatformId)   // Y3: kanal kapsamı kolonu (K2)
         .Bool("converted", q => q.ConvertedOrderId != null)
         .Sort("quoteNumber", q => q.QuoteNumber)
         .Sort("total", q => q.GrandTotal)
@@ -46,7 +47,8 @@ public static class QuoteGrid
     public static IQueryable<Quote> ApplyAll(IQueryable<Quote> query, QuoteListFilters f, GridRequest? grid, bool includeStatus = true)
     {
         query = ApplyNamed(query, f, includeStatus);
-        return includeStatus ? Schema.ApplyFilters(query, grid) : Schema.ApplyFilters(query, grid, "status");
+        // Y3 (K2): kanal kapsamı — erişilmeyen kanalın satırı hiçbir yüzeyde görünmez.
+        return Schema.ApplyKanalKapsami(includeStatus ? Schema.ApplyFilters(query, grid) : Schema.ApplyFilters(query, grid, "status"), grid?.KanalKisiti);
     }
 
     public static string StatusLabel(string s) => s switch

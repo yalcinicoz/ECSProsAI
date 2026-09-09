@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using System.Security.Claims;
 using ECSPros.Crm.Application.Tickets.Commands;
 using ECSPros.Crm.Application.Tickets.Queries;
@@ -15,6 +17,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/crm/tickets")]
 [Authorize]
+[RequirePermission(Permissions.CrmTicketsView)]   // Y2: sayfa yetkisi
 public class CrmTicketsController(IMediator mediator, ILogger<CrmTicketsController> logger) : ControllerBase
 {
     private (Guid Id, string Ad) MevcutKullanici()
@@ -27,7 +30,8 @@ public class CrmTicketsController(IMediator mediator, ILogger<CrmTicketsControll
         => r.IsFailure ? new BadRequestObjectResult(new { success = false, error = r.Error }) : new OkObjectResult(new { success = true, data = r.Value });
 
     [HttpGet]
-    public async Task<IActionResult> List(
+    public async Task<IActionResult> List([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, 
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? status = null, [FromQuery] string? type = null,
         [FromQuery] Guid? subjectId = null, [FromQuery] Guid? createdBy = null, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null,
         [FromQuery] long? trackingNo = null, [FromQuery] string? customer = null, [FromQuery] string? orderNumber = null, [FromQuery] string? search = null,
@@ -36,18 +40,33 @@ public class CrmTicketsController(IMediator mediator, ILogger<CrmTicketsControll
     {
         var (uid, _) = MevcutKullanici();
         // DataGrid F4 (2026-09-08): sort/dir + f.* (TicketGrid.Schema beyaz listesi); page/pageSize merkezi clamp
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
-        return Sonuc(await mediator.Send(new GetTicketsQuery(uid, grid.Page, grid.PageSize, status, type, subjectId, createdBy, from, to, trackingNo,
-            customer, orderNumber, search, memberId, orderId, taggedMe, unreadByMe, includeHidden, sort, grid), ct));
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, await kanalKapsami.KanallarAsync(Permissions.CrmTicketsView, ct), defaultPageSize: 20);
+        var sonuc = await mediator.Send(new GetTicketsQuery(uid, grid.Page, grid.PageSize, status, type, subjectId, createdBy, from, to, trackingNo,
+            customer, orderNumber, search, memberId, orderId, taggedMe, unreadByMe, includeHidden, sort, grid), ct);
+        if (sonuc.IsFailure) return Sonuc(sonuc);
+
+        // Y6 (K6): müşteri/arayan telefonu hassas alandır — yetkisi olmayana maske gider.
+        var izin = await alanYetkileri.IzinlerAsync(ct);
+        var sayfa = sonuc.Value!;
+        var maskeli = sayfa with
+        {
+            Items = sayfa.Items.Select(t => t with
+            {
+                CustomerPhone = izin.Telefonla(t.CustomerPhone) ?? "",
+                CallerPhone = izin.Telefonla(t.CallerPhone) ?? "",
+            }).ToList(),
+        };
+        return Ok(new { success = true, data = maskeli });
     }
 
     /// <summary>Talepleri Excel'e aktarır (DataGrid F4): gövdede aynı filtre modeli (search/sort/dir/filters + named: status, type,
     /// subjectId, createdBy, from, to, trackingNo, customer, orderNumber, memberId, orderId, taggedMe, unreadByMe, includeHidden, sort) + kolon listesi.</summary>
     [HttpPost("export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> Export([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
-        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam, CancellationToken ct)
+    public async Task<IActionResult> Export([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam, [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, CancellationToken ct)
     {
+        var kanalKisiti = await kanalKapsami.KanallarAsync(Permissions.CrmTicketsView, ct);   // Y3: export listeyle aynı kapsamdan geçer
         var (uid, _) = MevcutKullanici();
         var E = ECSPros.Api.Grid.GridExportEndpoint.Tarih; // kısaltma
         var filters = new TicketListFilters(
@@ -59,15 +78,25 @@ public class CrmTicketsController(IMediator mediator, ILogger<CrmTicketsControll
             ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "taggedMe") ?? false, ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "unreadByMe") ?? false,
             ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "includeHidden") ?? false);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "tickets", "talepler", "Talepler",
-            ECSPros.Api.Grid.TicketExportColumns.All, max => mediator.Send(new ExportTicketsQuery(uid, filters, body.ToGridRequest(), max, body.NamedValue("sort")), ct), ct);
+            ECSPros.Api.Grid.TicketExportColumns.All, max => mediator.Send(new ExportTicketsQuery(uid, filters, body.ToGridRequest(kanalKisiti), max, body.NamedValue("sort")), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     [HttpGet("{trackingNo:long}")]
-    public async Task<IActionResult> Detail(long trackingNo, CancellationToken ct)
-        => Sonuc(await mediator.Send(new GetTicketDetailQuery(trackingNo), ct));
+    public async Task<IActionResult> Detail(
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, long trackingNo, CancellationToken ct)
+    {
+        var sonuc = await mediator.Send(new GetTicketDetailQuery(trackingNo), ct);
+        // Y3 (K2 + §C.2): kapsam dışı kaydın varlığı sızmasın → 404.
+        var kanallar = await kanalKapsami.KanallarAsync(Permissions.CrmTicketsView, ct);
+        if (sonuc.IsSuccess && kanallar is not null
+            && sonuc.Value!.FirmPlatformId is { } fp && !kanallar.Contains(fp))
+            return NotFound(new { success = false, error = "Kayıt bulunamadı." });
+        return Sonuc(sonuc);
+    }
 
     /// <summary>Kayıt açıldı: okundu satırları + bu kaydın bildirimlerini "kayda girdi" yap (GET yan etkisiz kalsın diye ayrı uç).</summary>
     [HttpPost("{id:guid}/open")]
+    [RequirePermission(Permissions.CrmTicketsManage)]   // Y2
     public async Task<IActionResult> Open(Guid id, CancellationToken ct)
     {
         var (uid, ad) = MevcutKullanici();
@@ -83,6 +112,7 @@ public class CrmTicketsController(IMediator mediator, ILogger<CrmTicketsControll
         Guid? MemberId, int? LegacyMemberId, string? CustomerName, string? CustomerPhone, string? BodyHtml, List<string>? Attachments);
 
     [HttpPost]
+    [RequirePermission(Permissions.CrmTicketsManage)]   // Y2
     public async Task<IActionResult> Create([FromBody] CreateBody b, [FromServices] Services.CrmTicketOrderLookup lookup, CancellationToken ct)
     {
         var (uid, ad) = MevcutKullanici();
@@ -109,6 +139,7 @@ public class CrmTicketsController(IMediator mediator, ILogger<CrmTicketsControll
     public record ActivityBody(string? BodyHtml, List<string>? Attachments, Guid StatusId, Guid? TaggedUserId, string? TaggedUserName);
 
     [HttpPost("{id:guid}/activities")]
+    [RequirePermission(Permissions.CrmTicketsManage)]   // Y2
     public async Task<IActionResult> AddActivity(Guid id, [FromBody] ActivityBody b, [FromServices] IRealtimeNotificationService rt, CancellationToken ct)
     {
         var (uid, ad) = MevcutKullanici();
@@ -124,6 +155,7 @@ public class CrmTicketsController(IMediator mediator, ILogger<CrmTicketsControll
     }
 
     [HttpPost("{id:guid}/hidden")]
+    [RequirePermission(Permissions.CrmTicketsManage)]   // Y2
     public async Task<IActionResult> SetHidden(Guid id, [FromBody] bool hidden, CancellationToken ct)
     {
         var (uid, ad) = MevcutKullanici();
@@ -139,6 +171,7 @@ public class CrmTicketsController(IMediator mediator, ILogger<CrmTicketsControll
     }
 
     [HttpPost("notifications/seen")]
+    [RequirePermission(Permissions.CrmTicketsManage)]   // Y2
     public async Task<IActionResult> NotificationsSeen([FromBody] List<Guid> ids, CancellationToken ct)
     {
         var (uid, _) = MevcutKullanici();
@@ -146,6 +179,7 @@ public class CrmTicketsController(IMediator mediator, ILogger<CrmTicketsControll
     }
 
     [HttpPost("notifications/{id:guid}/opened")]
+    [RequirePermission(Permissions.CrmTicketsManage)]   // Y2
     public async Task<IActionResult> NotificationOpened(Guid id, CancellationToken ct)
     {
         var (uid, _) = MevcutKullanici();
@@ -159,16 +193,19 @@ public class CrmTicketsController(IMediator mediator, ILogger<CrmTicketsControll
 
     public record SubjectBody(Guid? Id, string Name, string Type, int SortOrder, bool IsActive, List<string>? RequiredFields);
     [HttpPost("settings/subjects")]
+    [RequirePermission(Permissions.CrmTicketsManage)]   // Y2
     public async Task<IActionResult> SaveSubject([FromBody] SubjectBody b, CancellationToken ct)
         => Sonuc(await mediator.Send(new UpsertTicketSubjectCommand(b.Id, b.Name, b.Type, b.SortOrder, b.IsActive, b.RequiredFields ?? []), ct));
 
     public record StatusBody(Guid? Id, string Code, string Name, string Color, int SortOrder, bool IsHidden, bool IsResolved, bool ExemptFromDuplicateCheck, bool IsDefault);
     [HttpPost("settings/statuses")]
+    [RequirePermission(Permissions.CrmTicketsManage)]   // Y2
     public async Task<IActionResult> SaveStatus([FromBody] StatusBody b, CancellationToken ct)
         => Sonuc(await mediator.Send(new UpsertTicketStatusCommand(b.Id, b.Code, b.Name, b.Color, b.SortOrder, b.IsHidden, b.IsResolved, b.ExemptFromDuplicateCheck, b.IsDefault), ct));
 
     /// <summary>Ek yükleme — Requests.UploadMedia kopyası; dosyalar media/crm/yyyyMM altına.</summary>
     [HttpPost("media")]
+    [RequirePermission(Permissions.CrmTicketsManage)]   // Y2
     [RequestSizeLimit(11_000_000)]
     public async Task<IActionResult> UploadMedia(IFormFile? file, [FromServices] Services.Storage.IFileStorage storage, CancellationToken ct)
     {

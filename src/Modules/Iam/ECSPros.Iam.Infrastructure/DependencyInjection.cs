@@ -21,6 +21,9 @@ public static class DependencyInjection
                 }));
 
         services.AddScoped<IIamDbContext>(sp => sp.GetRequiredService<IamDbContext>());
+        // Y1 (2026-09-09, K3): efektif yetkinin TEK kaynağı — yetki kontrolleri her istekte buradan
+        // okur (token'a gömülmez), yetki değişince önbellek düşürülür.
+        services.AddScoped<IEtkinYetkiServisi, EtkinYetkiServisi>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<ISupplierUserTokenService, SupplierUserTokenService>();

@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +9,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/migration")]
 [Authorize]
+[RequirePermission(Permissions.SystemMigrationManage)]   // Y2: yüksek etkili sistem işlemleri
 public class MigrationController : ControllerBase
 {
     private readonly MigrationService _migrationService;
@@ -39,6 +42,7 @@ public class MigrationController : ControllerBase
     }
 
     [HttpPost("run")]
+    [RequirePermission(Permissions.SystemMigrationManage)]   // Y2
     public async Task<IActionResult> Run([FromBody] RunMigrationRequest req)
     {
         int phase = req?.Phase ?? 0;

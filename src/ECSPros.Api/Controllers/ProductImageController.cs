@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Catalog.Application.Commands.ArchiveProductImage;
 using ECSPros.Catalog.Application.Commands.ArchiveProductVideo;
 using ECSPros.Catalog.Application.Commands.ConfirmImageBatch;
@@ -35,6 +37,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/catalog")]
 [Authorize]
+[RequirePermission(Permissions.CatalogProductsView)]   // Y2: sayfa yetkisi
 public class ProductImageController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -60,6 +63,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPost("image-sets")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> CreateImageSet([FromBody] CreateImageSetRequest request, CancellationToken ct = default)
     {
         var command = new CreateImageSetCommand(request.Code, request.Name, request.FallbackSetId, request.SortPriority);
@@ -70,6 +74,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPut("image-sets/{id:guid}")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> UpdateImageSet(Guid id, [FromBody] UpdateImageSetRequest request, CancellationToken ct = default)
     {
         var command = new UpdateImageSetCommand(id, request.Name, request.FallbackSetId, request.SortPriority, request.IsActive);
@@ -80,6 +85,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpDelete("image-sets/{id:guid}")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> DeleteImageSet(Guid id, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new DeleteImageSetCommand(id), ct);
@@ -100,6 +106,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPost("mannequins")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> CreateMannequin([FromBody] CreateMannequinCommand command, CancellationToken ct = default)
     {
         var result = await _mediator.Send(command, ct);
@@ -109,6 +116,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPut("mannequins/{id:guid}")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> UpdateMannequin(Guid id, [FromBody] UpdateMannequinRequest request, CancellationToken ct = default)
     {
         var command = new UpdateMannequinCommand(id, request.Code, request.FirstName, request.LastName, request.Gender,
@@ -121,6 +129,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpDelete("mannequins/{id:guid}")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> DeleteMannequin(Guid id, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new DeleteMannequinCommand(id), ct);
@@ -146,6 +155,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPost("products/{productId:guid}/images/prepare")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> PrepareImageBatch(Guid productId, [FromBody] PrepareImageBatchRequest request, CancellationToken ct = default)
     {
         var storedExtensions = request.FileExtensions
@@ -159,6 +169,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPost("upload/{batchId:guid}")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     [DisableRequestSizeLimit]
     [RequestFormLimits(MultipartBodyLengthLimit = long.MaxValue, ValueLengthLimit = int.MaxValue)]
     public async Task<IActionResult> UploadToFtp(Guid batchId, CancellationToken ct = default)
@@ -213,6 +224,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPost("products/{productId:guid}/images/confirm")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> ConfirmImageBatch(Guid productId, [FromBody] ConfirmImageBatchCommand command, CancellationToken ct = default)
     {
         var result = await _mediator.Send(command with { ProductId = productId }, ct);
@@ -222,6 +234,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPatch("products/{productId:guid}/images/{imageId:guid}")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> UpdateProductImageMetadata(
         Guid productId,
         Guid imageId,
@@ -236,6 +249,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpDelete("products/{productId:guid}/images/{imageId:guid}")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> ArchiveProductImage(Guid productId, Guid imageId, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new ArchiveProductImageCommand(imageId), ct);
@@ -260,6 +274,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPost("products/{productId:guid}/images/archive/{batchId:guid}/restore")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> RestoreImageBatch(Guid productId, Guid batchId, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new RestoreImageBatchCommand(productId, batchId), ct);
@@ -280,6 +295,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPut("products/{productId:guid}/image-set-mappings")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> UpsertProductImageSetMapping(Guid productId, [FromBody] UpsertMappingRequest request, CancellationToken ct = default)
     {
         var command = new UpsertProductImageSetMappingCommand(productId, request.ForSetId, request.UseSetId);
@@ -290,6 +306,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpDelete("products/{productId:guid}/image-set-mappings/{forSetId:guid}")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> DeleteProductImageSetMapping(Guid productId, Guid forSetId, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new DeleteProductImageSetMappingCommand(productId, forSetId), ct);
@@ -326,6 +343,7 @@ public class ProductImageController : ControllerBase
     /// <summary>H5 (K15): URL ile video ekleme — kullanıcının video sunucusundaki ya da
     /// dış kaynaktaki adres; dosya yükleme akışının yanında ikinci yol (kayıt Active doğar).</summary>
     [HttpPost("products/{productId:guid}/videos/by-url")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> AddVideoByUrl(
         Guid productId, [FromBody] AddVideoByUrlRequest request, CancellationToken ct = default)
     {
@@ -338,6 +356,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPost("products/{productId:guid}/videos/prepare")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> PrepareVideoBatch(Guid productId, [FromBody] PrepareVideoBatchRequest request, CancellationToken ct = default)
     {
         var command = new PrepareVideoBatchCommand(productId, request.ImageSetId, request.FileExtensions, request.ReplaceSet);
@@ -348,6 +367,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPost("upload/videos/{batchId:guid}")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     [DisableRequestSizeLimit]
     [RequestFormLimits(MultipartBodyLengthLimit = long.MaxValue, ValueLengthLimit = int.MaxValue)]
     public async Task<IActionResult> UploadVideoToFtp(Guid batchId, CancellationToken ct = default)
@@ -388,6 +408,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPost("products/{productId:guid}/videos/confirm")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> ConfirmVideoBatch(Guid productId, [FromBody] ConfirmVideoBatchCommand command, CancellationToken ct = default)
     {
         var result = await _mediator.Send(command with { ProductId = productId }, ct);
@@ -397,6 +418,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPatch("products/{productId:guid}/videos/{videoId:guid}")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> UpdateProductVideoMetadata(
         Guid productId,
         Guid videoId,
@@ -411,6 +433,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpDelete("products/{productId:guid}/videos/{videoId:guid}")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> ArchiveProductVideo(Guid productId, Guid videoId, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new ArchiveProductVideoCommand(videoId), ct);
@@ -433,6 +456,7 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPost("products/{productId:guid}/videos/archive/{batchId:guid}/restore")]
+    [RequirePermission(Permissions.CatalogImagesManage)]   // Y2
     public async Task<IActionResult> RestoreVideoBatch(Guid productId, Guid batchId, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new RestoreVideoBatchCommand(productId, batchId), ct);

@@ -45,4 +45,8 @@ public class PosSale : AggregateRoot
         AddDomainEvent(new PosSaleRefundedEvent(Id, WarehouseId, refundedBy,
             Items.Select(i => new SoldItem(i.VariantId, i.Quantity)).ToList()));
     }
+
+    /// <summary>Y3 (2026-09-09): POS satışının KANALI kasadan gelir (satışta kanal kolonu yok).
+    /// FK (RegisterId) zaten vardı; navigasyon kapsam filtresi için eklendi, migration gerekmez.</summary>
+    public PosRegister Register { get; set; } = null!;
 }

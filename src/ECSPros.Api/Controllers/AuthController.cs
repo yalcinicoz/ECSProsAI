@@ -64,17 +64,36 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>Token doğrulama — mevcut kullanıcı bilgisi.</summary>
+    /// <summary>Mevcut kullanıcı + EFEKTİF yetkileri (Y1, K3): yetki token'dan değil, her
+    /// çağrıda yetki servisinden gelir — panel menüsü/butonları anında doğru olur.
+    /// <c>channels</c>: kanal kapsamlı yetkilerde geçerli kanal kimlikleri (kapsamsızlarda yok).</summary>
     [HttpGet("me")]
     [Authorize]
-    public IActionResult Me()
+    public async Task<IActionResult> Me(
+        [FromServices] ECSPros.Iam.Application.Services.IEtkinYetkiServisi yetkiServisi,
+        CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
         var email = User.FindFirst("email")?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value;
         var fullName = User.FindFirst("full_name")?.Value;
-        var permissions = User.FindAll("permission").Select(c => c.Value).ToList();
         var mustChangePassword = User.FindFirst("must_change_password")?.Value == "true";
+        // K5: süper admin bayrağı — panel menü/buton görünürlüğünde tüm kontrolleri geçer.
+        var isSuperAdmin = User.FindFirst("sa")?.Value == "true";
 
-        return Ok(new { success = true, data = new { userId, email, fullName, permissions, mustChangePassword } });
+        var permissions = new List<string>();
+        var channels = new Dictionary<string, List<Guid>>();
+        if (Guid.TryParse(userId, out var uid))
+        {
+            var yetkiler = await yetkiServisi.GetirAsync(uid, ct);
+            isSuperAdmin = isSuperAdmin || yetkiler.SuperAdmin;
+            foreach (var key in yetkiler.Keyler)
+            {
+                permissions.Add(key);
+                if (yetkiler.Kanallar(key) is { } kanallar) channels[key] = kanallar.ToList();
+            }
+        }
+
+        return Ok(new { success = true, data = new { userId, email, fullName, permissions, channels, mustChangePassword, isSuperAdmin } });
     }
 
     /// <summary>Mevcut kullanıcı kendi şifresini değiştirir.</summary>

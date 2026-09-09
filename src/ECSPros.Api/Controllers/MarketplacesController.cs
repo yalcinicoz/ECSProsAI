@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Api.Services.Marketplace;
 using ECSPros.Api.Services.Marketplace.Reference;
 using ECSPros.Api.Services.Marketplace.Send;
@@ -22,6 +24,8 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/marketplaces")]
 [Authorize]
+[RequirePermission(Permissions.MarketplacesView)]   // Y2: sayfa yetkisi
+[KanalKapsamiKontrol(Permissions.MarketplacesView)]   // Y3: kanal parametresi kapsam dışıysa 404
 public class MarketplacesController(
     IMediator mediator,
     MarketplaceAdminService service,
@@ -83,6 +87,7 @@ public class MarketplacesController(
 
     /// <summary>Seçilen varyant/ürünleri pazaryerine gönderir (fiyat kanal önceliğiyle, stok online satılabilir toplam).</summary>
     [HttpPost("{firmPlatformId:guid}/sync-products")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> SyncProducts(
         Guid firmPlatformId, [FromBody] SyncProductsRequest request, CancellationToken ct)
     {
@@ -143,6 +148,7 @@ public class MarketplacesController(
 
     /// <summary>Stok bilgisini pazaryerine iter — variantIds boşsa mağazanın tüm senkron ürünleri.</summary>
     [HttpPost("{firmPlatformId:guid}/update-stocks")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> UpdateStocks(
         Guid firmPlatformId, [FromBody] UpdateStocksRequest request, CancellationToken ct)
     {
@@ -205,6 +211,7 @@ public class MarketplacesController(
 
     /// <summary>Açık paketleri hemen sorgular (worker beklemeden) — elle tetikleme.</summary>
     [HttpPost("batches/poll-now")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> PollBatchesNow(CancellationToken ct)
     {
         await batchWorker.ProcessDueBatchesAsync(ct, force: true);
@@ -230,6 +237,7 @@ public class MarketplacesController(
     /// attributes kapsamı categoryIds ile daraltılabilir; boşsa tüm aktif yaprak kategoriler.
     /// </summary>
     [HttpPost("reference-sync")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> StartReferenceSync([FromBody] ReferenceSyncRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Marketplace))
@@ -269,6 +277,7 @@ public class MarketplacesController(
     /// stok/eşik-altı fiyat otomatik düzeltilir, büyük sapmalar ve kayıplar sorun olur,
     /// zaman aşımına düşmüş item'lar çözülür, fiili kategori istisnaya işlenir.</summary>
     [HttpPost("{firmPlatformId:guid}/reconcile")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> Reconcile(
         Guid firmPlatformId,
         [FromServices] MarketplaceReconciliationService reconciliation,
@@ -296,6 +305,7 @@ public class MarketplacesController(
 
     /// <summary>Sorunu yoksay — koşul sürerse bir sonraki taramada yeniden açılır (bilinçli).</summary>
     [HttpPost("issues/{id:guid}/dismiss")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> DismissIssue(
         Guid id, [FromServices] MarketplaceIssueService issueService, CancellationToken ct)
     {
@@ -308,6 +318,7 @@ public class MarketplacesController(
 
     /// <summary>Pazaryerinden yeni siparişleri çeker (elle tetikleme).</summary>
     [HttpPost("{firmPlatformId:guid}/fetch-orders")]
+    [RequirePermission(Permissions.MarketplacesManage)]   // Y2
     public async Task<IActionResult> FetchOrders(
         Guid firmPlatformId, [FromQuery] DateTime? since, CancellationToken ct)
     {

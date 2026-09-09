@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Pos.Application.Commands.CloseSession;
 using ECSPros.Pos.Application.Commands.CompleteSale;
 using ECSPros.Pos.Application.Commands.OpenSession;
@@ -16,6 +18,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/pos")]
 [Authorize]
+[RequirePermission(Permissions.PosView)]   // Y2: sayfa yetkisi
 public class PosController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -35,6 +38,7 @@ public class PosController : ControllerBase
 
     /// <summary>POS oturumu açar.</summary>
     [HttpPost("sessions/open")]
+    [RequirePermission(Permissions.PosManage)]   // Y2
     public async Task<IActionResult> OpenSession([FromBody] OpenSessionRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -55,6 +59,7 @@ public class PosController : ControllerBase
 
     /// <summary>POS satışını tamamlar — stok otomatik düşülür.</summary>
     [HttpPost("sales")]
+    [RequirePermission(Permissions.PosManage)]   // Y2
     public async Task<IActionResult> CompleteSale([FromBody] CompleteSaleRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -82,7 +87,7 @@ public class PosController : ControllerBase
 
     /// <summary>POS satışlarını listeler.</summary>
     [HttpGet("sales")]
-    public async Task<IActionResult> GetSales(
+    public async Task<IActionResult> GetSales([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, 
         [FromQuery] Guid? sessionId,
         [FromQuery] Guid? registerId,
         [FromQuery] DateTime? dateFrom,
@@ -93,7 +98,7 @@ public class PosController : ControllerBase
         CancellationToken ct = default)
     {
         // DataGrid (2026-09-08): page/pageSize/search/sort/dir/f.* (PosSaleGrid.Schema); adlandırılmış filtreler korunur
-        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, await kanalKapsami.KanallarAsync(Permissions.PosView, ct), defaultPageSize: 20);
         var result = await _mediator.Send(
             new GetPosSalesQuery(sessionId, registerId, dateFrom, dateTo, status, page, pageSize, grid), ct);
         return Ok(new { success = true, data = result.Value });
@@ -102,16 +107,17 @@ public class PosController : ControllerBase
     /// <summary>POS satışlarını Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: sessionId, registerId, dateFrom, dateTo, status.</summary>
     [HttpPost("sales/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
-    public async Task<IActionResult> ExportSales([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+    public async Task<IActionResult> ExportSales([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
         [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
         [FromServices] ILogger<PosController> logger, CancellationToken ct)
     {
+        var kanalKisiti = await kanalKapsami.KanallarAsync(Permissions.PosView, ct);   // Y3: export listeyle aynı kapsamdan
         var g = ECSPros.Api.Grid.GridExportEndpoint.Kimlik;
         var filters = new PosSaleListFilters(g(body, "sessionId"), g(body, "registerId"),
             ECSPros.Api.Grid.GridExportEndpoint.Tarih(body, "dateFrom"), ECSPros.Api.Grid.GridExportEndpoint.Tarih(body, "dateTo"),
             body.NamedValue("status"), body.Search);
         return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "pos-sales", "pos-satislari", "POS Satışları",
-            ECSPros.Api.Grid.PosSaleExportColumns.All, max => _mediator.Send(new ExportPosSalesQuery(filters, body.ToGridRequest(), max), ct), ct);
+            ECSPros.Api.Grid.PosSaleExportColumns.All, max => _mediator.Send(new ExportPosSalesQuery(filters, body.ToGridRequest(kanalKisiti), max), ct), ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
     /// <summary>POS satış detayını döner.</summary>
@@ -126,6 +132,7 @@ public class PosController : ControllerBase
 
     /// <summary>POS satışını iade eder — stok otomatik geri yüklenir.</summary>
     [HttpPost("sales/{saleId:guid}/refund")]
+    [RequirePermission(Permissions.PosManage)]   // Y2
     public async Task<IActionResult> RefundSale(Guid saleId, [FromBody] RefundSaleRequest request, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -152,6 +159,7 @@ public class PosController : ControllerBase
 
     /// <summary>POS oturumunu kapatır.</summary>
     [HttpPost("sessions/{sessionId:guid}/close")]
+    [RequirePermission(Permissions.PosManage)]   // Y2
     public async Task<IActionResult> CloseSession(Guid sessionId, [FromBody] CloseSessionRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CloseSessionCommand(

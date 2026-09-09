@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Accounts.Application.Commands.AddAccountLedger;
 using ECSPros.Accounts.Application.Commands.CreateAccountGroup;
 using ECSPros.Accounts.Application.Commands.CreateCurrentAccount;
@@ -17,6 +19,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/accounts")]
 [Authorize]
+[RequirePermission(Permissions.AccountsView)]   // Y2: sayfa yetkisi
 public class AccountsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -32,6 +35,7 @@ public class AccountsController : ControllerBase
     }
 
     [HttpPost("groups")]
+    [RequirePermission(Permissions.AccountsManage)]   // Y2
     public async Task<IActionResult> CreateGroup([FromBody] CreateAccountGroupRequest req, CancellationToken ct)
     {
         var r = await _mediator.Send(new CreateAccountGroupCommand(req.Code, req.Name, req.GroupType, req.Description, req.SortOrder), ct);
@@ -40,6 +44,7 @@ public class AccountsController : ControllerBase
     }
 
     [HttpPut("groups/{id:guid}")]
+    [RequirePermission(Permissions.AccountsManage)]   // Y2
     public async Task<IActionResult> UpdateGroup(Guid id, [FromBody] UpdateAccountGroupRequest req, CancellationToken ct)
     {
         var r = await _mediator.Send(new UpdateAccountGroupCommand(id, req.Name, req.GroupType, req.Description, req.SortOrder, req.IsActive), ct);
@@ -79,6 +84,7 @@ public class AccountsController : ControllerBase
     }
 
     [HttpPost]
+    [RequirePermission(Permissions.AccountsManage)]   // Y2
     public async Task<IActionResult> CreateAccount([FromBody] CreateCurrentAccountRequest req, CancellationToken ct)
     {
         var r = await _mediator.Send(new CreateCurrentAccountCommand(
@@ -91,6 +97,7 @@ public class AccountsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/ledgers")]
+    [RequirePermission(Permissions.AccountsManage)]   // Y2
     public async Task<IActionResult> AddLedger(Guid id, [FromBody] AddLedgerRequest req, CancellationToken ct)
     {
         var r = await _mediator.Send(new AddAccountLedgerCommand(id, req.Currency, req.Description), ct);
@@ -99,6 +106,7 @@ public class AccountsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [RequirePermission(Permissions.AccountsManage)]   // Y2
     public async Task<IActionResult> UpdateAccount(Guid id, [FromBody] UpdateCurrentAccountRequest req, CancellationToken ct)
     {
         var r = await _mediator.Send(new UpdateCurrentAccountCommand(
@@ -122,6 +130,7 @@ public class AccountsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/supplier-users")]
+    [RequirePermission(Permissions.AccountsManage)]   // Y2
     public async Task<IActionResult> CreateSupplierUser(Guid id, [FromBody] CreateSupplierUserRequest req, CancellationToken ct)
     {
         var acc = await _mediator.Send(new GetCurrentAccountDetailQuery(id), ct);

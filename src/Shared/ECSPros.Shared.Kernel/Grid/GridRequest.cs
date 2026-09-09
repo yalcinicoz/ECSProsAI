@@ -22,6 +22,13 @@ public sealed class GridRequest
     public string? Dir { get; init; }
     public List<GridFilter> Filters { get; init; } = new();
 
+    /// <summary>
+    /// Y3 (2026-09-09, karar K2): kullanıcının bu listede görebileceği KANALLAR.
+    /// null → kısıt yok (süper admin ya da kanal kapsamsız yetki); boş liste → hiçbir satır.
+    /// Liste, sayaç, arama ve export AYNI kısıttan geçer — kapsam dışı satır hiçbir yüzeyde görünmez.
+    /// </summary>
+    public IReadOnlyCollection<Guid>? KanalKisiti { get; init; }
+
     public bool? Desc => Dir is null ? null : string.Equals(Dir, "desc", StringComparison.OrdinalIgnoreCase);
     public bool HasFilter(string field) => Filters.Any(f => string.Equals(f.Field, field, StringComparison.OrdinalIgnoreCase));
     public bool IsEmpty => string.IsNullOrWhiteSpace(Search) && Filters.Count == 0;
@@ -35,6 +42,7 @@ public sealed class GridRequest
         Sort = string.IsNullOrWhiteSpace(Sort) ? null : Sort.Trim(),
         Dir = string.IsNullOrWhiteSpace(Dir) ? null : Dir.Trim().ToLowerInvariant(),
         Filters = Filters.Where(f => !string.IsNullOrWhiteSpace(f.Field)).ToList(),
+        KanalKisiti = KanalKisiti,
     };
 
     /// <summary>Verilen alanlar hariç kopya — sekme sayaçları (durum filtresi dışındaki filtrelerle sayım) için.</summary>
@@ -42,6 +50,7 @@ public sealed class GridRequest
     {
         Page = Page, PageSize = PageSize, Search = Search, Sort = Sort, Dir = Dir,
         Filters = Filters.Where(f => !fields.Contains(f.Field, StringComparer.OrdinalIgnoreCase)).ToList(),
+        KanalKisiti = KanalKisiti,   // sayaçlar da aynı kapsamdan geçer
     };
 }
 
@@ -59,10 +68,12 @@ public sealed class GridExportRequest
     public List<string>? Columns { get; init; }
     public Dictionary<string, string>? Named { get; init; }
 
-    public GridRequest ToGridRequest() => new GridRequest
+    /// <param name="kanalKisiti">Y3: export de listeyle AYNI kanal kapsamından geçer (K2).</param>
+    public GridRequest ToGridRequest(IReadOnlyCollection<Guid>? kanalKisiti) => new GridRequest
     {
         Page = 1, PageSize = GridRequest.MaxPageSize, Search = Search, Sort = Sort, Dir = Dir,
         Filters = Filters ?? new(),
+        KanalKisiti = kanalKisiti,
     }.Normalize();
 
     public string? NamedValue(string key) =>

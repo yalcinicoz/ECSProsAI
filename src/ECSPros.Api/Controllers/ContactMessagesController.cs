@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using ECSPros.Storefront.Application.Commands.UpdateContactMessageStatus;
 using ECSPros.Storefront.Application.Queries.GetContactMessages;
 using MediatR;
@@ -10,10 +12,11 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/contact-messages")]
 [Authorize]
+[RequirePermission(Permissions.StorefrontModerationView)]   // Y2: sayfa yetkisi
 public class ContactMessagesController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetList(
+    public async Task<IActionResult> GetList([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, 
         [FromQuery] string? status = null,
         [FromQuery] Guid? firmPlatformId = null,
         [FromQuery] string? search = null,
@@ -22,12 +25,14 @@ public class ContactMessagesController(IMediator mediator) : ControllerBase
         CancellationToken ct = default)
     {
         var result = await mediator.Send(
-            new GetContactMessagesQuery(status, firmPlatformId, search, page, pageSize), ct);
+            new GetContactMessagesQuery(status, firmPlatformId, search, page, pageSize,
+                await kanalKapsami.KanallarAsync(Permissions.StorefrontModerationView, ct)), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
 
     [HttpPatch("{id}/status")]
+    [RequirePermission(Permissions.StorefrontModerationManage)]   // Y2
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateContactMessageStatusRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new UpdateContactMessageStatusCommand(id, req.Status), ct);

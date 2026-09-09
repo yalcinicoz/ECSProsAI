@@ -1,3 +1,5 @@
+using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Api.Authorization;
 using System.Security.Claims;
 using ECSPros.Storefront.Application.Commands.DeletePageBlock;
 using ECSPros.Storefront.Application.Commands.PublishPageSnapshot;
@@ -23,6 +25,8 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/pages")]
 [Authorize]
+[RequirePermission(Permissions.StorefrontContentView)]   // Y2: sayfa yetkisi
+[KanalKapsamiKontrol(Permissions.StorefrontContentView)]   // Y3: kanal parametresi kapsam dışıysa 404
 public class PagesController(
     IMediator mediator,
     ECSPros.Storefront.Application.Services.IStorefrontDbContext db,
@@ -77,6 +81,7 @@ public class PagesController(
     }
 
     [HttpPost("blocks")]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     public async Task<IActionResult> CreateBlock([FromBody] BlockRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(BlokKomutu(null, req), ct);
@@ -91,6 +96,7 @@ public class PagesController(
     }
 
     [HttpPut("blocks/{id:guid}")]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     public async Task<IActionResult> UpdateBlock(Guid id, [FromBody] BlockRequest req, CancellationToken ct)
     {
         // G13: eski değer audit için mutasyondan ÖNCE okunur (aktiflik/kural farkı da buradan)
@@ -112,6 +118,7 @@ public class PagesController(
     }
 
     [HttpDelete("blocks/{id:guid}")]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     public async Task<IActionResult> DeleteBlock(Guid id, [FromQuery] Guid firmPlatformId, CancellationToken ct)
     {
         var eski = (await mediator.Send(new GetPageBlockDetailQuery(id, firmPlatformId), ct)).Value;
@@ -124,6 +131,7 @@ public class PagesController(
     }
 
     [HttpPut("blocks/order")]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     public async Task<IActionResult> ReorderBlocks([FromBody] ReorderRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new ReorderPageBlocksCommand(req.FirmPlatformId, req.Placement, req.OrderedIds), ct);
@@ -135,6 +143,7 @@ public class PagesController(
 
     /// <summary>Öğe listesi replace (SaveNavNodes deseni — editör tam listeyi gönderir).</summary>
     [HttpPut("blocks/{id:guid}/items")]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     public async Task<IActionResult> SaveItems(Guid id, [FromBody] ItemsRequest req, CancellationToken ct)
     {
         var eski = (await mediator.Send(new GetPageBlockDetailQuery(id, req.FirmPlatformId), ct)).Value;
@@ -162,6 +171,7 @@ public class PagesController(
     /// <summary>Vitrin öğe görseli yükleme: URL elle girilmez. CDN etkinse ürün görsellerinden
     /// ayrı storefront/pages/{desktop|mobile} ağacına çift hedefli yazılır.</summary>
     [HttpPost("media")]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     [RequestSizeLimit(6_000_000)]
     public async Task<IActionResult> UploadMedia(
         IFormFile? file,
@@ -305,6 +315,7 @@ public class PagesController(
     }
 
     [HttpPost("publish")]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     public async Task<IActionResult> Publish([FromBody] PublishRequest request, CancellationToken ct)
     {
         var result = await mediator.Send(new PublishPageSnapshotCommand(
@@ -318,6 +329,7 @@ public class PagesController(
     }
 
     [HttpPost("rollback")]
+    [RequirePermission(Permissions.StorefrontContentManage)]   // Y2
     public async Task<IActionResult> Rollback([FromBody] RollbackRequest request, CancellationToken ct)
     {
         var result = await mediator.Send(new RollbackPageSnapshotCommand(

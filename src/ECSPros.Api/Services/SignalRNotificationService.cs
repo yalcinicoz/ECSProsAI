@@ -13,10 +13,22 @@ public class SignalRNotificationService(
     IHubContext<FulfillmentHub> fulfillmentHub,
     IHubContext<DashboardHub> dashboardHub) : IRealtimeNotificationService
 {
-    public async Task SendOrderEventAsync(string eventType, object data, CancellationToken ct = default)
+    /// <summary>
+    /// Y3 (K2): sipariş olayı kanal grubuna gider. Aboneler <see cref="NotificationHub.Subscribe"/>
+    /// sırasında YALNIZ görebildikleri kanalların gruplarına alınır; kısıtsız kullanıcılar
+    /// (süper admin / kanal kapsamsız yetki) ayrıca "topic:orders:all" grubundadır.
+    /// Kanal bilinmiyorsa (null) bildirim yalnız kısıtsız abonelere gider — sızıntı yerine eksik bildirim.
+    /// </summary>
+    public async Task SendOrderEventAsync(string eventType, object data, Guid? firmPlatformId, CancellationToken ct = default)
     {
-        await notificationHub.Clients.Group("topic:orders")
+        await notificationHub.Clients.Group(NotificationHub.TumKanallarGrubu("orders"))
             .SendAsync(eventType, data, ct);
+        await notificationHub.Clients.Group("topic:orders")   // eski genel grup (kısıtsız aboneler)
+            .SendAsync(eventType, data, ct);
+
+        if (firmPlatformId is { } kanal)
+            await notificationHub.Clients.Group(NotificationHub.KanalGrubu("orders", kanal))
+                .SendAsync(eventType, data, ct);
     }
 
     public async Task SendFulfillmentEventAsync(string planId, string eventType, object data, CancellationToken ct = default)
@@ -41,9 +53,19 @@ public class SignalRNotificationService(
             .SendAsync(eventType, data, ct);
     }
 
-    public async Task SendQuestionEventAsync(string eventType, object data, CancellationToken ct = default)
+    /// <summary>
+    /// Ürün sorusu bildirimi. Y3 (K2): moderasyon yetkisi kanal kapsamlıdır — bildirim yalnız
+    /// o kanalı görebilen abonelere gider. Kanal bilinmiyorsa yalnız kısıtsız aboneler alır.
+    /// </summary>
+    public async Task SendQuestionEventAsync(string eventType, object data, Guid? firmPlatformId, CancellationToken ct = default)
     {
-        await notificationHub.Clients.Group("topic:questions")
+        await notificationHub.Clients.Group(NotificationHub.TumKanallarGrubu("questions"))
             .SendAsync(eventType, data, ct);
+        await notificationHub.Clients.Group("topic:questions")   // eski genel grup (kısıtsız aboneler)
+            .SendAsync(eventType, data, ct);
+
+        if (firmPlatformId is { } kanal)
+            await notificationHub.Clients.Group(NotificationHub.KanalGrubu("questions", kanal))
+                .SendAsync(eventType, data, ct);
     }
 }

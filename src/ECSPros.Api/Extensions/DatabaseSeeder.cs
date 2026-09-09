@@ -1359,6 +1359,7 @@ public static class DatabaseSeeder
         await SeedPermissionsAndRolesAsync(sp);
         await SeedAdminUserAsync(sp);
         await SeedApiClientTypesAsync(sp);
+        await SeedGecisYetkiGrubuAsync(sp);
     }
 
     /// <summary>
@@ -1543,7 +1544,120 @@ public static class DatabaseSeeder
 
         await context.SaveChangesAsync();
 
-        Console.WriteLine("✓ Seed: Permission ve roller oluşturuldu/güncellendi.");
+        // Y0 (2026-09-09, K4): kod sahipli katalog senkronu — eski elle seed listesinin yerini
+        // KADEMELİ olarak alır. Katalogdaki yeni yetkiler eklenir, katalogda olmayanlar pasife
+        // alınır; görünen ad/açıklama/sıra panelin sahibidir, senkron ezmez.
+        var katalogSonuc = await ECSPros.Iam.Application.Services.PermissionKatalogSenkronu
+            .CalistirAsync(context);
+        Console.WriteLine($"✓ Seed: Permission ve roller güncellendi. Katalog senkronu: " +
+            $"+{katalogSonuc.Eklenen} eklendi, {katalogSonuc.Guncellenen} güncellendi, " +
+            $"{katalogSonuc.Pasiflenen} pasife alındı.");
+    }
+
+
+    /// <summary>
+    /// K8 GEÇİŞ ADIMI (Y2, 2026-09-09) — <b>geçici</b> yetki grubu.
+    ///
+    /// Y2 ile panel uçlarının tamamı yetkiye bağlandı; hiçbir grubu olmayan mevcut kullanıcılar
+    /// aksi hâlde restart anında paneli hiç kullanamaz olurdu (kullanıcı kararı: "canlı paneli
+    /// durdurmayacağız"). Bu grup BUGÜNKÜ erişime yakın bir kapsam verir ve kalıcı tasarımın
+    /// parçası DEĞİLDİR: gerçek departman grupları kurulunca (Y8) kaldırılacaktır.
+    ///
+    /// Kapsam dışı bırakılanlar (bilinçli):
+    ///  • Zaten yetkiyle korunan eski yetkiler (catalog.platform.manage, definition.manage,
+    ///    procurement.*, inventory.manage, catalog.*.manage, integration.credentials.reveal,
+    ///    order.packages.merge) — bu kullanıcılarda bugün de YOKTU.
+    ///  • iam.* (kullanıcı/yetki yönetimi) ve system.migration.manage — bugüne kadar yetkisizdi
+    ///    ama uçları korumasızdı; bilinçli SIKILAŞTIRMA: artık yalnız süper admin.
+    ///
+    /// Atama yalnız HİÇ ROLÜ OLMAYAN aktif kullanıcılara yapılır (idempotent): kullanıcı gerçek
+    /// bir gruba taşındığında bir daha bu gruba eklenmez.
+    /// </summary>
+    public static async Task SeedGecisYetkiGrubuAsync(IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var sp = scope.ServiceProvider;
+        var context = sp.GetRequiredService<IamDbContext>();
+        var core = sp.GetRequiredService<CoreDbContext>();
+
+        const string kod = "gecis_tam_erisim";
+
+        string[] haric =
+        [
+            Permissions.CatalogPlatformManage, Permissions.DefinitionManage,
+            Permissions.CatalogProductsManage, Permissions.CatalogCategoriesManage,
+            Permissions.CatalogImagesManage, Permissions.CatalogSettingsManage,
+            Permissions.InventoryManage, Permissions.ProcurementManage, Permissions.ProcurementSort,
+            Permissions.IntegrationCredentialsReveal, Permissions.OrderPackagesMerge,
+            Permissions.IamPermissionsManage, Permissions.IamPermissionsSimulate,
+            Permissions.IamAuditView, Permissions.IamUsersView, Permissions.IamUsersManage,
+            Permissions.SystemMigrationManage,
+        ];
+
+        // Y8 (K8 adım 6): grup panelden KALDIRILDIYSA bir daha kurulmaz. Aksi hâlde her restart
+        // geçici tam-erişim grubunu diriltir ve geçişi sonsuza kadar geri alır.
+        var kaldirilmis = await context.Roles.IgnoreQueryFilters()
+            .AnyAsync(r => r.Code == kod && r.IsDeleted);
+        if (kaldirilmis)
+        {
+            Console.WriteLine($"• Seed: Geçiş yetki grubu ({kod}) kaldırılmış — yeniden kurulmadı (K8 adım 6 tamam).");
+            return;
+        }
+
+        var grup = await context.Roles.FirstOrDefaultAsync(r => r.Code == kod);
+        if (grup is null)
+        {
+            grup = new Role
+            {
+                Code = kod,
+                NameI18n = new Dictionary<string, string> { ["tr"] = "Geçiş — Mevcut Erişim (geçici)" },
+                DescriptionI18n = new Dictionary<string, string>
+                { ["tr"] = "Y2 geçişi için otomatik oluşturuldu. Gerçek departman grupları kurulunca KALDIRILACAK." },
+                IsSystem = false,
+                IsActive = true,
+            };
+            context.Roles.Add(grup);
+            await context.SaveChangesAsync();
+        }
+
+        var kanallar = await core.FirmPlatforms.Where(fp => fp.IsActive).Select(fp => fp.Id).ToListAsync();
+        var yetkiler = await context.Permissions
+            .Where(p => p.IsActive && !haric.Contains(p.Code))
+            .Select(p => new { p.Id, p.Code, p.ChannelScoped })
+            .ToListAsync();
+        var mevcutGrantlar = await context.RolePermissions
+            .Where(rp => rp.RoleId == grup.Id).Select(rp => rp.PermissionId).ToListAsync();
+
+        var eklenenYetki = 0;
+        foreach (var y in yetkiler.Where(y => !mevcutGrantlar.Contains(y.Id)))
+        {
+            context.RolePermissions.Add(new RolePermission
+            {
+                RoleId = grup.Id,
+                PermissionId = y.Id,
+                // Kanal kapsamlı yetkide "tüm kanallar" = ŞU ANKİ kanalların listesi (Ek-2):
+                // sonradan açılan kanal bu gruba otomatik girmez.
+                ChannelIds = y.ChannelScoped ? new List<Guid>(kanallar) : null,
+            });
+            eklenenYetki++;
+        }
+        if (eklenenYetki > 0) await context.SaveChangesAsync();
+
+        // Rolü OLMAYAN aktif kullanıcılar (süper adminler hariç — bayrakla geçiyorlar)
+        var rolluKullanicilar = await context.UserRoles.Where(ur => !ur.IsDeleted)
+            .Select(ur => ur.UserId).Distinct().ToListAsync();
+        var adaylar = await context.Users
+            .Where(u => u.IsActive && !u.IsSuperAdmin && !rolluKullanicilar.Contains(u.Id))
+            .Select(u => u.Id)
+            .ToListAsync();
+
+        foreach (var kullaniciId in adaylar)
+            context.UserRoles.Add(new UserRole { UserId = kullaniciId, RoleId = grup.Id });
+        if (adaylar.Count > 0) await context.SaveChangesAsync();
+
+        if (eklenenYetki > 0 || adaylar.Count > 0)
+            Console.WriteLine($"✓ Seed: Geçiş yetki grubu ({kod}) — +{eklenenYetki} yetki, " +
+                              $"+{adaylar.Count} kullanıcı atandı. (K8: geçici, Y8'de kaldırılacak.)");
     }
 
     private static async Task SeedAdminUserAsync(IServiceProvider sp)
