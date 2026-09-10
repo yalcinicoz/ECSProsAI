@@ -50,6 +50,22 @@ Yani hata mobil tarafında değil; **istemci fiyatına güvenen sepet** tasarım
 güvenlik boşluğunu da kapatır: bugün istemci sepete istediği fiyatı yazabiliyor (para kaybı yok, çünkü
 checkout yeniden hesaplıyor — ama sepet ekranı yanlış tutar gösteriyor).
 
+### ✅ M1 ek düzeltme (2026-09-10) — `lineTotal`/`subtotal` net; iki uç aynı
+
+Mobil ekibin 2026-09-10 bulgusu: aynı sepette `GET /cart` `lineTotal`=1.599,98 / `subtotal` brüt,
+`checkout/preview` `lineTotal`=1.359,98 / `subtotal` net; `total` ikisinde de aynıydı. Sebep: sepet
+satırı `AddedPrice × Quantity` (kampanya öncesi taban), ön izleme `UnitPrice × Quantity` hesaplıyordu.
+
+- `lineTotal` = `unitPrice × quantity` (NET), `subtotal` = Σ `lineTotal` — iki uçta aynı sayı
+  (izole doğrulama: 1.359,98 / 1.659,97 = 1.359,98 / 1.659,97).
+- `campaignDiscount` BİLİNÇLİ sepet-seviyesi kaldı (MK1; ön izleme ile aynı anlam). `totalDiscount`
+  bilgi alanı; ürün-bazlı payı artık `subtotal`'a gömülü → `total = subtotal − campaignDiscount + kargo`.
+- `addedPrice` kampanya öncesi taban olarak korunur; web çizik satır tutarı buradan hesaplanır.
+- `POST /cart/items.price` yok sayılıyor — mobil teyit etti, madde kapalı.
+- Web etkisi: sepet sayfası özeti + üst mini sepet net birimden hesaplar oldu; teslimat/ödeme sayfaları
+  Σ`lineTotal` − `campaignDiscount` kullandığından ürün-bazlı kampanyada fazla tutar gösteriyordu
+  (M1'in sunucu-fiyatı değişikliğinden beri gizli hata) — bu düzeltmeyle kapandı.
+
 ---
 
 ## 2. Ürün detayı — `GET /api/store/catalog/products/{code}`

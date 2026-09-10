@@ -45,7 +45,12 @@ public record CartDto(
     // TotalDiscount: TÜM kampanya indirimlerinin toplamı (ürün-bazlı + sepet-seviyesi payı) —
     //   MK1 kararı: CampaignDiscount'un anlamı DEĞİŞMEDİ (yalnız sepet-seviyesi), bu ayrı alandır.
     //   Kupon buraya GİRMEZ: kupon sepette istemci tarafındadır, tahsilat checkout'ta hesaplanır.
-    // Total: ödenecek tutar = Subtotal − TotalDiscount + ShippingFeeResolved (kupon hariç).
+    //   Bilgi amaçlıdır: ürün-bazlı payı Subtotal'a ZATEN gömülüdür (2026-09-10), ödenecek tutardan
+    //   bir daha düşülmez; brüt referans = Σ(AddedPrice × Quantity) − TotalDiscount = Subtotal − CampaignDiscount.
+    // Subtotal (2026-09-10, mobil isteği): Σ LineTotal = NET ara toplam (ürün-bazlı kampanya fiyata gömülü,
+    //   sepet-seviyesi indirim düşülmemiş) — checkout/preview `subtotal` ile AYNI sayı.
+    // Total: ödenecek tutar = Subtotal − CampaignDiscount + ShippingFeeResolved (kupon hariç)
+    //   — SiparisTutarKurali ile aynı aritmetik (kupon/kapıda masrafı yalnız checkout'ta).
     decimal ShippingFeeResolved = 0m,
     string? ShippingFreeReason = null,
     decimal? RemainingForFreeShipping = null,
@@ -74,7 +79,10 @@ public record CartItemDto(
     // ── M1 (2026-09-09): liste kartıyla AYNI fiyat sözleşmesi (KartFiyatGorunumu).
     // UnitPrice = satış fiyatı (ürün-bazlı kampanya varsa kampanyalı) — listedeki `price`.
     // CompareAtPrice = çizili referans (indirim yoksa null) — listedeki `compareAtPrice`.
-    // AddedPrice/LineTotal ESKİ anlamlarını korur (kampanya öncesi taban) — web istemcisi kırılmaz.
+    // AddedPrice = kampanya ÖNCESİ sunucu taban fiyatı (brüt birim; web çizik satır tutarı bundan).
+    // LineTotal (2026-09-10, mobil isteği): UnitPrice × Quantity = NET satır tutarı —
+    //   checkout/preview `lineTotal` ile AYNI; brüt için CompareAtLineTotal / AddedPrice × Quantity.
+    //   (Eskiden AddedPrice × Quantity brüt idi; sepet ile ön izleme aynı sepette farklı ara toplam veriyordu.)
     decimal UnitPrice = 0m,
     decimal? CompareAtPrice = null,
     decimal? CompareAtLineTotal = null,
@@ -178,9 +186,9 @@ public class GetCartQueryHandler(
                 ? (int)Math.Round((c - satisFiyat) / c * 100m, MidpointRounding.AwayFromZero) : 0;
 
             return new CartItemDto(
-                // AddedPrice/LineTotal artık SUNUCU fiyatını yansıtır: sepette gösterilen tutar
-                // checkout'ta tahsil edilenle aynı olur (eskiden ekleme anındaki fiyat donuyordu).
-                i.Id, i.VariantId, i.Quantity, birimFiyat, i.Quantity * birimFiyat,
+                // AddedPrice SUNUCU taban fiyatını yansıtır (eskiden ekleme anındaki fiyat donuyordu);
+                // LineTotal = satış fiyatı × adet (NET) — ön izleme/checkout satırıyla aynı sayı (2026-09-10).
+                i.Id, i.VariantId, i.Quantity, birimFiyat, satisFiyat * i.Quantity,
                 i.IsAvailable, i.AvailableQuantity,
                 g?.ProductCode, g?.ProductNameI18n, g?.ImageUrl, g?.OptionsText,
                 kampanyaFiyat, Math.Max(0m, Math.Round(satirIndirim, 2)), g?.Sku,
@@ -189,9 +197,12 @@ public class GetCartQueryHandler(
         }).ToList();
 
         // M1: sepet toplamları — kargo TEK kuraldan çözülür (checkout'la aynı kural).
+        // 2026-09-10: araToplam NET (satır satış fiyatları); ödenecek ürün tutarı = net − sepet-seviyesi
+        // indirim — SiparisTutarKurali ile aynı aritmetik (ürün-bazlı indirim satır fiyatına gömülü,
+        // bir daha düşülmez). TotalDiscount bilgi alanı olarak Σ CampaignLineDiscount kalır.
         var araToplam = items.Sum(i => i.LineTotal);
         var toplamIndirim = Math.Round(items.Sum(i => i.CampaignLineDiscount), 2);
-        var odenecekUrun = Math.Max(0m, araToplam - toplamIndirim);
+        var odenecekUrun = araToplam - Math.Clamp(kampanya.CartDiscount, 0m, araToplam);
         var kargoSonuc = KargoUcretiKurali.Hesapla(
             kargo.Fee, kargo.FreeThreshold, odenecekUrun, kampanya.Shipping?.Fee);
         var esigeKalan = KargoUcretiKurali.EsigeKalan(

@@ -160,6 +160,22 @@ liste kartı `colors[]` de filtre_rengi'siz üründe renk ekseninden dolar.
 | DELETE | `/cart/{cartId}` | Sepeti boşalt |
 | POST | `/cart/merge` (Üye) | Girişte misafir sepetini üye sepetiyle birleştir |
 
+**Sepet tutar sözleşmesi (2026-09-10 — `GET /cart` ile `POST /checkout/preview` AYNI anlam):**
+
+| Alan | Anlam |
+|---|---|
+| satır `unitPrice` | Satış fiyatı (ürün-bazlı kampanya varsa kampanyalı) — liste kartındaki `price` |
+| satır `lineTotal` | **`unitPrice × quantity` (NET)** — ön izleme satırıyla aynı sayı |
+| satır `compareAtPrice` / `compareAtLineTotal` | Çizili referans (indirim yoksa `null`); brüt gösterim için |
+| satır `addedPrice` | Kampanya ÖNCESİ sunucu taban fiyatı (brüt birim; `addedPrice × quantity` − `campaignLineDiscount` = net satır) |
+| `subtotal` | **Σ `lineTotal` (NET)** — ön izleme `subtotal` ile aynı sayı |
+| `campaignDiscount` | YALNIZ sepet-seviyesi kampanya (2 al 1 öde, min. sepet…) — ön izleme ile aynı anlam (MK1) |
+| `totalDiscount` | Bilgi alanı: tüm kampanya indirimleri (ürün-bazlı + sepet-seviyesi). Ürün-bazlı payı `subtotal`'a ZATEN gömülü — **yeni `subtotal`'dan bir daha düşülmez** |
+| `total` | `subtotal − campaignDiscount + shippingFeeResolved` (kupon/kapıda masrafı yalnız checkout'ta) |
+
+Brüt özet satırı istenirse: Σ(`addedPrice × quantity`) − `totalDiscount` = `subtotal − campaignDiscount`.
+Eski davranış (2026-09-09 ve öncesi): `lineTotal`/`subtotal` brüt (taban × adet) idi; aynı sepet iki uçta farklı ara toplam veriyordu.
+
 Misafir akışı: mobil bir `sessionId` (rastgele GUID) üretip saklar; üye girişinde
 `/cart/merge` çağrılır. Üye "sepetten çıkarılanlar": `/api/store/cart/removed` (GET/POST/DELETE, Üye).
 

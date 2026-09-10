@@ -146,7 +146,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // 2026-08-03: kalemin kampanya indirimi (sunucudan, ağırlıklı dağıtım) — kampanya adı
         // + satır indirimi ayrı satırda; tutar çizik eski + indirimli olarak gösterilir.
         const satirIndirim = kalem.campaignLineDiscount || 0;
-        const brut = kalem.lineTotal || 0;
+        // 2026-09-10: lineTotal artık NET (satış fiyatı × adet); çizik brüt = taban fiyat × adet.
+        const brut = (kalem.addedPrice || 0) * (kalem.quantity || 0);
         const kampanyaAdlari = sepetKampanyalari
             .filter((k) => (k.variantIds || []).includes(kalem.variantId))
             .map((k) => k.name)

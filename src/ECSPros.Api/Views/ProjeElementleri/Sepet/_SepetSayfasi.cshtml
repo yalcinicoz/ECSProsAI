@@ -808,7 +808,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const satirKur = (kalem) => {
         const satir = sablon.content.firstElementChild.cloneNode(true);
-        satir.dataset.msBirimFiyat = String(kalem.addedPrice || 0);
+        // 2026-09-10: özet/kupon/eşik hesapları NET birim fiyattan (unitPrice = ürün-bazlı kampanya
+        // gömülü) — sunucu subtotal'ı ve ön izleme ile aynı taban; sepet-seviyesi indirim ayrıca düşülür.
+        // Satır görünümündeki çizik brüt tutar kalem.addedPrice'tan hesaplanır (satirKur içinde).
+        satir.dataset.msBirimFiyat = String(kalem.unitPrice || kalem.addedPrice || 0);
         satir.dataset.msKalemId = kalem.id;
         satir.dataset.msVariant = kalem.variantId || "";
         // Önceki seçim durumunu geri yükle (sayfa yenilense de seçim korunur)
