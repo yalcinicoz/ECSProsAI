@@ -53,6 +53,26 @@ public class YetkilendirmeController(
         r.IsFailure ? BadRequest(new { success = false, error = r.Error })
                     : Ok(new { success = true, data = r.Value });
 
+    // ── Kanal listesi (yetki ekranları) ───────────────────────────────────────
+    /// <summary>
+    /// Kanal kapsamlı yetkilerde seçilecek kanal listesi (2026-09-10): yetki grubu ve kullanıcı
+    /// yetkisi ekranları bunu bekler. Panel daha önce var olmayan <c>GET /api/core/firm-platforms</c>'u
+    /// çağırıyordu (404 → boş liste → kanal seçimi yapılamıyordu). CoreController'a konmadı: o
+    /// denetleyici sınıf düzeyinde <c>definitions.view</c> ister, yetki yöneticisinde bu yetki
+    /// olmayabilir. Kaynak <see cref="TumKanallarAsync"/> ile AYNI (aktif kanallar) — "tüm kanallar
+    /// (bugünkü liste)" kısayolunun yazdığı küme ile ekrandaki liste ayrışamaz.
+    /// </summary>
+    [HttpGet("permission-channels")]
+    public async Task<IActionResult> KanalListesi(CancellationToken ct)
+    {
+        var kanallar = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+            coreDb.FirmPlatforms
+                .Where(fp => fp.IsActive)
+                .OrderBy(fp => fp.Code)
+                .Select(fp => new { fp.Id, fp.Code, fp.NameI18n }), ct);
+        return Ok(new { success = true, data = kanallar });
+    }
+
     // ── Yetki İçerikleri (katalog) ────────────────────────────────────────────
     /// <summary>Yetki kataloğunu TAM liste olarak döner — yetki grubu ve kullanıcı yetkisi ekranları
     /// bunu bekler. ⚠ Sayfalanmaz; liste EKRANI için /permissions/grid kullanın.</summary>

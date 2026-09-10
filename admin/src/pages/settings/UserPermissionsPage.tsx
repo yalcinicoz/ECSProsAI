@@ -53,7 +53,9 @@ export function UserPermissionsPage() {
   })
   const { data: kanallar = BOS_KANAL } = useQuery<Kanal[]>({
     queryKey: ['kanallar-yetki'],
-    queryFn: async () => (await api.get('/core/firm-platforms')).data.data ?? BOS_KANAL,
+    // 2026-09-10: /core/firm-platforms diye bir uç yoktu (404 → kanal seçimi boş kalıyordu);
+    // liste yetki API'sinden gelir, "tüm kanallar (bugünkü liste)" ile aynı kaynak.
+    queryFn: async () => (await api.get('/iam/permission-channels')).data.data ?? BOS_KANAL,
   })
   const { data: gruplar = [] } = useQuery<{ id: string; ad: string }[]>({
     queryKey: ['yetki-gruplari'],
