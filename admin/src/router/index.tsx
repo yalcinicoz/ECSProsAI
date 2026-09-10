@@ -22,6 +22,7 @@ import { TranslationsPage } from '@/pages/settings/TranslationsPage'
 import { PlatformTypesPage } from '@/pages/settings/PlatformTypesPage'
 import { IntegrationServicesPage } from '@/pages/settings/IntegrationServicesPage'
 import { ChannelsPage } from '@/pages/settings/ChannelsPage'
+import { ChannelDetailPage } from '@/pages/settings/ChannelDetailPage'
 import { NotificationTemplatesPage } from '@/pages/settings/NotificationTemplatesPage'
 import { FirmsPage } from '@/pages/settings/FirmsPage'
 import { FirmDetailPage } from '@/pages/settings/FirmDetailPage'
@@ -251,6 +252,8 @@ export const router = createBrowserRouter(
             { path: 'settings/platform-types',  element: <PlatformTypesPage /> },
             { path: 'settings/integration-services', element: <IntegrationServicesPage /> },
             { path: 'settings/channels',         element: <ChannelsPage /> },
+            { path: 'settings/channels/new',     element: <ChannelDetailPage /> },
+            { path: 'settings/channels/:id',     element: <ChannelDetailPage /> },
             { path: 'settings/notification-templates', element: <NotificationTemplatesPage /> },
             { path: 'settings/languages',       element: <LanguagesPage /> },
             { path: 'settings/lookup-types',    element: <LookupTypesPage /> },

@@ -99,7 +99,7 @@ export const NAV_SECTIONS: NavSection[] = [
     { label: 'Platform Tipleri',to: '/settings/platform-types', icon: 'globe', permission: 'system.firms.view' },
     { label: 'Bildirim Şablonları', to: '/settings/notification-templates', icon: 'bell', permission: 'definitions.view' },
     { label: 'Entegrasyonlar', to: '/settings/integration-services', icon: 'plug', permission: 'definition.manage' },
-    { label: 'Satış Kanalı Tanımları', to: '/settings/channels',       icon: 'shoppingbag', permission: 'system.firms.view' },
+    { label: 'Satış Kanalı Tanımları', to: '/settings/channels',       icon: 'shoppingbag', activePatterns: ['/settings/channels/new', '/settings/channels/:id'], permission: 'system.firms.view' },
   ]},
   { id: 'system', label: 'Sistem', icon: 'settings', items: [
     { label: 'Entegrasyon Logları',to: '/integrations/logs',     icon: 'plug', permission: 'system.integrations.view' },

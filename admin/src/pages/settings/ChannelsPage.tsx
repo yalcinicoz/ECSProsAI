@@ -1,17 +1,18 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Eye, EyeOff, Globe, ShoppingBag, Building2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { PageSpinner } from '@/components/ui/Spinner'
 import type { PlatformType, SchemaField } from './PlatformTypesPage'
 import { CapabilityBadges, CapabilityOverridesEditor } from '@/components/channels/ChannelCapabilities'
 import { DEFAULT_CAPABILITIES, MARKETPLACE_CAPABILITIES, mergeCapabilities, type CapabilityOverrides, type ChannelCapabilities } from '@/components/channels/channelCapabilitiesModel'
 import { getFieldLabel } from './platformTypeFields'
+import { getFirmName, getPlatformTypeName, getChannelName } from './channelHelpers'
 import { apiErrorMessage } from '@/lib/api-error'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -53,26 +54,6 @@ const PRICE_TYPES = [
   { value: 'manual', label: 'Manuel' },
   { value: 'multiplier', label: 'Çarpan' },
 ]
-
-function getFirmName(f: Pick<Firm, 'nameI18n' | 'code'>) {
-  const n = f.nameI18n
-  if (!n) return f.code
-  return n['tr'] ?? n[Object.keys(n)[0]] ?? f.code
-}
-
-function getPlatformTypeName(pt: Pick<FirmPlatform, 'platformTypeCode' | 'platformTypeNameI18n'>) {
-  const n = pt.platformTypeNameI18n
-  if (!n) return pt.platformTypeCode
-  return n['tr'] ?? n[Object.keys(n)[0]] ?? pt.platformTypeCode
-}
-
-function getChannelName(ch: Pick<FirmPlatform, 'code' | 'nameI18n'>) {
-  const n = ch.nameI18n
-  if (!n) return ch.code
-  return n['tr'] ?? n[Object.keys(n)[0]] ?? ch.code
-}
-
-// ── Dynamic Field ─────────────────────────────────────────────────────────────
 
 function DynamicField({
   field, value, onChange,
@@ -137,9 +118,11 @@ function DynamicField({
 
 // ── Exported Types ────────────────────────────────────────────────────────────
 
-export type { FirmPlatformWithFirm, Firm }
+export type { FirmPlatformWithFirm, Firm, FirmPlatform }
 
 // ── Channel Form ──────────────────────────────────────────────────────────────
+
+export type ChannelFormTab = 'genel' | 'api' | 'vitrin' | 'odeme' | 'kargo' | 'entegrasyon'
 
 interface ChannelFormProps {
   platformTypes: PlatformType[]
@@ -148,9 +131,13 @@ interface ChannelFormProps {
   target: FirmPlatformWithFirm | null
   onClose: () => void
   onSuccess: () => void
+  /** stack = modal içinde alt alta (Firma/Pazaryeri sayfaları); tabs = ayrı sayfa, sekmeli (ChannelDetailPage). */
+  layout?: 'stack' | 'tabs'
+  tab?: string
+  onTabChange?: (tab: ChannelFormTab) => void
 }
 
-export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClose, onSuccess }: ChannelFormProps) {
+export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClose, onSuccess, layout = 'stack', tab, onTabChange }: ChannelFormProps) {
   const queryClient = useQueryClient()
   const isEdit = !!target
 
@@ -324,9 +311,11 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
 
   const needFirmSelect = !isEdit && !initialFirmId && firms.length > 1
 
-  return (
-    <div className="space-y-5">
-      {/* Firma seçimi — sadece "Tümü" tabından açılınca göster */}
+  // Bölümler — modal (stack) ve ayrı sayfa (tabs) aynı içeriği kullanır (2026-09-10 kullanıcı kararı:
+  // popup kullanışsız oldu → /settings/channels/:id sayfası + sekmeler). Yeni ayar eklerken ilgili bölüme koy.
+  const bolumGenelTemel = (
+    <>
+{/* Firma seçimi — sadece "Tümü" tabından açılınca göster */}
       {needFirmSelect && (
         <div>
           <label className="flbl">Firma <span style={{ color: '#ef4444' }}>*</span></label>
@@ -391,8 +380,50 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
           </div>
         )}
       </div>
-
-      {/* Credentials section */}
+    </>
+  )
+  const bolumYetenek = (
+    <>
+      {/* Yetenekler (F0, K1): tip varsayılanı + kanal ezmesi */}
+      {platformTypeId && (
+        <div className="space-y-3 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Kanal Yetenekleri</p>
+            <CapabilityBadges caps={mergeCapabilities(baseCaps, capOverrides)} />
+          </div>
+          {isEdit ? (
+            <CapabilityOverridesEditor base={baseCaps} overrides={capOverrides} onChange={setCapOverrides} />
+          ) : (
+            <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+              Tip varsayılanları uygulanır; kanal bazlı ezmeler kayıt sonrası düzenlenebilir.
+            </p>
+          )}
+        </div>
+      )}
+    </>
+  )
+  const bolumAktif = (
+    <>
+      {/* Active toggle (edit only) */}
+      {isEdit && (
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
+            checked={isActive} onChange={e => setIsActive(e.target.checked)} />
+          <span className="text-sm" style={{ color: 'var(--text)' }}>Aktif</span>
+        </label>
+      )}
+    </>
+  )
+  const bolumGenel = (
+    <>
+      {bolumGenelTemel}
+      {bolumYetenek}
+      {bolumAktif}
+    </>
+  )
+  const bolumSema = (
+    <>
+{/* Credentials section */}
       {credFields.length > 0 && (
         <div className="space-y-4 p-4 rounded-xl" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
           <p className="text-xs font-semibold" style={{ color: '#92400e' }}>Kimlik Bilgileri (API)</p>
@@ -422,8 +453,12 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
           Bu platform tipi için alan şeması tanımlı değil. Platform Tipleri sayfasından şema ekleyebilirsiniz.
         </p>
       )}
+    </>
+  )
 
-      {/* Stok görünürlüğü (kanal ayarı) */}
+  const bolumVitrin = (
+    <>
+{/* Stok görünürlüğü (kanal ayarı) */}
       <div className="space-y-3 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
         <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Stok Görünürlüğü</p>
         <label className="flex items-center gap-2 cursor-pointer">
@@ -441,25 +476,12 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
           </div>
         )}
       </div>
+    </>
+  )
 
-      {/* Yetenekler (F0, K1): tip varsayılanı + kanal ezmesi */}
-      {platformTypeId && (
-        <div className="space-y-3 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Kanal Yetenekleri</p>
-            <CapabilityBadges caps={mergeCapabilities(baseCaps, capOverrides)} />
-          </div>
-          {isEdit ? (
-            <CapabilityOverridesEditor base={baseCaps} overrides={capOverrides} onChange={setCapOverrides} />
-          ) : (
-            <p className="text-xs" style={{ color: 'var(--text-s)' }}>
-              Tip varsayılanları uygulanır; kanal bazlı ezmeler kayıt sonrası düzenlenebilir.
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Ödeme yöntemleri (kanal ayarı, 2026-08-04) */}
+  const bolumOdeme = (
+    <>
+{/* Ödeme yöntemleri (kanal ayarı, 2026-08-04) */}
       <div className="space-y-3 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
         <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Ödeme Yöntemleri</p>
         {TUM_ODEME_YONTEMLERI.map(y => (
@@ -544,7 +566,12 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
           Yalnız site ve mobil kart ödemelerinde uygulanır. Vade farkı faturada ürünlere yedirilmez, ürünlerin KDV oranına göre ayrı satır olarak yazılır; iadede ürünün vade farkı payı müşteriye ödenir.
         </p>
       </div>
-      {/* Kargo ücreti (kanal ayarı, 2026-09-09) */}
+    </>
+  )
+
+  const bolumKargo = (
+    <>
+{/* Kargo ücreti (kanal ayarı, 2026-09-09) */}
       <div className="space-y-2 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
         <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Kargo Ücreti</p>
         <div className="grid grid-cols-2 gap-3">
@@ -590,8 +617,12 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
           değildir). Değişiklik ~1 dk içinde siteye yansır.
         </p>
       </div>
+    </>
+  )
 
-      {/* Eski sistem eşlemesi (geçici, 2026-08-04) */}
+  const bolumEntegrasyon = (
+    <>
+{/* Eski sistem eşlemesi (geçici, 2026-08-04) */}
       <div className="space-y-2 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
         <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Eski Sistem (ECSGYE) Eşlemesi</p>
         <div>
@@ -603,17 +634,12 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
           </p>
         </div>
       </div>
+    </>
+  )
 
-      {/* Active toggle (edit only) */}
-      {isEdit && (
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
-            checked={isActive} onChange={e => setIsActive(e.target.checked)} />
-          <span className="text-sm" style={{ color: 'var(--text)' }}>Aktif</span>
-        </label>
-      )}
-
-      {mutation.isError && (
+  const altBilgi = (
+    <>
+{mutation.isError && (
         <p className="text-sm" style={{ color: '#ef4444' }}>
           {apiErrorMessage(mutation.error, 'Hata oluştu. Lütfen tekrar deneyin.')}
         </p>
@@ -632,6 +658,54 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
           {isEdit ? 'Kaydet' : 'Oluştur'}
         </Button>
       </div>
+    </>
+  )
+
+  if (layout === 'tabs') {
+    const TABS: { key: ChannelFormTab; label: string }[] = [
+      { key: 'genel', label: 'Genel' },
+      { key: 'api', label: schema.length > 0 ? 'API & Şema Ayarları' : 'Şema Ayarları' },
+      { key: 'vitrin', label: 'Vitrin' },
+      { key: 'odeme', label: 'Ödeme & Taksit' },
+      { key: 'kargo', label: 'Kargo' },
+      { key: 'entegrasyon', label: 'Eski Sistem' },
+    ]
+    const aktifTab: ChannelFormTab = TABS.some(t => t.key === tab) ? (tab as ChannelFormTab) : 'genel'
+    return (
+      <div>
+        <div className="tab-scroll flex gap-1 mb-5" style={{ borderBottom: '1px solid var(--border)' }}>
+          {TABS.map(t => (
+            <button key={t.key} type="button" className={cn('stab', aktifTab === t.key && 'active')}
+              onClick={() => onTabChange?.(t.key)}>{t.label}</button>
+          ))}
+        </div>
+        <div className="space-y-5" key={aktifTab}>
+          {aktifTab === 'genel' && bolumGenel}
+          {aktifTab === 'api' && bolumSema}
+          {aktifTab === 'vitrin' && bolumVitrin}
+          {aktifTab === 'odeme' && bolumOdeme}
+          {aktifTab === 'kargo' && bolumKargo}
+          {aktifTab === 'entegrasyon' && bolumEntegrasyon}
+        </div>
+        <div className="sticky bottom-0 mt-6 pt-3 pb-1 space-y-2" style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
+          {altBilgi}
+        </div>
+      </div>
+    )
+  }
+
+  // Modal (stack): bölüm sırası eskisiyle aynı — Firma/Pazaryeri sayfalarındaki popup değişmedi.
+  return (
+    <div className="space-y-5">
+      {bolumGenelTemel}
+      {bolumSema}
+      {bolumVitrin}
+      {bolumYetenek}
+      {bolumOdeme}
+      {bolumKargo}
+      {bolumEntegrasyon}
+      {bolumAktif}
+      {altBilgi}
     </div>
   )
 }
@@ -745,9 +819,8 @@ function ChannelCard({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export function ChannelsPage() {
+  const navigate = useNavigate()
   const [selectedFirmId, setSelectedFirmId] = useState<string | 'all'>('all')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<FirmPlatformWithFirm | null>(null)
 
   // Firms
   const { data: firms = [], isLoading: firmsLoading } = useQuery<Firm[]>({
@@ -776,14 +849,6 @@ export function ChannelsPage() {
     })),
   })
 
-  const { data: platformTypes = [], isLoading: ptLoading } = useQuery<PlatformType[]>({
-    queryKey: ['platform-types', false],
-    queryFn: async () => {
-      const { data } = await api.get('/core/platform-types?activeOnly=false')
-      return data.data ?? []
-    },
-    staleTime: 5 * 60 * 1000,
-  })
 
   const channelsLoading = channelQueries.some(q => q.isLoading)
 
@@ -798,14 +863,12 @@ export function ChannelsPage() {
     return allChannels.filter(ch => ch.firmId === selectedFirmId)
   }, [allChannels, selectedFirmId])
 
-  // The firm pre-selected when opening create modal
+  // 2026-09-10 (kullanıcı kararı): kanal tanımı popup'ta değil ayrı sayfada (sekmeli) düzenlenir.
   const createFirmId = selectedFirmId === 'all' ? undefined : selectedFirmId
+  function openCreate() { navigate(createFirmId ? `/settings/channels/new?firmId=${createFirmId}` : '/settings/channels/new') }
+  function openEdit(ch: FirmPlatformWithFirm) { navigate(`/settings/channels/${ch.id}`) }
 
-  function openCreate() { setEditTarget(null); setModalOpen(true) }
-  function openEdit(ch: FirmPlatformWithFirm) { setEditTarget(ch); setModalOpen(true) }
-  function closeModal() { setModalOpen(false); setEditTarget(null) }
-
-  if (firmsLoading || ptLoading) return <PageSpinner />
+  if (firmsLoading) return <PageSpinner />
 
   if (firms.length === 0) {
     return (
@@ -924,23 +987,6 @@ export function ChannelsPage() {
         </div>
       )}
 
-      {/* Modal */}
-      <Modal
-        open={modalOpen}
-        onClose={closeModal}
-        title={editTarget ? `Kanal Düzenle — ${getChannelName(editTarget)}` : 'Yeni Satış Kanalı'}
-        size="md"
-        footer={null}
-      >
-        <ChannelForm
-          platformTypes={platformTypes}
-          firms={firms}
-          initialFirmId={createFirmId}
-          target={editTarget}
-          onClose={closeModal}
-          onSuccess={closeModal}
-        />
-      </Modal>
     </div>
   )
 }
