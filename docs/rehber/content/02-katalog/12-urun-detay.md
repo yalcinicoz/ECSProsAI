@@ -85,6 +85,8 @@ sayfaya getirir. Stok miktarı burada yalnızca **izlenir**; stok girişi Stok m
 | Alan | Zorunlu | Açıklama |
 |---|---|---|
 | Her özellik için bir açılır liste | Grup tanımında zorunluysa `*` | Seçenekler özellik tipinin değer havuzundan gelir; `— Seçiniz —` ile boş bırakılabilir. |
+| Serbest metin özellik | — | Veri tipi metin olan özelliklerde açılır liste yerine metin kutusu. |
+| **Manken** | — | Veri tipi JSON olan `manken` özelliğinde kadro seçici: "+ Manken ekle" (Katalog Ayarları › Mankenler'deki aktif kayıtlar) → her manken için görünüm (Tüm / Ön / Arka / Yandan / Detay) ve **Kaldır**. Mankenin ölçüleri seçim anında ürüne kopyalanır; kadro sonradan değişse de burası değişmez. |
 
 | Buton/Aksiyon | Nerede | Ne olur | Ön koşul / yetki |
 |---|---|---|---|

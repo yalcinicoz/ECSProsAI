@@ -69,7 +69,7 @@ Gönderi satırları: gönderi numarası · kargo anlaşması adı · takip numa
 taşıyıcı olayları (tarih — açıklama (yer)). Gönderi yoksa "Henüz gönderi yok."
 
 ### Faturalar (N)
-Fatura numarası · tip (e-Arşiv / e-Fatura / İhracat) · tutar · durum rozeti (Oluşturuldu / İptal) · "PDF ✓" (entegratör PDF'i kayıtlıysa) · "Faturalarda aç →" bağlantısı.
+Fatura numarası · tip (e-Arşiv / e-Fatura / İhracat) · tutar · durum rozeti (Oluşturuldu / İptal) · "PDF ✓" (entegratör PDF'i kayıtlıysa) · "Yazdır" (iptal edilmemiş faturada) · "Faturalarda aç →" bağlantısı.
 Altında **+ Fatura Oluştur** butonu. Fatura yoksa "Bu sipariş için fatura kesilmedi."
 
 ### İadeler (N)
@@ -110,6 +110,7 @@ Alıcı · Üye Id (üye değilse `Misafir` rozeti) · Kargo Tercihi (müşterin
 | Yeni No | Paket satırı | "Yeni Numara" penceresi: Gerekçe (zorunlu). Pakete seriden yeni numara verilir; eski numara geçmişe yazılır ve bir daha kullanılmaz; bağlı kargo kodu temizlenir. | Paket `Paketlendi`, kilitsiz |
 | Seçilenleri Birleştir (N) ⚠️ | Paketler kartı başlığı | "Paketleri Birleştir — İstisna İşlemi": seçilen paketler kapatılır (`Birleştirildi`), kalemler yeni tek pakete taşınır, eski numaralar geçmişe yazılır ve geri kullanılmaz. Gerekçe zorunlu; kırmızı "Birleştirmeyi Onayla" ile tamamlanır. | ≥2 paket seçili, aynı sipariş; yetki `order.packages.merge` |
 | + Fatura Oluştur | Faturalar kartı | "Fatura Oluştur" penceresi (aşağıdaki form). Fatura numarası seriden otomatik üretilir; tutarlar siparişten alınır. | En az bir aktif fatura serisi |
+| Yazdır | Fatura satırı | Sitenin fatura yazdırma sayfasını yeni sekmede açar (`/yazdir/fatura/{id}`); paket faturasında yalnız paketin kalemleri basılır. Eski "Fatura Yeniden Yazdır". | Fatura iptal edilmemiş |
 | Faturalarda aç → | Fatura satırı | Faturalar sayfasına gider (PDF adresi girme / iptal orada). | — |
 | Detay → | İade satırı | İade detayına gider. | — |
 | Takip numarası bağlantısı | Kargo kartı | Taşıyıcının takip sayfasını yeni sekmede açar. | Takip adresi varsa |

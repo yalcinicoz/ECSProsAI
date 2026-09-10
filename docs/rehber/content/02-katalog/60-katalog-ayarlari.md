@@ -20,7 +20,7 @@ resim seti (örn. ikinci bir çekim takımı) tanımlanacağında. Günlük ür�
 ## Ekran yerleşimi
 ![Katalog Ayarları — Resim Sunucusu sekmesi (CDN, Yerel Depolama / FTP, Video Sunucusu bölümleri) ve Resim Setleri sekmesi](img/catalog-settings.webp)
 1. **Başlık** — "Katalog Ayarları", altında "Resim sunucusu ve resim seti yönetimi".
-2. **Sekmeler** — `Resim Sunucusu` (varsayılan açık) ve `Resim Setleri`.
+2. **Sekmeler** — `Resim Sunucusu` (varsayılan açık), `Resim Setleri` ve `Mankenler`.
 3. **İçerik** — Resim Sunucusu'nda bölümlü ayar formu ve altta **Kaydet**; Resim Setleri'nde set tablosu ve **Yeni Set** butonu.
 
 ## Sekmeler
@@ -114,6 +114,41 @@ halinde) → **Varsayılan** set.
 | Sıra Önceliği | Hayır | 0 ve üzeri tam sayı; küçük değer üstte. |
 | Aktif | Hayır | Yalnız düzenlemede; kaldırılırsa set pasife alınır. |
 
+### Mankenler
+Manken kadrosu: ürün fotoğraflarında kullanılan model/mankenlerin ad, cinsiyet ve ölçü bilgileri. Ürün detayı ›
+**Özellikler** sekmesindeki **Manken** alanı bu listeden seçilir; seçim anında mankenin ölçüleri ürüne **o anki
+hâliyle kopyalanır** (kadro sonradan değişse de eski ürün kayıtları değişmez). Manken alanı yalnız ürün grubunda
+"Manken" özelliği tanımlıysa görünür.
+
+| Sütun | Anlamı |
+|---|---|
+| MANKEN | Ad Soyad; altında kod (varsa). |
+| CİNSİYET | Kadın / Erkek / Çocuk / "—". |
+| BOY / KİLO | cm / kg. |
+| GÖĞÜS / BEL / BASEN | cm ölçüleri; boş olanlar "—". |
+| BEDEN | Giydiği beden (örn. S, 38). |
+| DURUM | `Aktif` / `Pasif` — pasif manken ürünlerde seçim listesine çıkmaz. |
+
+Üstte "Manken Kadrosu (N)" ve **Pasifleri göster** kutusu, sağda **Yeni Manken**. Kayıt yoksa "Henüz manken tanımlanmadı." yazar.
+
+| Buton/Aksiyon | Nerede | Ne olur | Ön koşul / yetki |
+|---|---|---|---|
+| Yeni Manken | Sekme, sağ üst | "Yeni Manken" penceresi. | `catalog.images.manage` |
+| Satır tıklama | Tablo | "Manken Düzenle" penceresi (Aktif kutusu burada). | — |
+| Kaydet | Pencere | Oluşturur/günceller; Ad boşsa pasif. | — |
+| Sil ⚠️ | Düzenleme penceresi, sol alt | Tarayıcı onayından sonra manken silinir (soft-delete); ürünlerdeki ölçü kopyaları korunur. | — |
+
+#### Form alanları — Manken
+| Alan | Zorunlu | Açıklama |
+|---|---|---|
+| Ad / Soyad | Ad evet | Görünen ad. |
+| Kod | Hayır | Kısa kod (örn. `MNK-01`). |
+| Cinsiyet | Hayır | Kadın / Erkek / Çocuk. |
+| Boy, Kilo, Göğüs, Bel, Basen | Hayır | Sayı (cm / kg). |
+| Giydiği Beden | Hayır | Serbest metin (örn. S, 38). |
+| Not | Hayır | İç not. |
+| Aktif | — | Yalnız düzenlemede; kaldırılırsa seçim listesinden düşer. |
+
 ## Durumlar ve iş kuralları
 - **Görsel adresi kuralı:** Mağazadaki görsel adresleri `CDN Temel URL / yükseklik / kalite / dosya adı` biçiminde üretilir; üç yükseklik (thumbnail / liste-detay / zoom) farklı yerlerde kullanılır. Alan boşsa varsayılan (85, 240, 640, 1200) devreye girer.
 - **Toplu yükleme hedefi:** Varsayılan aktif dual-target akışında WebP, SFTP Dosya Yolu'na; aynı benzersiz
@@ -147,6 +182,10 @@ halinde) → **Varsayılan** set.
 3. Bu sette görseli olmayan ürünler için **Fallback Set** seçin (genellikle varsayılan set).
 4. **Sıra Önceliği** verin ve **Oluştur**'a tıklayın.
 5. Ürün kartlarının Resimler sekmesinde yeni set artık seçilebilir.
+
+### Manken tanımlama ve ürüne bağlama
+1. **Mankenler** sekmesi → **Yeni Manken** → ad ve ölçüleri girin → **Kaydet**.
+2. Ürün detayı › **Özellikler** › **Manken** alanında "+ Manken ekle" listesinden seçin, görünümü (ön/arka/yandan/detay) belirleyin → **Kaydet**.
 
 ## İpuçları ve sık karşılaşılan durumlar
 > **İpucu:** Yükseklik değerlerini değiştirmeden önce CDN'nizin o yükseklikte görsel üretebildiğinden emin olun; CDN yalnız tanımlı boyutları sunuyorsa farklı bir değer kırık görsele yol açar.

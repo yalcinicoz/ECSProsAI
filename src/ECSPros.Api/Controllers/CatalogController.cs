@@ -776,16 +776,3 @@ public record UpdateSeoRequest(
     Dictionary<string, string>? MetaDescriptionI18n,
     Dictionary<string, string>? MetaKeywordsI18n);
 
-public record CreateFilterPresetRequest(
-    string Code,
-    Dictionary<string, string> NameI18n,
-    string? Description,
-    Dictionary<string, object> FilterDef,
-    int SortOrder = 0);
-
-public record UpdateFilterPresetRequest(
-    Dictionary<string, string> NameI18n,
-    string? Description,
-    Dictionary<string, object> FilterDef,
-    bool IsActive,
-    int SortOrder);

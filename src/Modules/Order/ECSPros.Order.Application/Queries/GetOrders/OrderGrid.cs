@@ -40,6 +40,7 @@ public static class OrderGrid
         .Sort("status", o => o.Status)
         .Sort("customer", o => o.ShippingRecipientName)
         .Sort("paymentStatus", o => o.PaymentStatus)
+        .Sort("cargo", o => o.RequestedCargoName)   // FAZ 15.2c (2026-09-10): kargo kolonu
         .DefaultSort(o => o.CreatedAt, desc: true)
         .TieBreaker(o => o.Id);
 
@@ -75,10 +76,27 @@ public static class OrderGrid
     }
 
     /// <summary>Adlandırılmış + grid filtreleri (grid'de status hariç tutulabilir → sekme sayaçları).</summary>
+    /// <summary>FAZ 15.2c (2026-09-10, eski "Üründen Sipariş Sorgula"): şemaya girmeyen kalem filtresi — <c>f.product</c>
+    /// sipariş kalemlerinde ürün kodu (Sku) ya da ürün adında geçen siparişleri getirir (koleksiyon; GridSchema tek
+    /// alanlı ifade istediği için handler'da özel uygulanır, ApplyFilters'ta atlanır).</summary>
+    public static IQueryable<OrderEntity> ApplyProductFilter(IQueryable<OrderEntity> query, GridRequest? grid)
+    {
+        var filter = grid?.Filters.FirstOrDefault(x => string.Equals(x.Field, "product", StringComparison.OrdinalIgnoreCase));
+        if (filter is null || string.IsNullOrWhiteSpace(filter.Value)) return query;
+        var term = filter.Value.Trim().ToLower();
+        return filter.Op switch
+        {
+            "eq" => query.Where(o => o.Items.Any(i => i.Sku.ToLower() == term)),
+            "startswith" => query.Where(o => o.Items.Any(i => i.Sku.ToLower().StartsWith(term) || i.ProductName.ToLower().StartsWith(term))),
+            _ => query.Where(o => o.Items.Any(i => i.Sku.ToLower().Contains(term) || i.ProductName.ToLower().Contains(term))),
+        };
+    }
+
     public static IQueryable<OrderEntity> ApplyAll(IQueryable<OrderEntity> query, OrderListFilters f, GridRequest? grid, bool includeStatus = true)
     {
         query = ApplyNamed(query, f, includeStatus);
-        query = includeStatus ? Schema.ApplyFilters(query, grid) : Schema.ApplyFilters(query, grid, "status");
+        query = ApplyProductFilter(query, grid);
+        query = includeStatus ? Schema.ApplyFilters(query, grid, "product") : Schema.ApplyFilters(query, grid, "status", "product");
         // Y3 (K2): kullanıcının erişemediği kanalın siparişi listeye/sayıma/exporta girmez.
         return Schema.ApplyKanalKapsami(query, grid?.KanalKisiti);
     }

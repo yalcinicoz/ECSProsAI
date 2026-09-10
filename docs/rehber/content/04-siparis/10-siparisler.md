@@ -52,8 +52,12 @@ Sayaçlar dakikada bir kendiliğinden yenilenir. Sekme değiştirince sayfa 1'e 
 | TUTAR | Genel toplam ve para birimi (TRY için ₺). |
 | ÖDEME | Üst satır ödeme yöntemi (Kart (Online) / Kapıda Nakit / Kapıda Kart; eski kayıtlarda "—"), alt satır ödeme durumu (Bekliyor, Ödenmedi, Ödendi, Kısmi, İade Edildi, Başarısız). |
 | DURUM | Sipariş durumu rozeti (aşağıdaki tablo). |
+| KARGO | Müşterinin teslimat adımında seçtiği kargo firması (kargoya veriş bunu varsayılan alır); yoksa "—". Sütun filtresiyle kargo firmasına göre listelenir (eski "Kargo Firmaları Sipariş"). |
 | TARİH | Oluşturulma tarihi ve saati. |
 | (son sütun) | "Detay →" — satırın tamamı tıklanabilir. |
+
+SİPARİŞ NO sütununun filtre penceresinde **Ürün kodu / adı (kalem)** filtresi vardır: sipariş kalemlerinde o ürün kodu
+ya da adı geçen siparişleri getirir (eski "Üründen Sipariş Sorgula"). "içerir / ile başlar / eşittir" seçenekleri.
 
 Sıralama sabittir (en yeni üstte). Liste boşsa "Sipariş bulunamadı." yazısı görünür.
 

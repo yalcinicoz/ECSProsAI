@@ -242,6 +242,10 @@ function InvoiceModal({ invoice, onClose }: { invoice: InvoiceSummary; onClose: 
           <Button size="sm" variant="danger" onClick={() => cancel.mutate()} loading={cancel.isPending}>Faturayı İptal Et</Button>
         ) : <span />}
         <div className="flex gap-2">
+          {/* FAZ 15.2b (2026-09-10): yeniden yazdır — site /yazdir/fatura sayfası (paket faturasında yalnız paket kalemleri) */}
+          {invoice.status !== 'cancelled' && (
+            <Button size="sm" variant="ghost" onClick={() => window.open(`/yazdir/fatura/${invoice.id}`, '_blank')}>Yazdır</Button>
+          )}
           <Button variant="secondary" onClick={onClose}>Kapat</Button>
           <Button onClick={() => saveUrl.mutate()} loading={saveUrl.isPending}>PDF Adresini Kaydet</Button>
         </div>

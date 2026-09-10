@@ -3,6 +3,7 @@ import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/rea
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ChevronRight, Save, EyeOff, Trash2, CheckCircle, AlertCircle, Info, Settings2 } from 'lucide-react'
 import api from '@/api/client'
+import { type Mannequin, mankenAd, mankenOzet } from './CatalogSettingsPage'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -1096,6 +1097,13 @@ function ChannelsPricingTab({ product }: { product: ProductDetail }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
+// FAZ 15.2a: manken özelliği JSON kalemi (docs/manken-ozelligi-spec.md — mankenId + görünüm + ölçü snapshot'ı)
+interface MankenSecim { mankenId: string; mankenAd: string; aciklama: string; mankenDetay: string }
+const MANKEN_GORUNUMLER = [
+  { value: 'tum', label: 'Tüm görünümler' }, { value: 'on', label: 'Ön görünüm' }, { value: 'arka', label: 'Arka görünüm' },
+  { value: 'yan', label: 'Yandan' }, { value: 'detay', label: 'Detay çekimi' },
+]
+
 export function ProductDetailPage() {
   const { code } = useParams<{ code: string }>()
   const navigate  = useNavigate()
@@ -1223,6 +1231,14 @@ export function ProductDetailPage() {
   const [attrForm, setAttrForm] = useState<Record<string, string>>({})
   // attributeTypeId → serbest metin (dataType='text'; CustomValue {"tr": "..."} — pazaryeri gönderimiyle aynı sözleşme)
   const [attrText, setAttrText] = useState<Record<string, string>>({})
+  // FAZ 15.2a (2026-09-10, docs/manken-ozelligi-spec.md): "manken" (json) özelliği — kadrodan seçim, ölçüler SNAPSHOT.
+  // CustomValue {"mankenler":[{mankenId, mankenAd, aciklama, mankenDetay}]} (sunucu CustomValue'yu nesne bekler).
+  const [attrManken, setAttrManken] = useState<Record<string, MankenSecim[]>>({})
+  const { data: mankenler = [] } = useQuery<Mannequin[]>({
+    queryKey: ['mannequins', false],
+    queryFn: async () => (await api.get('/catalog/mannequins?activeOnly=true')).data.data,
+    staleTime: 5 * 60 * 1000,
+  })
 
   useEffect(() => {
     if (product) {
@@ -1237,17 +1253,28 @@ export function ProductDetailPage() {
       setSupplierProductCode(product.supplierProductCode ?? '')
       const init: Record<string, string> = {}
       const initText: Record<string, string> = {}
+      const initManken: Record<string, MankenSecim[]> = {}
       for (const a of product.attributes) {
         if (a.attributeValueId) init[a.attributeTypeId] = a.attributeValueId
         else if (a.customValue) {
           try {
             const cv = JSON.parse(a.customValue) as Record<string, unknown>
             if (typeof cv?.tr === 'string') initText[a.attributeTypeId] = cv.tr
+            if (Array.isArray(cv?.mankenler)) {
+              initManken[a.attributeTypeId] = (cv.mankenler as Record<string, unknown>[])
+                .filter(x => typeof x?.mankenId === 'string')
+                .map(x => ({
+                  mankenId: String(x.mankenId), mankenAd: typeof x.mankenAd === 'string' ? x.mankenAd : '',
+                  aciklama: typeof x.aciklama === 'string' ? x.aciklama : 'tum',
+                  mankenDetay: typeof x.mankenDetay === 'string' ? x.mankenDetay : '',
+                }))
+            }
           } catch { /* eski/serbest biçim — metin alanı boş başlar */ }
         }
       }
       setAttrForm(init)
       setAttrText(initText)
+      setAttrManken(initManken)
       // init barcodes
       const bc: Record<string, string> = {}
       for (const v of product.variants) {
@@ -1296,6 +1323,12 @@ export function ProductDetailPage() {
       const group = groups.find((g) => g.id === product!.productGroupId)
       const nonVariantAttrs = (group?.attributes ?? []).filter((a) => !a.isVariant)
       const attributes = nonVariantAttrs.map((a) => {
+        if (attrDataType.get(a.attributeTypeId) === 'json' && a.attributeTypeCode === 'manken') {
+          const secimler = attrManken[a.attributeTypeId] ?? []
+          return secimler.length
+            ? { attributeTypeId: a.attributeTypeId, attributeValueId: null, customValue: JSON.stringify({ mankenler: secimler }) }
+            : null
+        }
         if (attrDataType.get(a.attributeTypeId) === 'text') {
           const text = (attrText[a.attributeTypeId] ?? '').trim()
           // boş metin → satır gönderilmez → sunucu mevcut satırı siler
@@ -2061,6 +2094,50 @@ export function ProductDetailPage() {
                   const values = attrTypeMap.get(ga.attributeTypeId) ?? []
                   const attrName = ga.attributeTypeNameI18n['tr'] ?? ga.attributeTypeCode
                   const selectedValueId = attrForm[ga.attributeTypeId] ?? ''
+                  if (attrDataType.get(ga.attributeTypeId) === 'json' && ga.attributeTypeCode === 'manken') {
+                    const secimler = attrManken[ga.attributeTypeId] ?? []
+                    const guncelle = (liste: MankenSecim[]) => setAttrManken((f) => ({ ...f, [ga.attributeTypeId]: liste }))
+                    return (
+                      <div key={ga.id} className="md:col-span-2">
+                        <label className="flbl">
+                          {attrName}
+                          {ga.isRequired && <span style={{ color: '#ef4444' }}> *</span>}
+                        </label>
+                        <div className="space-y-2">
+                          {secimler.map((sec, i) => (
+                            <div key={sec.mankenId + i} className="flex flex-wrap items-center gap-2 rounded-lg px-3 py-2"
+                              style={{ border: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-medium" style={{ color: 'var(--text)' }}>{sec.mankenAd || sec.mankenId}</div>
+                                <div className="text-xs" style={{ color: 'var(--text-s)' }}>{sec.mankenDetay || 'ölçü yok'}</div>
+                              </div>
+                              <select className="inp !w-auto" value={sec.aciklama}
+                                onChange={(e) => guncelle(secimler.map((x, j) => (j === i ? { ...x, aciklama: e.target.value } : x)))}>
+                                {MANKEN_GORUNUMLER.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+                              </select>
+                              <button type="button" className="text-xs underline" style={{ color: '#dc2626' }}
+                                onClick={() => guncelle(secimler.filter((_, j) => j !== i))}>Kaldır</button>
+                            </div>
+                          ))}
+                          <select className="inp cursor-pointer" value="" style={{ color: 'var(--text-s)' }}
+                            onChange={(e) => {
+                              const m = mankenler.find((x) => x.id === e.target.value)
+                              if (!m) return
+                              // Ölçüler o anki hâliyle donar (spec: manken tablosu sonradan değişse de ürün kaydı değişmez)
+                              guncelle([...secimler, { mankenId: m.id, mankenAd: mankenAd(m), aciklama: 'tum', mankenDetay: mankenOzet(m) }])
+                            }}>
+                            <option value="">+ Manken ekle (kadrodan seç)</option>
+                            {mankenler.filter((m) => !secimler.some((x) => x.mankenId === m.id)).map((m) => (
+                              <option key={m.id} value={m.id}>{mankenAd(m)}{mankenOzet(m) ? ` — ${mankenOzet(m)}` : ''}</option>
+                            ))}
+                          </select>
+                          <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+                            Kadro: Tanımlar › Katalog Ayarları › Mankenler. Seçilen ölçüler ürüne o anki hâliyle yazılır.
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  }
                   if (attrDataType.get(ga.attributeTypeId) === 'text') {
                     return (
                       <div key={ga.id}>

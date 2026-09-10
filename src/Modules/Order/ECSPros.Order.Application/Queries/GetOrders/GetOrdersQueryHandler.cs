@@ -36,7 +36,8 @@ public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, Result<Page
                 o.CurrencyCode,
                 o.CreatedAt,
                 o.ShippingRecipientName,
-                o.PaymentMethod))
+                o.PaymentMethod,
+                o.RequestedCargoName))
             .ToListAsync(cancellationToken);
 
         return Result.Success(new PagedOrderResult(items, totalCount, request.Page, request.PageSize));

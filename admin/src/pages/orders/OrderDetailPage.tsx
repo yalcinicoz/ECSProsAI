@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '@/api/client'
+import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -711,7 +712,12 @@ export function OrderDetailPage() {
                     <Badge variant="neutral">{INVOICE_SOURCE_MAP[inv.numberSource] ?? inv.numberSource}{inv.externalSource ? ` · ${inv.externalSource}` : ''}</Badge>
                   )}
                   {inv.hasIntegratorPdf && <span className="text-xs" style={{ color: 'var(--text-s)' }}>PDF ✓</span>}
-                  <Link to="/orders/invoices" className="text-xs ml-auto underline" style={{ color: 'var(--brand)' }}>
+                  {/* FAZ 15.2b (2026-09-10, eski "Fatura Yeniden Yazdır"): site yazdırma sayfası yeni sekmede */}
+                  {inv.status !== 'cancelled' && (
+                    <button type="button" className="text-xs ml-auto underline" style={{ color: 'var(--brand)' }}
+                      onClick={() => window.open(`/yazdir/fatura/${inv.id}`, '_blank')}>Yazdır</button>
+                  )}
+                  <Link to="/orders/invoices" className={cn('text-xs underline', inv.status === 'cancelled' && 'ml-auto')} style={{ color: 'var(--brand)' }}>
                     Faturalarda aç →
                   </Link>
                 </div>

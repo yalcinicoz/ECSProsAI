@@ -45,6 +45,7 @@ export interface OrderSummary {
   createdAt: string
   recipientName?: string
   paymentMethod?: string | null
+  requestedCargoName?: string | null   // FAZ 15.2c: müşterinin kargo tercihi
 }
 
 interface PagedResult<T> {
@@ -104,7 +105,8 @@ export function OrdersPage() {
   const columns: GridColumn<OrderSummary>[] = [
     { key: 'orderNumber', header: 'SİPARİŞ NO', frozen: true, lockVisible: true, sortable: true, minWidth: 130,
       filter: { type: 'text', label: 'Sipariş no', ops: ['startswith', 'contains', 'eq'] },
-      filters: [{ field: 'externalOrderNumber', label: 'Dış sipariş no', type: 'text' }, { field: 'cargo', label: 'Kargo', type: 'text' }],
+      // FAZ 15.2c (2026-09-10, eski "Üründen Sipariş Sorgula"): ürün kodu / adı kalem filtresi (sunucuda OrderGrid.ApplyProductFilter)
+      filters: [{ field: 'externalOrderNumber', label: 'Dış sipariş no', type: 'text' }, { field: 'product', label: 'Ürün kodu / adı (kalem)', type: 'text', ops: ['contains', 'startswith', 'eq'] }],
       cell: o => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{o.orderNumber}</code> },
     { key: 'customer', header: 'MÜŞTERİ', frozen: true, sortable: true, priority: 1, filter: { type: 'text', label: 'Müşteri' },
       filters: [{ field: 'phone', label: 'Telefon', type: 'text', ops: ['contains', 'startswith'] }],
@@ -120,6 +122,9 @@ export function OrdersPage() {
     { key: 'status', header: 'DURUM', lockVisible: true, sortable: true, priority: 1,
       filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(ORDER_STATUS_MAP).map(([value, v]) => ({ value, label: v.label })) },
       cell: o => { const st = ORDER_STATUS_MAP[o.status] ?? { label: o.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
+    // FAZ 15.2c (eski "Kargo Firmaları Sipariş"): kargo kolonu + filtresi (teslimat adımındaki tercih; kargoya veriş bunu varsayılan alır)
+    { key: 'cargo', header: 'KARGO', sortable: true, priority: 3, filter: { type: 'text', label: 'Kargo' },
+      cell: o => <span className="text-xs" style={{ color: 'var(--text-m)' }}>{o.requestedCargoName ?? '—'}</span> },
     { key: 'createdAt', header: 'TARİH', sortable: true, priority: 2, filter: { type: 'date', label: 'Tarih', quick: true },
       cell: o => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(o.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}</span> },
     { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },

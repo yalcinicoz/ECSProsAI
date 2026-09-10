@@ -442,13 +442,18 @@ canlı değişiklik için kullanıcı onayı ve bakım penceresi.
       go-live'dan önce yalnız kanalın eski statik sayfa adresleri elle girilir.
 
 **15.2 Backend hazır, yalnız panel ekranı yok — küçük işler**
-- [ ] **15.2a Manken yönetimi:** `Mannequin` entity + `ProductImageController` mannequins GET/POST/PUT var; ekran yok.
-      Eski "Manken Ölçüleri Gir" modalı (Excel: manken × resim seti × ürün ölçüleri) aynı kalemin parçası.
-- [ ] **15.2b Fatura yeniden yazdır:** web'de `/yazdir/fatura/{invoiceId}` var; sipariş/paket ekranında düğme yok.
-- [ ] **15.2c Sipariş grid filtreleri:** "Üründen Sipariş Sorgula" ve "Kargo Firmaları Sipariş" ayrı sayfa değil,
-      `/orders` DataGrid'ine ürün kodu/barkod filtresi + kargo firması sütunu/filtresi olarak eklenir (DataGrid standardı).
-- [ ] **15.2d Ölü dosya temizliği:** `catalog/FilterColorsPage.tsx`, `catalog/FilterPresetsPage.tsx`, `cms/MenusPage.tsx`,
-      `cms/MenuDetailPage.tsx`, `pages/PlaceholderPage.tsx` — hiçbir yerden import edilmiyor; sil ya da rotaya bağla (karar).
+- [x] **15.2a Manken yönetimi (2026-09-10):** Katalog Ayarları › **Mankenler** sekmesi (kadro CRUD, pasif/aktif, soft-delete)
+      + Ürün detayı › Özellikler'de `manken` (json) özelliği için kadro seçici — görünüm (ön/arka/yandan/detay) + ölçü
+      SNAPSHOT'ı `CustomValue {"mankenler":[…]}` (spec). Eski "Manken Ölçüleri Gir" modalının karşılığı bu seçicidir; Excel
+      toplu giriş yapılmadı (ihtiyaç çıkarsa).
+- [x] **15.2b Fatura yeniden yazdır (2026-09-10):** Sipariş detayı fatura satırı + Faturalar penceresinde **Yazdır**
+      (`/yazdir/fatura/{id}`, yeni sekme; iptal faturada yok).
+- [x] **15.2c Sipariş grid filtreleri (2026-09-10):** `/orders` KARGO kolonu (RequestedCargoName, sıralanır/filtrelenir) +
+      SİPARİŞ NO filtre penceresinde "Ürün kodu / adı (kalem)" (`f.product`, `OrderGrid.ApplyProductFilter` — koleksiyon
+      filtresi şema dışı, ApplyFilters'ta atlanır). Barkod filtresi YOK: kalem Sku ürün kodu taşıyor, varyant barkodu
+      Order bağlamında değil (gerekirse Catalog eşlemesiyle v2).
+- [x] **15.2d Ölü dosya temizliği (2026-09-10):** 5 dosya silindi (filtre renk/ön ayar sayfalarının backend ucu da yoktu;
+      `CreateFilterPresetRequest`/`UpdateFilterPresetRequest` kayıtları da kaldırıldı). `/navigation/menus` yönlendirmesi kaldı.
 
 **15.3 Raf operasyonları — en büyük blok (backend KISMEN hazır)**
 - [ ] **15.3 Raf/göz operasyon ekranları (eski Depo grubu, 10 sayfa):** `WarehouseSection`/`WarehouseBin` yapısı, Depo Detay'da

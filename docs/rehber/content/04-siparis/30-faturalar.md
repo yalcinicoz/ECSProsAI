@@ -46,6 +46,7 @@ Arama kutusu yoktur; belirli bir siparişin faturaları sipariş detayındaki **
 |---|---|---|---|
 | Satır tıklama | Liste | "Fatura {no}" penceresi: durum rozeti, tip · tarih, Alıcı, Tutar, "Sipariş: görüntüle" bağlantısı, Entegratör PDF durumu, PDF adresi alanı. | — |
 | Sipariş: görüntüle | Fatura penceresi | Siparişin detay sayfasına gider. | — |
+| Yazdır | Fatura penceresi (sağ alt) | Fatura yazdırma sayfasını yeni sekmede açar (yeniden yazdırma). | Fatura iptal edilmemiş |
 | PDF Adresini Kaydet | Fatura penceresi | Girilen https adresini faturaya kaydeder; müşteri sitede "Faturayı Görüntüle" butonunu görür. **Boş kaydetmek mevcut adresi siler.** | — |
 | Faturayı İptal Et ⚠️ | Fatura penceresi (sol alt, kırmızı) | Fatura `İptal` olur. Geri alınamaz; numara yeniden kullanılmaz. | Durum `Oluşturuldu` |
 | Kapat | Fatura penceresi | Pencereyi kapatır. | — |
