@@ -119,6 +119,13 @@ public static class DurumEtiketleri
             E("pending", "Cevap Bekleyen", Warning), E("answered", "Cevaplanan (yayında)", Success),
             E("hidden", "Yayından Kaldırılan", Neutral),
         ];
+
+        /// <summary>Raf sayımı oturumu (FAZ 15.3, 2026-09-10).</summary>
+        public static readonly IReadOnlyList<DurumEtiketi> SayimDurumu =
+        [
+            E("open", "Sayılıyor", Warning), E("finished", "Bitti (uygulanmadı)", Info),
+            E("applied", "Uygulandı", Success), E("cancelled", "İptal", Neutral),
+        ];
     }
 
     /// <summary>

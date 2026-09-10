@@ -158,3 +158,33 @@ public class TransferTrackingConfiguration : IEntityTypeConfiguration<TransferTr
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }
+
+/// <summary>FAZ 15.3 (2026-09-10): raf sayım oturumu + satırları.</summary>
+public class BinCountConfiguration : IEntityTypeConfiguration<BinCount>
+{
+    public void Configure(EntityTypeBuilder<BinCount> builder)
+    {
+        builder.ToTable("inv_bin_counts");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Status).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.Notes).HasMaxLength(1000);
+        builder.HasIndex(x => new { x.BinId, x.Status });
+        builder.HasIndex(x => x.StartedAt);
+        builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.HasOne(x => x.Warehouse).WithMany().HasForeignKey(x => x.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.Bin).WithMany().HasForeignKey(x => x.BinId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Lines).WithOne(x => x.BinCount).HasForeignKey(x => x.BinCountId);
+    }
+}
+
+public class BinCountLineConfiguration : IEntityTypeConfiguration<BinCountLine>
+{
+    public void Configure(EntityTypeBuilder<BinCountLine> builder)
+    {
+        builder.ToTable("inv_bin_count_lines");
+        builder.HasKey(x => x.Id);
+        builder.Ignore(x => x.Diff);
+        builder.HasIndex(x => new { x.BinCountId, x.VariantId }).IsUnique();
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}

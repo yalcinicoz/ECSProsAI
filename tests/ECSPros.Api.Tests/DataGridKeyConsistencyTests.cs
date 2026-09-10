@@ -53,6 +53,7 @@ public sealed class DataGridKeyConsistencyTests
         ["admin/src/pages/crm/tickets/TicketsPage.tsx"] = new[] { "src/Modules/Crm/ECSPros.Crm.Application/Tickets/Queries/TicketGrid.cs" },
         ["admin/src/pages/inventory/StocksPage.tsx"] = new[] { "src/ECSPros.Api/Grid/StockGrid.cs" },
         ["admin/src/pages/inventory/WarehousesPage.tsx"] = new[] { "src/Modules/Inventory/ECSPros.Inventory.Application/Queries/GetWarehouses/WarehouseGrid.cs" },
+        ["admin/src/pages/inventory/BinCountsPage.tsx"] = new[] { "src/Modules/Inventory/ECSPros.Inventory.Application/Shelf/BinCountQueries.cs" },
         ["admin/src/pages/inventory/TransfersPage.tsx"] = new[] { "src/Modules/Inventory/ECSPros.Inventory.Application/Queries/GetTransfers/TransferGrid.cs" },
         ["admin/src/pages/finance/SupplierInvoicesPage.tsx"] = new[] { "src/Modules/Finance/ECSPros.Finance.Application/Queries/GetSupplierInvoices/SupplierInvoiceGrid.cs" },
         ["admin/src/pages/fulfillment/PickingPlansPage.tsx"] = new[] { "src/Modules/Fulfillment/ECSPros.Fulfillment.Application/Queries/GetPickingPlans/PickingPlanGrid.cs" },

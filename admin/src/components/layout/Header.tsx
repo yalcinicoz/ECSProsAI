@@ -38,6 +38,8 @@ const BREADCRUMB: Record<string, string> = {
   '/inventory/warehouses':         'Depolar',
   '/inventory/stocks':             'Stok Takibi',
   '/inventory/transfers':          'Stok Hareketleri',
+  '/inventory/shelf':              'Raf İşlemleri',
+  '/inventory/bin-counts':         'Raf Sayımları',
   '/promotion/campaigns':          'Kampanyalar',
   '/pos/sales':                    'POS Satışları',
   '/integrations/logs':            'Entegrasyon Logları',

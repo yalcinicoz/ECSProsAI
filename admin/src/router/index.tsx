@@ -58,6 +58,8 @@ import { WarehouseDetailPage } from '@/pages/inventory/WarehouseDetailPage'
 import { StocksPage } from '@/pages/inventory/StocksPage'
 import { TransfersPage } from '@/pages/inventory/TransfersPage'
 import { TransferDetailPage } from '@/pages/inventory/TransferDetailPage'
+import { ShelfPage } from '@/pages/inventory/ShelfPage'
+import { BinCountsPage } from '@/pages/inventory/BinCountsPage'
 import { AccountGroupsPage } from '@/pages/accounts/AccountGroupsPage'
 import { AccountsPage } from '@/pages/accounts/AccountsPage'
 import { AccountDetailPage, AccountCreatePage } from '@/pages/accounts/AccountDetailPage'
@@ -167,6 +169,8 @@ export const router = createBrowserRouter(
             { path: 'inventory/stocks',         element: <StocksPage /> },
             { path: 'inventory/transfers',      element: <TransfersPage /> },
             { path: 'inventory/transfers/:id',  element: <TransferDetailPage /> },
+            { path: 'inventory/shelf',          element: <ShelfPage /> },          // FAZ 15.3 raf işlemleri
+            { path: 'inventory/bin-counts',     element: <BinCountsPage /> },
 
             // Pazaryerleri
             { path: 'marketplaces',            element: <MarketplacesPage /> },

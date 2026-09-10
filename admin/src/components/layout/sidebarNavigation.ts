@@ -49,6 +49,7 @@ export const NAV_SECTIONS: NavSection[] = [
     { label: 'Kargo Yönlendirme', to: '/fulfillment/cargo-reroute', icon: 'truck', permission: 'fulfillment.view' },
     { label: 'Stok Takibi',      to: '/inventory/stocks',     icon: 'boxes', permission: 'inventory.view' },
     { label: 'Stok Hareketleri', to: '/inventory/transfers',  icon: 'refreshcw', permission: 'inventory.view' },
+    { label: 'Raf İşlemleri',    to: '/inventory/shelf',      icon: 'scan', activePatterns: ['/inventory/bin-counts'], permission: 'inventory.view' },
   ]},
   { id: 'procurement', label: 'Tedarik', icon: 'inbox', items: [
     { label: 'Satın Almalar', to: '/procurement/purchase-orders', icon: 'inbox', permission: 'procurement.manage' },

@@ -26,6 +26,8 @@ public static class Permissions
 
     /// <summary>Depo, stok ve transfer yönetimi.</summary>
     public const string InventoryManage = "inventory.manage";
+    /// <summary>FAZ 15.3 (2026-09-10): raf sayımı farkını stoğa uygulama — sayan personelden ayrı (depo sorumlusu).</summary>
+    public const string InventoryCountApply = "inventory.count.apply";
 
     /// <summary>Tedarik: satın alma / mal kabul yönetimi (docs/urun-tedarik-is-akisi.md T1).</summary>
     public const string ProcurementManage = "procurement.manage";
@@ -131,6 +133,7 @@ public static class Permissions
         CatalogImagesManage,
         CatalogSettingsManage,
         InventoryManage,
+        InventoryCountApply,
         ProcurementManage,
         ProcurementSort,
     ];
@@ -149,6 +152,7 @@ public static class Permissions
         CatalogImagesManage,
         CatalogSettingsManage,
         InventoryManage,
+        InventoryCountApply,
         OrderPackagesMerge,
         ProcurementManage,
         ProcurementSort,

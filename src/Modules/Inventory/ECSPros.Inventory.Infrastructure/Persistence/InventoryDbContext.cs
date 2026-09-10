@@ -19,6 +19,8 @@ public class InventoryDbContext : DbContext, IInventoryDbContext
     public DbSet<TransferRequest> TransferRequests => Set<TransferRequest>();
     public DbSet<TransferRequestItem> TransferRequestItems => Set<TransferRequestItem>();
     public DbSet<TransferTracking> TransferTrackings => Set<TransferTracking>();
+    public DbSet<BinCount> BinCounts => Set<BinCount>();
+    public DbSet<BinCountLine> BinCountLines => Set<BinCountLine>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

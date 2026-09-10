@@ -1,4 +1,4 @@
-# Raf / Göz Operasyon Ekranları — Kurgu v1 (2026-09-10)
+# Raf / Göz Operasyon Ekranları — Kurgu v1.1 (2026-09-10) — K1-K6 ÖNERİLERLE ONAYLANDI, R0-R5 UYGULANDI
 
 Yol haritası **FAZ 15.3**. Eski panelin "Depo" grubundaki 10 sayfanın (rafa yerleştir, toplu yerleştir, iadeden rafa,
 raftan rafa transfer, raf sayım, raf ürün listesi, mağaza depodan reyona, reyondan çıkar ×3) yeni panelde tek bir
@@ -110,7 +110,7 @@ Kurallar: her mutasyon `StockTx.RunAsync` kilidiyle; 0'lı satır bırakılmaz (
 
 ---
 
-## 4. Kararlar (onay bekliyor)
+## 4. Kararlar (2026-09-10 kullanıcı: "önerilerinle devam et" — hepsi öneri değeriyle KAPALI)
 
 | # | Soru | Öneri |
 |---|------|-------|
@@ -135,3 +135,17 @@ Kurallar: her mutasyon `StockTx.RunAsync` kilidiyle; 0'lı satır bırakılmaz (
 | R5 | Rehber sayfası, menü (Stok › Raf İşlemleri), kabul testi (olumsuz: pasif göz, başka depo gözü, aynalama kipinde yazma) |
 
 Kapsam dışı: stüdyo akışı (15.4a), depolar arası çok kalemli transfer (mevcut Transferler), ERP stok kartı güncelleme.
+
+---
+
+## 6. Uygulama durumu (2026-09-10)
+
+| Faz | Durum | Nerede |
+|-----|-------|--------|
+| R0 | ✅ | `Inventory.Application/Shelf/*` (ShelfOps çekirdeği, GetBinContents/GetVariantBins, PlaceToBin, MoveBetweenBins, ReturnToShelf, StoreMove, BinCount Start/Scan/Finish/Apply/Cancel + BinCountGrid), `inv_bin_counts` + `inv_bin_count_lines` (migration `AddBinCounts`, canlı+demo), `StokHareketTipi`, `DurumEtiketleri.Panel.SayimDurumu`, yetki `inventory.count.apply` (katalog), API `api/inventory/shelf/*`, `bin-counts*`, `stock-authority`; `StockAuthority` (Legacy:Sync:Enabled && Stock && !DryRun → yazma uçları 409) |
+| R1-R4 | ✅ | Panel `/inventory/shelf?mode=contents|place|move|return|count|store` (tek ekran, 6 kip; `ShelfPage.tsx`), `/inventory/bin-counts` DataGrid + detay penceresi (`BinCountsPage.tsx`); menü Stok › Raf İşlemleri |
+| R5 | ✅ | Rehber `07-stok/40-raf-islemleri.md`; testler StockAuthorityTests + DataGridKeyConsistency; kabul: aynalama kipinde yazma 409 (canlıda bugün böyle), pasif göz/başka depo/serbest adet aşımı sunucu hataları |
+
+Sınırlar: mal kabul kolisinden yerleştirme Tedarik › Sayım/Teslim akışında (PlaceSortingEntry → ReceiveToBin) — raf ekranı
+kendi kutusundan koli okutmaz (K5 "koli okutulduysa" kısmı bu akışa işaret eder). Stüdyo akışı ayrı (K6). Göz barkodu
+ile ürün barkodu çakışırsa göz kazanır (önce göz aranır).

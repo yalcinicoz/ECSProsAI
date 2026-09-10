@@ -456,7 +456,7 @@ canlı değişiklik için kullanıcı onayı ve bakım penceresi.
       `CreateFilterPresetRequest`/`UpdateFilterPresetRequest` kayıtları da kaldırıldı). `/navigation/menus` yönlendirmesi kaldı.
 
 **15.3 Raf operasyonları — en büyük blok (backend KISMEN hazır)**
-- [ ] **15.3 Raf/göz operasyon ekranları (eski Depo grubu, 10 sayfa):** → **KURGU v1 yazıldı `docs/raf-operasyon-ekranlari-plani.md` (2026-09-10), K1-K6 onay bekliyor; ★ kısıt: canlı `pricestock` senkronu göz stoklarını eskiden yeniden yazıyor → ekranlar aynalama/otorite kipli.** `WarehouseSection`/`WarehouseBin` yapısı, Depo Detay'da
+- [x] **15.3 Raf/göz operasyon ekranları (2026-09-10):** kurgu `docs/raf-operasyon-ekranlari-plani.md` K1-K6 öneriyle onaylandı, R0-R5 UYGULANDI — `/inventory/shelf` (6 kip) + `/inventory/bin-counts`; ★ aynalama kipi: canlı `Legacy:Sync:Stock` açıkken yazma uçları 409, go-live'da bayrak kapanınca otorite panel. `WarehouseSection`/`WarehouseBin` yapısı, Depo Detay'da
       raf-birim yönetimi, `ReceiveToBin`/`ScanToBin`/`UpdateBinStatus` komutları VAR; eksik olan operasyon ekranları:
       rafa ürün yerleştir (göz barkodu + ürün barkodu), toplu yerleştir, iadeden rafa, raftan rafa transfer, raf sayım,
       raf ürün listesi, mağaza depodan reyona / reyondan çıkar (MR/AR/GR). Tek tablet ekran ailesi olarak tasarlanmalı

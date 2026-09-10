@@ -10,6 +10,8 @@ using ECSPros.Inventory.Application.Commands.CreateWarehouseLocation;
 using ECSPros.Inventory.Application.Commands.UpdateTransferStatus;
 using ECSPros.Inventory.Application.Commands.UpdateWarehouse;
 using ECSPros.Inventory.Application.Commands.UpdateWarehouseLocation;
+using ECSPros.Inventory.Application.Shelf;
+using ECSPros.Api.Services.Inventory;
 using ECSPros.Inventory.Application.Queries.GetReservations;
 using ECSPros.Inventory.Application.Queries.GetStocks;
 using ECSPros.Inventory.Application.Queries.GetTransferDetail;
@@ -436,6 +438,191 @@ public class InventoryController : ControllerBase
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
     }
+
+    // ─── FAZ 15.3 Raf / göz operasyonları (docs/raf-operasyon-ekranlari-plani.md) ───────────────
+
+    /// <summary>Stok otoritesi: legacy (aynalama — raf yazma uçları 409) | panel.</summary>
+    [HttpGet("stock-authority")]
+    public IActionResult GetStockAuthority([FromServices] StockAuthority authority)
+        => Ok(new { success = true, data = new { authority = authority.Current, legacyOwnsStock = authority.LegacyOwnsStock, message = authority.LegacyOwnsStock ? StockAuthority.LegacyMessage : null } });
+
+    private static IActionResult? OtoriteKontrol(StockAuthority authority)
+        => authority.LegacyOwnsStock ? new ConflictObjectResult(new { success = false, error = StockAuthority.LegacyMessage, code = "stock_authority_legacy" }) : null;
+
+    private Guid? KullaniciId()
+    {
+        var v = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        return Guid.TryParse(v, out var g) ? g : null;
+    }
+
+    /// <summary>Tek okutma kutusu: barkod bir GÖZ mü, ÜRÜN mü? Önce göz (inv_warehouse_bins.Barcode), sonra varyant barkodu.</summary>
+    [HttpGet("shelf/resolve")]
+    public async Task<IActionResult> ResolveScan([FromQuery] string barcode, [FromServices] ECSPros.Shared.Contracts.IProductService products, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(barcode)) return BadRequest(new { success = false, error = "Barkod boş." });
+        var bin = await _mediator.Send(new GetBinContentsQuery(barcode.Trim(), null), ct);
+        if (bin.IsSuccess) return Ok(new { success = true, data = new { kind = "bin", bin = bin.Value } });
+
+        var v = await _mediator.Send(new ECSPros.Catalog.Application.Queries.GetVariantByBarcode.GetVariantByBarcodeQuery(barcode.Trim()), ct);
+        if (v.IsFailure || v.Value is null) return Ok(new { success = true, data = new { kind = "none" } });
+        ECSPros.Shared.Contracts.VariantDisplayInfo? g = null;
+        try { g = (await products.GetVariantDisplayAsync(new[] { v.Value.VariantId }, ct)).GetValueOrDefault(v.Value.VariantId); } catch { /* isteğe bağlı */ }
+        var bins = await _mediator.Send(new GetVariantBinsQuery(v.Value.VariantId, null), ct);
+        return Ok(new { success = true, data = new { kind = "variant", variant = new {
+            v.Value.VariantId, v.Value.ProductId, v.Value.ProductCode, v.Value.Sku,
+            productName = g?.ProductNameI18n.GetValueOrDefault("tr") ?? v.Value.ProductNameI18n.GetValueOrDefault("tr") ?? v.Value.ProductCode,
+            g?.OptionsText, g?.ImageUrl }, bins = bins.Value } });
+    }
+
+    /// <summary>R1 Raf içeriği (göz barkodu).</summary>
+    [HttpGet("shelf/bins/{barcode}/contents")]
+    public async Task<IActionResult> GetBinContents(string barcode, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new GetBinContentsQuery(barcode, null), ct);
+        if (r.IsFailure) return NotFound(new { success = false, error = r.Error });
+        return Ok(new { success = true, data = r.Value });
+    }
+
+    /// <summary>R1 Ürün hangi gözlerde.</summary>
+    [HttpGet("shelf/variants/{variantId:guid}/bins")]
+    public async Task<IActionResult> GetVariantBins(Guid variantId, [FromQuery] Guid? warehouseId, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new GetVariantBinsQuery(variantId, warehouseId), ct);
+        return Ok(new { success = true, data = r.Value });
+    }
+
+    /// <summary>R2 Göze yerleştir (free: serbest giriş, not zorunlu; unbinned: rafsız satırdan).</summary>
+    [HttpPost("shelf/place")]
+    [RequirePermission(Permissions.InventoryManage)]
+    public async Task<IActionResult> PlaceToBin([FromBody] ShelfPlaceRequest req, [FromServices] StockAuthority authority, CancellationToken ct)
+    {
+        if (OtoriteKontrol(authority) is { } engel) return engel;
+        var r = await _mediator.Send(new PlaceToBinCommand(req.BinId, req.VariantId, req.Quantity, req.Source ?? PlaceSources.Free, req.Notes, KullaniciId()), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true, data = new { quantityInBin = r.Value } });
+    }
+
+    /// <summary>R3 Göz→göz taşıma (aynı depo).</summary>
+    [HttpPost("shelf/move")]
+    [RequirePermission(Permissions.InventoryManage)]
+    public async Task<IActionResult> MoveBetweenBins([FromBody] ShelfMoveRequest req, [FromServices] StockAuthority authority, CancellationToken ct)
+    {
+        if (OtoriteKontrol(authority) is { } engel) return engel;
+        var r = await _mediator.Send(new MoveBetweenBinsCommand(req.FromBinId, req.ToBinId, req.MoveAll,
+            req.Items?.Select(i => new MoveItem(i.VariantId, i.Quantity)).ToList(), req.Notes, KullaniciId()), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true, data = new { moved = r.Value } });
+    }
+
+    /// <summary>R4 İadeden rafa (kapalı kısım gözü → satış rafı / defo).</summary>
+    [HttpPost("shelf/return-to-shelf")]
+    [RequirePermission(Permissions.InventoryManage)]
+    public async Task<IActionResult> ReturnToShelf([FromBody] ShelfReturnRequest req, [FromServices] StockAuthority authority, CancellationToken ct)
+    {
+        if (OtoriteKontrol(authority) is { } engel) return engel;
+        var r = await _mediator.Send(new ReturnToShelfCommand(req.FromBinId, req.ToBinId, req.VariantId, req.Quantity, req.ReturnId, req.Notes, KullaniciId()), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true, data = new { moved = r.Value } });
+    }
+
+    /// <summary>R6 Mağaza reyon: depolar arası anlık tek ürün taşıma.</summary>
+    [HttpPost("shelf/store-move")]
+    [RequirePermission(Permissions.InventoryManage)]
+    public async Task<IActionResult> StoreMove([FromBody] ShelfStoreMoveRequest req, [FromServices] StockAuthority authority, CancellationToken ct)
+    {
+        if (OtoriteKontrol(authority) is { } engel) return engel;
+        var uid = KullaniciId(); if (uid is null) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var r = await _mediator.Send(new StoreMoveCommand(req.FromWarehouseId, req.ToWarehouseId, req.VariantId, req.Quantity, req.Notes, uid.Value), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true, data = new { transferId = r.Value } });
+    }
+
+    // ── R5 Raf sayımı ──
+
+    /// <summary>Sayım oturumları (DataGrid: search/sort/dir/f.* — BinCountGrid.Schema).</summary>
+    [HttpGet("bin-counts")]
+    public async Task<IActionResult> GetBinCounts([FromQuery] string? search, CancellationToken ct)
+    {
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, null, defaultPageSize: 20);
+        var r = await _mediator.Send(new GetBinCountsQuery(grid.Page, grid.PageSize, search, grid), ct);
+        return Ok(new { success = true, data = r.Value });
+    }
+
+    /// <summary>Sayımları Excel'e aktarır (DataGrid F4).</summary>
+    [HttpPost("bin-counts/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportBinCounts([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<InventoryController> logger, CancellationToken ct)
+        => await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "bin-counts", "raf-sayimlari", "Raf Sayımları",
+            ECSPros.Api.Grid.BinCountExportColumns.All, max => _mediator.Send(new ExportBinCountsQuery(body.Search, body.ToGridRequest(null), max), ct), ct,
+            alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
+
+    [HttpGet("bin-counts/{id:guid}")]
+    public async Task<IActionResult> GetBinCount(Guid id, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new GetBinCountDetailQuery(id), ct);
+        if (r.IsFailure) return NotFound(new { success = false, error = r.Error });
+        return Ok(new { success = true, data = r.Value });
+    }
+
+    /// <summary>Sayım başlat (açık oturum varsa onu döner). Aynalama kipinde de çalışır — rapor üretir.</summary>
+    [HttpPost("bin-counts/start")]
+    [RequirePermission(Permissions.InventoryManage)]
+    public async Task<IActionResult> StartBinCount([FromBody] BinCountStartRequest req, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new StartBinCountCommand(req.BinId, KullaniciId()), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true, data = new { countId = r.Value } });
+    }
+
+    [HttpPost("bin-counts/{id:guid}/scan")]
+    [RequirePermission(Permissions.InventoryManage)]
+    public async Task<IActionResult> ScanBinCount(Guid id, [FromBody] BinCountScanRequest req, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new ScanBinCountCommand(id, req.VariantId, req.Delta), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true, data = r.Value });
+    }
+
+    [HttpPost("bin-counts/{id:guid}/finish")]
+    [RequirePermission(Permissions.InventoryManage)]
+    public async Task<IActionResult> FinishBinCount(Guid id, [FromBody] BinCountFinishRequest? req, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new FinishBinCountCommand(id, req?.Notes), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Farkı stoğa uygular — ayrı yetki (K3); otorite eskideyken 409.</summary>
+    [HttpPost("bin-counts/{id:guid}/apply")]
+    [RequirePermission(Permissions.InventoryCountApply)]
+    public async Task<IActionResult> ApplyBinCount(Guid id, [FromServices] StockAuthority authority, CancellationToken ct)
+    {
+        if (OtoriteKontrol(authority) is { } engel) return engel;
+        var uid = KullaniciId(); if (uid is null) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var r = await _mediator.Send(new ApplyBinCountCommand(id, uid.Value), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true, data = new { appliedLines = r.Value } });
+    }
+
+    [HttpPost("bin-counts/{id:guid}/cancel")]
+    [RequirePermission(Permissions.InventoryManage)]
+    public async Task<IActionResult> CancelBinCount(Guid id, [FromBody] BinCountFinishRequest? req, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new CancelBinCountCommand(id, req?.Notes), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true });
+    }
+
+    public record ShelfPlaceRequest(Guid BinId, Guid VariantId, int Quantity = 1, string? Source = null, string? Notes = null);
+    public record ShelfMoveItemRequest(Guid VariantId, int? Quantity);
+    public record ShelfMoveRequest(Guid FromBinId, Guid ToBinId, bool MoveAll = false, List<ShelfMoveItemRequest>? Items = null, string? Notes = null);
+    public record ShelfReturnRequest(Guid FromBinId, Guid ToBinId, Guid VariantId, int Quantity = 1, Guid? ReturnId = null, string? Notes = null);
+    public record ShelfStoreMoveRequest(Guid FromWarehouseId, Guid ToWarehouseId, Guid VariantId, int Quantity = 1, string? Notes = null);
+    public record BinCountStartRequest(Guid BinId);
+    public record BinCountScanRequest(Guid VariantId, int Delta = 1);
+    public record BinCountFinishRequest(string? Notes);
 }
 
 public record CreateWarehouseRequest(

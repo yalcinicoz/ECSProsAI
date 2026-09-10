@@ -65,6 +65,8 @@ public static class PermissionKatalogu
         // ── Stok / tedarik ───────────────────────────────────────────────────────
         new(Permissions.InventoryManage, PermissionTuru.Aksiyon, "Stok", "Stoklar", false,
             "Stok ve Depo Yönetimi", "Depo, stok ve transfer işlemleri.", 70),
+        new(Permissions.InventoryCountApply, PermissionTuru.Aksiyon, "Stok", "Raf İşlemleri", false,
+            "Raf Sayımı Farkını Uygula", "Bitirilmiş raf sayımının farkını stoğa yazar (sayan personelden ayrı, depo sorumlusu).", 71),
         new(Permissions.ProcurementManage, PermissionTuru.Aksiyon, "Tedarik", "Satın Almalar", false,
             "Tedarik Yönetimi", "Satın alma ve mal kabul.", 80),
         new(Permissions.ProcurementSort, PermissionTuru.Aksiyon, "Tedarik", "Sayım / Teslim", false,

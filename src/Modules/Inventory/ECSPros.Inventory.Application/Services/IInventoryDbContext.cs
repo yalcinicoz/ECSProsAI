@@ -14,6 +14,8 @@ public interface IInventoryDbContext
     DbSet<StockReservation> StockReservations { get; }
     DbSet<TransferRequest> TransferRequests { get; }
     DbSet<TransferRequestItem> TransferRequestItems { get; }
+    DbSet<BinCount> BinCounts { get; }           // FAZ 15.3 raf sayımı
+    DbSet<BinCountLine> BinCountLines { get; }
 
     /// <summary>Faz 0 (StockTx): açık transaction + advisory kilit için — DbContext otomatik karşılar.</summary>
     Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database { get; }

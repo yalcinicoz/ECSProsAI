@@ -510,6 +510,7 @@ builder.Services.AddScoped<ECSPros.Api.Services.Store.IOrderConfirmationService,
 // (varsayılan KAPALI + DryRun; Legacy:Sync:Enabled + DryRun=false ile gerçek yazım)
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacySyncService>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacyOrderSyncService>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Inventory.StockAuthority>();   // FAZ 15.3: raf ekranları aynalama/otorite kipi
 ECSPros.Shared.Infrastructure.Http.ResilientHttpClientExtensions.AddResilientHttpClient(builder.Services, "legacy-order", c => c.Timeout = TimeSpan.FromSeconds(30));
 
 // Kalıcı gerçek-kaynak akışı: V3 ERP/SQL Server -> PostgreSQL. Güvenli varsayılan KAPALI
