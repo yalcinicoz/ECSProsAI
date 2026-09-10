@@ -47,6 +47,8 @@ const BREADCRUMB: Record<string, string> = {
   '/finance/suppliers':            'Tedarikçiler',
   '/fulfillment/picking-plans':    'Toplama Planlama',
   '/fulfillment/cargo-reroute':    'Kargo Yönlendirme',
+  '/fulfillment/assignments':      'Personele Dağıt',
+  '/fulfillment/box-lookup':       'Koli Sorgu',
   '/settings/users':               'Kullanıcılar',
   '/settings/roles':               'Roller',
   '/settings/audit-logs':          'Denetim Logları',

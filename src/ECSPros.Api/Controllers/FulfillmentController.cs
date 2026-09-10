@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using ECSPros.Fulfillment.Application.Commands.CompletePickingPlan;
 using ECSPros.Fulfillment.Application.Commands.ScanItem;
 using ECSPros.Fulfillment.Application.Commands.ScanToBin;
@@ -76,6 +77,55 @@ public class FulfillmentController : ControllerBase
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>FAZ 15.4e: aktif görevlerde personel başına atanan/toplanan/kalan + atanmamış havuz (eski "Kullanıcı Toplama Yönetimi").</summary>
+    [HttpGet("assignment-summary")]
+    public async Task<IActionResult> AssignmentSummary([FromQuery] Guid? planId, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new ECSPros.Fulfillment.Application.Queries.GetPickingAssignmentSummary.GetPickingAssignmentSummaryQuery(planId), ct);
+        return Ok(new { success = true, data = r.Value });
+    }
+
+    /// <summary>FAZ 15.4e: sayıya göre dağıt — atanmamış havuzdan (fromAssignee boş) ya da başka personelden (aktarım) N satır.</summary>
+    [HttpPost("picking-plans/{id:guid}/auto-assign")]
+    [RequirePermission(Permissions.FulfillmentManage)]
+    public async Task<IActionResult> AutoAssign(Guid id, [FromBody] AutoAssignRequest request, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.AutoAssignPickingLines
+            .AutoAssignPickingLinesCommand(id, request.AssignTo, request.Count, request.FromAssignee, AktifKullanici()), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true, data = new { assigned = r.Value } });
+    }
+
+    /// <summary>FAZ 15.4f: Set/Koli sipariş sorgu (eski "Set Koli Sipariş Sorgula") — koli/masa/yuva + sipariş durumu, müşteri, fatura tarihi.</summary>
+    [HttpGet("box-lookup")]
+    public async Task<IActionResult> BoxLookup([FromQuery] string? planNumber, [FromQuery] int? boxNumber, [FromQuery] string? orderNumber,
+        [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] Guid? takenBy,
+        [FromServices] ECSPros.Order.Application.Services.IOrderDbContext odb, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new ECSPros.Fulfillment.Application.Queries.GetBoxOrders.GetBoxOrdersQuery(
+            planNumber, boxNumber, orderNumber, from?.ToUniversalTime(), to?.ToUniversalTime(), takenBy), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        var ids = r.Value!.Select(x => x.OrderId).Distinct().ToList();
+        var siparisler = ids.Count == 0 ? new() : await odb.Orders.AsNoTracking().Where(o => ids.Contains(o.Id))
+            .Select(o => new { o.Id, o.OrderNumber, o.Status, o.ShippingRecipientName, o.CreatedAt, o.PaymentMethod })
+            .ToDictionaryAsync(o => o.Id, ct);
+        var faturalar = ids.Count == 0 ? new() : await odb.Invoices.AsNoTracking().Where(i => ids.Contains(i.OrderId) && i.Status != "cancelled")
+            .GroupBy(i => i.OrderId).Select(g => new { g.Key, InvoiceDate = g.Max(i => i.InvoiceDate) }).ToDictionaryAsync(x => x.Key, x => x.InvoiceDate, ct);
+        var data = r.Value.Select(x =>
+        {
+            siparisler.TryGetValue(x.OrderId, out var o);
+            return new
+            {
+                x.PlanId, x.PlanNumber, x.PlannedAt, x.PlanStatus, x.BoxId, x.BoxNumber, x.BoxStatus, x.TakenBy, x.TakenAt, x.StationNumber,
+                x.DeskNumber, x.DeskSlotNumber, x.BinNumber, x.BinStatus, x.OrderId, x.LineCount, x.PickedLines,
+                orderNumber = o?.OrderNumber ?? x.OrderNumber, orderStatus = o?.Status, customer = o?.ShippingRecipientName,
+                orderCreatedAt = o?.CreatedAt ?? x.OrderCreatedAt, paymentMethod = o?.PaymentMethod,
+                invoiceDate = faturalar.TryGetValue(x.OrderId, out var fd) ? fd : (DateTime?)null,
+            };
+        }).ToList();
+        return Ok(new { success = true, data });
     }
 
     /// <summary>Görev satırlarını personele dağıtır.</summary>
@@ -835,3 +885,5 @@ public record FinalScanRequest(Guid OrderId, string? Barcode);
 
 public record RerouteCargoRequest(
     List<Guid>? OutboxIds, Guid TargetIntegrationId, string? TargetName, List<Guid>? OrderIds);
+
+public record AutoAssignRequest(Guid AssignTo, int Count, Guid? FromAssignee = null);

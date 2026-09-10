@@ -469,13 +469,17 @@ canlı değişiklik için kullanıcı onayı ve bakım penceresi.
 - [ ] **15.4b Kombin:** belgedeki gerekçe hatalıydı (ürün detayındaki "kombinasyon" varyant kombinasyonudur). Karşılıklar:
       `bundle` kampanya tipi (indirim) + üye koleksiyonları. Eski kombin = kendi kodu/fiyatı/görseli/cinsiyeti olan satılabilir
       set ürünü (Sevgili/Serbest/Müşteri kombin). Set-ürün modeli istenirse ayrı tasarım.
-- [ ] **15.4c Site Bileşen Yönetimi:** tarih aralıklı, öncelikli, hedef sayfa tipli popup/banner. Karşılık: Vitrin Yönetimi blokları
-      (ikon-banner/bilgi-banner…) + Kart Mesajları. Eksik: sayfa-tipi hedefleme + event hedefi + popup tipi.
+- [ ] **15.4c Site Bileşen Yönetimi:** KURGU `docs/site-bilesen-yonetimi-kurgu.md` (2026-09-10) K1-K4 onay bekliyor; ★ misharix'te
+      popup/üst bar/inline banner tasarımı yok → tasarım gelmeden site tarafı yazılmaz (K16). Eski model: tip + hedef sayfa/event +
+      tarih + öncelik + tek sefer + stil + görseller + kurallar (üye tipi, sepet tutarı, ödeme tipi).
 - [ ] **15.4d Sipariş Ayır:** eski modal `/ortak/data` genel ucuna `datakey=siparis-ayir` gönderiyor; uygulama kodunda karşılığı YOK
       (veri tabanı tanımlı bir prosedür) — anlamı eski MySQL/`ortak` tanımından okunmadan iş açılmaz (2026-09-10 → 15.5 kapsamına).
-- [ ] **15.4e Kullanıcı Toplama Yönetimi + Özel Sipariş Toplama:** `AssignPickingLines`/`CreatePickingTasks` var; eksik olan
-      personele günlük sayıya göre dağıtım ekranı ("Personele Dağıt") ve seçili siparişlerden serbest toplama oluşturma.
-- [ ] **15.4f Set Koli Sipariş Sorgula:** koli komutları + Koli Duvarı var; set/koli/sipariş/personel bazlı sorgu ekranı yok.
+- [x] **15.4e Personele Dağıt (2026-09-10):** `/fulfillment/assignments` — aktif görevlerde personel × atanan/toplanan/kalan
+      (`GET fulfillment/assignment-summary`), havuzdan sayıyla dağıt / personelden aktar (`POST picking-plans/{id}/auto-assign` →
+      AssignPickingLines ile aynı log+olay). "Özel sipariş toplama" (seçili siparişlerden serbest görev) Görev Oluştur ekranının
+      filtreleriyle karşılanıyor — ayrı iş açılmadı.
+- [x] **15.4f Koli Sorgu (2026-09-10):** `/fulfillment/box-lookup` — set/koli/sipariş no/tarih/personel → kolideki siparişler,
+      masa/yuva/göz, sipariş durumu, müşteri, fatura tarihi (`GET fulfillment/box-lookup`; Fulfillment + Order birleşimi API'de).
 - [x] **15.4g Müşteriye Ödemeler (2026-09-10):** İadeler'e **Ödenecek** sekmesi (received + refund pending); `Return.RefundIban`/
       `RefundAccountHolder` (migration `AddReturnRefundBank`), `PUT returns/{id}/refund-bank`, Geri Ödeme Yap havalede IBAN zorunlu,
       ödeme kaydı Details'e IBAN yazılır. Sitede müşteriden IBAN alma formu YOK (tasarım gerekir) — personel girer.

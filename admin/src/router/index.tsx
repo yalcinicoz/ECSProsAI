@@ -101,6 +101,8 @@ import { SortingWallPage } from '@/pages/fulfillment/SortingWallPage'
 import { DeskPage } from '@/pages/fulfillment/DeskPage'
 import { DesksMonitorPage } from '@/pages/fulfillment/DesksMonitorPage'
 import { CargoReroutePage } from '@/pages/fulfillment/CargoReroutePage'
+import { BoxLookupPage } from '@/pages/fulfillment/BoxLookupPage'
+import { AssignmentsPage } from '@/pages/fulfillment/AssignmentsPage'
 import { IntegrationLogsPage } from '@/pages/integrations/IntegrationLogsPage'
 import { UsersPage } from '@/pages/settings/UsersPage'
 import { RolesPage } from '@/pages/settings/RolesPage'
@@ -222,6 +224,8 @@ export const router = createBrowserRouter(
             // Fulfillment
             { path: 'fulfillment/picking-plans',    element: <PickingPlansPage /> },
             { path: 'fulfillment/tasks/new',        element: <TaskCreatePage /> },
+            { path: 'fulfillment/assignments',      element: <AssignmentsPage /> },   // FAZ 15.4e
+            { path: 'fulfillment/box-lookup',       element: <BoxLookupPage /> },     // FAZ 15.4f
             { path: 'fulfillment/tasks/:id',        element: <TaskDetailPage /> },
             { path: 'fulfillment/packing-stations', element: <PackingStationsPage /> },
             { path: 'fulfillment/my-picking',       element: <MyPickingPage /> },

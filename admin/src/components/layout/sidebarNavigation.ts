@@ -44,9 +44,11 @@ export const NAV_SECTIONS: NavSection[] = [
   ]},
   { id: 'operations', label: 'Depo & Operasyon', icon: 'boxes', items: [
     { label: 'Toplama Planlama', to: '/fulfillment/picking-plans', icon: 'boxes', activePatterns: ["/fulfillment/tasks/:id","/fulfillment/fast-lane/:planId","/fulfillment/sorting/:planId","/fulfillment/sorting-wall/:planId"], permission: 'fulfillment.view' },
+    { label: 'Personele Dağıt', to: '/fulfillment/assignments', icon: 'usersround', permission: 'fulfillment.view' },
     { label: 'Ürün Toplama',  to: '/fulfillment/my-picking',    icon: 'scan', permission: 'fulfillment.view' },
     { label: 'Masa İzleme',   to: '/fulfillment/desks',         icon: 'monitor', activePatterns: ["/fulfillment/desk/:deskId","/fulfillment/packing-stations"], permission: 'fulfillment.view' },
     { label: 'Kargo Yönlendirme', to: '/fulfillment/cargo-reroute', icon: 'truck', permission: 'fulfillment.view' },
+    { label: 'Koli Sorgu',    to: '/fulfillment/box-lookup',    icon: 'boxes', permission: 'fulfillment.view' },
     { label: 'Stok Takibi',      to: '/inventory/stocks',     icon: 'boxes', permission: 'inventory.view' },
     { label: 'Stok Hareketleri', to: '/inventory/transfers',  icon: 'refreshcw', permission: 'inventory.view' },
     { label: 'Raf İşlemleri',    to: '/inventory/shelf',      icon: 'scan', activePatterns: ['/inventory/bin-counts'], permission: 'inventory.view' },
