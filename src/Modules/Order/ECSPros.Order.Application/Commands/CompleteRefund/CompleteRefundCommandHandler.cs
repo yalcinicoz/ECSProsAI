@@ -54,13 +54,25 @@ public class CompleteRefundCommandHandler : IRequestHandler<CompleteRefundComman
 
         var now = DateTime.UtcNow;
 
+        // 15.4g: havale ile geri ödemede IBAN zorunlu (eski "Müşteriye Ödemeler" kalıbı); komutla gelen bilgi iade kaydına da yazılır.
+        var iban = (request.Iban ?? @return.RefundIban)?.Replace(" ", "").ToUpperInvariant();
+        var hesapSahibi = request.AccountHolder ?? @return.RefundAccountHolder;
+        if (request.RefundMethod == ReturnConstants.RefundMethodBankTransfer)
+        {
+            if (string.IsNullOrWhiteSpace(iban) || iban.Length < 15)
+                return Result.Failure<bool>("Havale ile geri ödeme için müşterinin IBAN'ı gerekli.");
+            @return.RefundIban = iban; @return.RefundAccountHolder = hesapSahibi;
+        }
+        var details = request.Details ?? new Dictionary<string, object>();
+        if (!string.IsNullOrWhiteSpace(iban)) { details["iban"] = iban; if (!string.IsNullOrWhiteSpace(hesapSahibi)) details["accountHolder"] = hesapSahibi!; }
+
         var refund = new ReturnRefund
         {
             ReturnId = request.ReturnId,
             RefundMethod = request.RefundMethod,
             Amount = request.Amount,
             Status = "completed",
-            Details = request.Details,
+            Details = details.Count == 0 ? null : details,
             ProcessedAt = now,
             ProcessedBy = request.ProcessedBy
         };

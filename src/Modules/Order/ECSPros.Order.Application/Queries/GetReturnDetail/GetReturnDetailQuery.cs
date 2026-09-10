@@ -29,7 +29,9 @@ public partial record ReturnDetailDto(
     List<string>? ImageUrls = null,     // E8: talep görselleri
     // İade planı (2026-09-10): geri ödeme yok nedeni + şu an ödenebilecek üst sınır (IadeOdemeKurali; panel tutar alanı bununla sınırlı)
     string? RefundNotApplicableReason = null,
-    decimal RefundUpperLimit = 0);
+    decimal RefundUpperLimit = 0,
+    string? RefundIban = null,          // 15.4g
+    string? RefundAccountHolder = null);
 
 // M4 (2026-09-09, mobil): iade detayının vitrin etiketi + 4 adımlı iade akışı (reddedilende boş).
 public partial record ReturnDetailDto

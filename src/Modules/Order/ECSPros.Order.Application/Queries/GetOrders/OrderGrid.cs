@@ -24,6 +24,10 @@ public static class OrderGrid
         .Text("customer", o => o.ShippingRecipientName)
         .Text("phone", o => o.ShippingRecipientPhone)
         .Text("cargo", o => o.RequestedCargoName)
+        // FAZ 15.4h (2026-09-10, eski "Sipariş Üye Notları"): müşteri notu (CustomerNotes.note) + iç not; hasNotes = ikisinden biri dolu
+        .Text("note", o => GridJson.TextObj(o.CustomerNotes, "note"))
+        .Text("internalNote", o => o.InternalNotes)
+        .Bool("hasNotes", o => (o.InternalNotes != null && o.InternalNotes != "") || GridJson.TextObj(o.CustomerNotes, "note") != null)
         .Enum("status", o => o.Status, Statuses)
         .Enum("paymentStatus", o => o.PaymentStatus, PaymentStatuses)
         .Enum("paymentMethod", o => o.PaymentMethod, PaymentMethods, nullToken: "none")
@@ -122,7 +126,8 @@ public record OrderListFilters(
 public record OrderExportRow(
     string OrderNumber, string? ExternalOrderNumber, DateTime CreatedAt, string Status, string PaymentStatus, string? PaymentMethod,
     string RecipientName, string RecipientPhone, string AddressLine, string? PostalCode, string? RequestedCargoName, string OrderType,
-    decimal Subtotal, decimal TotalDiscount, decimal TotalExpense, decimal TotalTax, decimal GrandTotal, string CurrencyCode);
+    decimal Subtotal, decimal TotalDiscount, decimal TotalExpense, decimal TotalTax, decimal GrandTotal, string CurrencyCode,
+    string? CustomerNote = null, string? InternalNotes = null);   // 15.4h
 
 /// <summary>Export kaynağı: sayfalamasız, sıralı sorgu + toplam (tavan kontrolü için). Sorgu çağıranın scope'unda tüketilir.</summary>
 public record OrderExportSource(int Count, IQueryable<OrderExportRow> Rows);
@@ -140,7 +145,8 @@ public class ExportOrdersQueryHandler(IOrderDbContext db) : IRequestHandler<Expo
         var rows = OrderGrid.Schema.ApplySort(q, r.Grid).Select(o => new OrderExportRow(
             o.OrderNumber, o.ExternalOrderNumber, o.CreatedAt, o.Status, o.PaymentStatus, o.PaymentMethod,
             o.ShippingRecipientName, o.ShippingRecipientPhone, o.ShippingAddressLine, o.ShippingPostalCode, o.RequestedCargoName, o.OrderType,
-            o.Subtotal, o.TotalDiscount, o.TotalExpense, o.TotalTax, o.GrandTotal, o.CurrencyCode));
+            o.Subtotal, o.TotalDiscount, o.TotalExpense, o.TotalTax, o.GrandTotal, o.CurrencyCode,
+            GridJson.TextObj(o.CustomerNotes, "note"), o.InternalNotes));
         return Result.Success(new OrderExportSource(count, rows));
     }
 }

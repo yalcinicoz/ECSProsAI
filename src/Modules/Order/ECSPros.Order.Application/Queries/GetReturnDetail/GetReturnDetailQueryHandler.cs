@@ -80,7 +80,9 @@ public class GetReturnDetailQueryHandler : IRequestHandler<GetReturnDetailQuery,
             @return.CargoReturnCode,
             @return.ImageUrls,
             @return.RefundNotApplicableReason,
-            ustSinir);
+            ustSinir,
+            @return.RefundIban,
+            @return.RefundAccountHolder);
 
         return Result.Success(dto);
     }

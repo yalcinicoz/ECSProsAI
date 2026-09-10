@@ -8,4 +8,6 @@ public record CompleteRefundCommand(
     string RefundMethod,
     decimal Amount,
     Guid ProcessedBy,
-    Dictionary<string, object>? Details = null) : IRequest<Result<bool>>;
+    Dictionary<string, object>? Details = null,
+    string? Iban = null,              // 15.4g: havale ile iadede zorunlu; Return'e ve ödeme kaydına yazılır
+    string? AccountHolder = null) : IRequest<Result<bool>>;

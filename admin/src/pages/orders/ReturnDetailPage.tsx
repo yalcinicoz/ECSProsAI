@@ -56,6 +56,8 @@ interface ReturnDetail {
   // İade planı (2026-09-10): geri ödeme yok nedeni + şu an ödenebilecek üst sınır (IadeOdemeKurali)
   refundNotApplicableReason?: string | null
   refundUpperLimit: number
+  refundIban?: string | null          // 15.4g
+  refundAccountHolder?: string | null
 }
 
 interface OrderInfo {
@@ -101,6 +103,8 @@ export function ReturnDetailPage() {
   const [inspectionNotes, setInspectionNotes] = useState('')
   const [refundMethod, setRefundMethod] = useState('')
   const [refundAmount, setRefundAmount] = useState('')
+  const [iban, setIban] = useState('')
+  const [accountHolder, setAccountHolder] = useState('')
   const [actionError, setActionError] = useState('')
 
   const { data: ret, isLoading } = useQuery<ReturnDetail>({
@@ -153,11 +157,17 @@ export function ReturnDetailPage() {
     onSuccess: () => { invalidate(); setReceiveOpen(false) },
     onError: onActionError,
   })
+  const saveBank = useMutation({
+    mutationFn: async () => { await api.put(`/orders/returns/${id}/refund-bank`, { iban: iban.trim() || null, accountHolder: accountHolder.trim() || null }) },
+    onSuccess: invalidate,
+    onError: onActionError,
+  })
   const refund = useMutation({
     mutationFn: async () => {
       await api.post(`/orders/returns/${id}/refund`, {
         refundMethod: refundMethod || ret!.refundMethod,
         amount: parseFloat(refundAmount) || ret!.refundAmount,
+        iban: iban.trim() || null, accountHolder: accountHolder.trim() || null,   // 15.4g: havalede zorunlu
       })
     },
     onSuccess: () => { invalidate(); setRefundOpen(false) },
@@ -197,6 +207,7 @@ export function ReturnDetailPage() {
             <Button size="sm" onClick={() => {
               setActionError('')
               setRefundMethod(ret.refundMethod)
+              setIban(ret.refundIban ?? ''); setAccountHolder(ret.refundAccountHolder ?? '')
               // Varsayılan: talep tutarı, üst sınırla kırpılmış (tutar üst sınırı aşamaz — E9)
               setRefundAmount(String(ustSinir > 0 ? Math.min(ret.refundAmount, ustSinir) : ret.refundAmount))
               setRefundOpen(true)
@@ -238,6 +249,9 @@ export function ReturnDetailPage() {
               {ret.refundStatus === 'pending' && (
                 <InfoRow label="Ödenebilir Üst Sınır" value={ustSinir > 0 ? money(ustSinir) : 'Tahsilat bulunamadı — geri ödeme yapılamaz'} />
               )}
+              {/* 15.4g: havale bilgisi (eski "Müşteriye Ödemeler" IBAN/alıcı) */}
+              <InfoRow label="IBAN" value={ret.refundIban ? <code className="text-xs">{ret.refundIban}</code> : (ret.refundMethod === 'bank_transfer' ? <span className="text-red-500">girilmedi — havale için gerekli</span> : undefined)} />
+              <InfoRow label="Hesap Sahibi" value={ret.refundAccountHolder} />
             </>
           )}
         </Section>
@@ -368,6 +382,17 @@ export function ReturnDetailPage() {
               ))}
             </select>
           </div>
+          {refundMethod === 'bank_transfer' && (
+            <div className="grid grid-cols-2 gap-2">
+              <div><label className="flbl">IBAN <span className="text-red-500">*</span></label>
+                <input className="inp font-mono" value={iban} onChange={e => setIban(e.target.value.toUpperCase())} placeholder="TR.." /></div>
+              <div><label className="flbl">Hesap Sahibi</label>
+                <input className="inp" value={accountHolder} onChange={e => setAccountHolder(e.target.value)} /></div>
+              <div className="col-span-2 flex justify-end">
+                <Button size="sm" variant="ghost" onClick={() => saveBank.mutate()} loading={saveBank.isPending} disabled={!iban.trim()}>Banka bilgisini kaydet (ödemesiz)</Button>
+              </div>
+            </div>
+          )}
           <div>
             <label className="flbl">Tutar</label>
             <input type="number" step="0.01" min="0" max={ustSinir > 0 ? ustSinir : undefined} className="inp" value={refundAmount}
@@ -384,7 +409,7 @@ export function ReturnDetailPage() {
         <div className="flex justify-end gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
           <Button variant="secondary" onClick={() => setRefundOpen(false)}>Vazgeç</Button>
           <Button onClick={() => refund.mutate()} loading={refund.isPending}
-            disabled={!(parseFloat(refundAmount) > 0) || (ustSinir > 0 && parseFloat(refundAmount) > ustSinir + 0.005)}>Geri Ödeme Yap</Button>
+            disabled={!(parseFloat(refundAmount) > 0) || (ustSinir > 0 && parseFloat(refundAmount) > ustSinir + 0.005) || (refundMethod === 'bank_transfer' && iban.trim().length < 15)}>Geri Ödeme Yap</Button>
         </div>
       </Modal>
     </div>

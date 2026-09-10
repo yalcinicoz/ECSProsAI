@@ -48,6 +48,21 @@ public class ReviewsController(IMediator mediator) : ControllerBase
             ct, alanIzinleri: await alanYetkileri.IzinlerAsync(ct));
     }
 
+    /// <summary>15.4k: personel yorum girişi (eski "Ürün Yorum Ekle"). Y3: kanal kullanıcının kapsamında olmalı.</summary>
+    [HttpPost]
+    [RequirePermission(Permissions.StorefrontModerationManage)]
+    public async Task<IActionResult> CreateManual([FromBody] ManualReviewRequest req, [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, CancellationToken ct)
+    {
+        var kapsam = await kanalKapsami.KanallarAsync(Permissions.StorefrontModerationManage, ct);
+        if (kapsam is not null && !kapsam.Contains(req.FirmPlatformId))
+            return StatusCode(403, new { success = false, error = "Bu kanal yetki kapsamınızda değil." });
+        var uid = Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value, out var g) ? g : Guid.Empty;
+        var result = await mediator.Send(new ECSPros.Storefront.Application.Commands.CreateManualProductReview.CreateManualProductReviewCommand(
+            req.FirmPlatformId, req.ProductCode, req.MemberId, req.MemberName, req.Rating, req.Text, req.Topic, req.Approve, uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { id = result.Value } });
+    }
+
     [HttpPost("{id}/approve")]
     [RequirePermission(Permissions.StorefrontModerationManage)]   // Y2
     public async Task<IActionResult> Approve(Guid id, [FromServices] ECSPros.Api.Services.Push.PushEtkilesim push, CancellationToken ct)
@@ -70,3 +85,5 @@ public class ReviewsController(IMediator mediator) : ControllerBase
 }
 
 public record RejectReviewRequest(string? Reason);
+
+public record ManualReviewRequest(Guid FirmPlatformId, string ProductCode, Guid? MemberId, string MemberName, int Rating, string? Text, string? Topic, bool Approve = true);

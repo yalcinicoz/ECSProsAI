@@ -41,6 +41,9 @@ public class OrderDbContext : DbContext, IOrderDbContext
     {
         // DataGrid: jsonb sözlük alanlarında filtre/sıralama (GridJson.Text → jsonb_extract_path_text, yerleşik PG fonksiyonu)
         modelBuilder.HasDbFunction(ECSPros.Shared.Kernel.Grid.GridJson.TextMethod).HasName("jsonb_extract_path_text").IsBuiltIn();
+        // 15.4h: CustomerNotes.note — Dictionary<string, object> parametresi sağlayıcıda tipsiz kalır; mağaza tipi jsonb verilir.
+        modelBuilder.HasDbFunction(ECSPros.Shared.Kernel.Grid.GridJson.TextObjMethod).HasName("jsonb_extract_path_text").IsBuiltIn()
+            .HasParameter("dict").HasStoreType("jsonb");
         modelBuilder.HasDefaultSchema("order");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(OrderDbContext).Assembly);
         base.OnModelCreating(modelBuilder);

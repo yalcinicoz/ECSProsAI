@@ -19,11 +19,16 @@ const TABS = [
   { key: 'requested', label: 'Talep Edilen' },
   { key: 'approved',  label: 'Onaylı' },
   { key: 'received',  label: 'Teslim Alınan' },
+  // FAZ 15.4g (eski "Müşteriye Ödemeler"): ödenecek = teslim alınmış + geri ödeme bekleyen; ödenen = geri ödendi
+  { key: 'payable',   label: 'Ödenecek' },
   { key: 'refunded',  label: 'Geri Ödenen' },
   { key: 'closed',    label: 'Kapanan' },
   { key: 'rejected',  label: 'Reddedilen' },
   { key: '',          label: 'Tümü' },
 ]
+// Sekme → sunucu parametreleri (status adlandırılmış filtre; refundStatus şema filtresi f.refundStatus)
+const tabParams = (tab: string): Record<string, string | undefined> =>
+  tab === 'payable' ? { status: 'received', 'f.refundStatus': 'pending' } : { status: tab !== 'all' && tab !== '' ? tab : undefined }
 
 export interface ReturnSummary {
   id: string
@@ -184,7 +189,7 @@ export function ReturnsPage() {
 
   const { data, isLoading, isFetching, error } = useQuery<PagedResult<ReturnSummary>>({
     queryKey: ['returns', tab, ...grid.queryKey],
-    queryFn: async () => (await api.get(`/orders/returns?${grid.toParams({ status: tab !== 'all' ? tab : undefined })}`)).data.data,
+    queryFn: async () => (await api.get(`/orders/returns?${grid.toParams(tabParams(tab))}`)).data.data,
     placeholderData: prev => prev,
     retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
@@ -244,7 +249,7 @@ export function ReturnsPage() {
         onRowClick={r => navigate(`/orders/returns/${r.id}`)}
         empty="İade bulunamadı."
         minWidth={760}
-        export={{ endpoint: '/orders/returns/export', named: () => ({ status: tab !== 'all' ? tab : undefined }), fallbackFileName: 'iadeler.xlsx' }}
+        export={{ endpoint: '/orders/returns/export', named: () => ({ status: tab === 'payable' ? 'received' : (tab !== 'all' && tab !== '' ? tab : undefined) }), fallbackFileName: 'iadeler.xlsx' }}
         compact={{
           title: r => r.returnNumber,
           subtitle: r => `${new Date(r.createdAt).toLocaleDateString('tr-TR')}${r.cargoReturnCode ? ` · ${r.cargoReturnCode}` : ''}`,

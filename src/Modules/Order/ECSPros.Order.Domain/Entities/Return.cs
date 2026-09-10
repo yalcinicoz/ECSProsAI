@@ -29,6 +29,10 @@ public class Return : BaseEntity
     /// <summary>cod_not_collected | marketplace | unpaid | already_refunded — <c>IadeOdemeKurali</c> neden kodu.</summary>
     public string? RefundNotApplicableReason { get; set; }
     public decimal RefundAmount { get; set; }
+    /// <summary>FAZ 15.4g (2026-09-10, eski "Müşteriye Ödemeler"): havale ile geri ödemede müşterinin IBAN'ı ve hesap sahibi
+    /// (eski webuyeparalari.IBAN/AliciAdiSoyadi). Panelden girilir; ödeme kaydında (ReturnRefund.Details) da saklanır.</summary>
+    public string? RefundIban { get; set; }
+    public string? RefundAccountHolder { get; set; }
     /// <summary>E8: paketi anlaşmalı kargoya kodla bırakma için üretilen iade kodu
     /// (IAD-XXXXXX). Gerçek kargo entegrasyonuna (H2) dek takip numarasından ayrı tutulur.</summary>
     public string? CargoReturnCode { get; set; }

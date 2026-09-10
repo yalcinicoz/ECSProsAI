@@ -46,6 +46,8 @@ export interface OrderSummary {
   recipientName?: string
   paymentMethod?: string | null
   requestedCargoName?: string | null   // FAZ 15.2c: müşterinin kargo tercihi
+  customerNote?: string | null         // FAZ 15.4h: müşteri notu (CustomerNotes.note)
+  internalNotes?: string | null        // FAZ 15.4h: iç not
 }
 
 interface PagedResult<T> {
@@ -60,6 +62,7 @@ const enumOpts = (m: Record<string, string>) => Object.entries(m).map(([value, l
 // Hızlı filtreler çubukta; diğer alanlar ilgili sütun başlığının filtre penceresinde (kullanıcı kararı 2026-09-08)
 const EXTRA_FILTERS: GridFilterField[] = [
   { key: 'paid', label: 'Ödemesi alınan', type: 'boolean', quick: true },
+  { key: 'hasNotes', label: 'Notu olan', type: 'boolean', quick: true },   // FAZ 15.4h (eski "Sipariş Üye Notları")
 ]
 const PAYMENT_FILTERS = [
   { field: 'paymentStatus', label: 'Ödeme durumu', type: 'enum' as const, multiple: true, options: enumOpts(PAYMENT_STATUS_MAP) },
@@ -125,6 +128,15 @@ export function OrdersPage() {
     // FAZ 15.2c (eski "Kargo Firmaları Sipariş"): kargo kolonu + filtresi (teslimat adımındaki tercih; kargoya veriş bunu varsayılan alır)
     { key: 'cargo', header: 'KARGO', sortable: true, priority: 3, filter: { type: 'text', label: 'Kargo' },
       cell: o => <span className="text-xs" style={{ color: 'var(--text-m)' }}>{o.requestedCargoName ?? '—'}</span> },
+    // FAZ 15.4h: müşteri notu + iç not (varsayılan gizli; "Notu olan" hızlı filtresiyle tarih aralıklı not listesi)
+    { key: 'note', header: 'NOTLAR', priority: 3, defaultVisible: false, minWidth: 220, filter: { type: 'text', label: 'Müşteri notu' },
+      filters: [{ field: 'internalNote', label: 'İç not', type: 'text' }],
+      cell: o => (o.customerNote || o.internalNotes)
+        ? <div className="text-xs" style={{ color: 'var(--text-m)' }}>
+            {o.customerNote && <div title={o.customerNote}><span style={{ color: 'var(--text-s)' }}>Müşteri: </span>{o.customerNote.length > 90 ? o.customerNote.slice(0, 90) + '…' : o.customerNote}</div>}
+            {o.internalNotes && <div title={o.internalNotes}><span style={{ color: 'var(--text-s)' }}>İç: </span>{o.internalNotes.length > 90 ? o.internalNotes.slice(0, 90) + '…' : o.internalNotes}</div>}
+          </div>
+        : <span style={{ color: 'var(--text-s)' }}>—</span> },
     { key: 'createdAt', header: 'TARİH', sortable: true, priority: 2, filter: { type: 'date', label: 'Tarih', quick: true },
       cell: o => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(o.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}</span> },
     { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },

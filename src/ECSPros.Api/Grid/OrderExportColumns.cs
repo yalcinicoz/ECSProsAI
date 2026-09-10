@@ -17,6 +17,8 @@ public static class OrderExportColumns
         new("address", "Adres", r => r.AddressLine, AlanYetkisi: "address"),
         new("postalCode", "Posta Kodu", r => r.PostalCode),
         new("cargo", "Kargo", r => r.RequestedCargoName),
+        new("note", "Müşteri Notu", r => r.CustomerNote),          // 15.4h
+        new("internalNote", "İç Not", r => r.InternalNotes),
         new("orderType", "Sipariş Tipi", r => r.OrderType),
         new("subtotal", "Ara Toplam", r => r.Subtotal),
         new("totalDiscount", "İndirim", r => r.TotalDiscount),

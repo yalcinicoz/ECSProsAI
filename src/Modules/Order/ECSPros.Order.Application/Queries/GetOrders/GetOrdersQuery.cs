@@ -38,7 +38,9 @@ public record OrderListDto(
     DateTime CreatedAt,
     string? RecipientName = null,
     string? PaymentMethod = null,   // 2026-08-04: kart | kapida-nakit | kapida-kart | null
-    string? RequestedCargoName = null)   // FAZ 15.2c (2026-09-10): panel KARGO kolonu (müşterinin teslimat adımı tercihi)
+    string? RequestedCargoName = null,   // FAZ 15.2c (2026-09-10): panel KARGO kolonu (müşterinin teslimat adımı tercihi)
+    string? CustomerNote = null,         // FAZ 15.4h: müşteri notu (CustomerNotes.note)
+    string? InternalNotes = null)        // FAZ 15.4h: iç not
 {
     // ── M4 (2026-09-09, mobil): kod → vitrin etiketi. Store/mobil "Siparişlerim" listesi bunu gösterir;
     // ADMIN PANELİ kendi haritasını (orderConstants.ts) kullanır — panel dili farklıdır (bkz. DurumEtiketleri).

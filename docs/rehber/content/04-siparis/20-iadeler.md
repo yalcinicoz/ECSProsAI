@@ -36,6 +36,7 @@ listesi buradan yönetilir. Liste `/orders/returns`, tek iadenin detayı `/order
 | Talep Edilen (varsayılan) | `requested` |
 | Onaylı | `approved` |
 | Teslim Alınan | `received` |
+| Ödenecek | `received` + geri ödeme `pending` — teslim alınmış, parası henüz ödenmemiş iadeler (eski "Müşteriye Ödemeler" ödenmemiş listesi). |
 | Geri Ödenen | `refunded` |
 | Kapanan | `closed` (geri ödeme yok, teslim alma ile kapandı) |
 | Reddedilen | `rejected` |
@@ -62,6 +63,7 @@ Arama kutusu yoktur; belirli bir siparişin iadelerine sipariş detayındaki **�
 | Talep Görselleri | Müşterinin yüklediği fotoğraflar (tıklayınca yeni sekmede açılır). |
 | Muayene | Not ve tamamlanma zamanı — teslim alma sırasında girilen muayene notu. |
 | Geri Ödemeler | Yöntem · tutar · durum · işlem zamanı — yapılmış geri ödeme kayıtları. |
+| Geri Ödeme › IBAN / Hesap Sahibi | Havale ile iadede müşterinin banka bilgisi; havale seçiliyken boşsa kırmızı "girilmedi" uyarısı. |
 
 ## Butonlar ve aksiyonlar
 | Buton/Aksiyon | Nerede | Ne olur | Ön koşul / yetki |
@@ -96,6 +98,7 @@ Arama kutusu yoktur; belirli bir siparişin iadelerine sipariş detayındaki **�
 | Alan | Zorunlu | Açıklama |
 |---|---|---|
 | Yöntem | Evet | Talepteki yöntem varsayılan (siparişin ödeme yöntemine göre: kart → Karta iade, kapıda → Havale/EFT); seçenekler Karta iade, Cüzdan, Havale/EFT, Nakit. |
+| IBAN / Hesap Sahibi | Havale/EFT'de IBAN evet | Yalnız Havale/EFT seçiliyken görünür; IBAN en az 15 karakter. **Banka bilgisini kaydet (ödemesiz)** ile ödeme yapmadan iade kaydına yazılır (müşteri IBAN'ı sonradan bildirdiğinde). |
 | Tutar | Evet | Varsayılan talep tutarı; 0'dan büyük ve **üst sınırı** (tahsil edilen − daha önce iade edilen) aşmamalı. Sunucu da aynı sınırı uygular. |
 
 ## Durumlar ve iş kuralları

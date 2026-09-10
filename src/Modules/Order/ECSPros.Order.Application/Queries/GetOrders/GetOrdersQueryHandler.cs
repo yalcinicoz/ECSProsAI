@@ -37,7 +37,9 @@ public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, Result<Page
                 o.CreatedAt,
                 o.ShippingRecipientName,
                 o.PaymentMethod,
-                o.RequestedCargoName))
+                o.RequestedCargoName,
+                ECSPros.Shared.Kernel.Grid.GridJson.TextObj(o.CustomerNotes, "note"),
+                o.InternalNotes))
             .ToListAsync(cancellationToken);
 
         return Result.Success(new PagedOrderResult(items, totalCount, request.Page, request.PageSize));

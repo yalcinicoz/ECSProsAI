@@ -13,4 +13,11 @@ public static class GridJson
     public static readonly System.Reflection.MethodInfo TextMethod =
         typeof(GridJson).GetMethod(nameof(Text), new[] { typeof(Dictionary<string, string>), typeof(string) })!;
 
+    /// <summary>FAZ 15.4h (2026-09-10): <c>Dictionary&lt;string, object&gt;</c> jsonb kolonları (Order.CustomerNotes) için aynı
+    /// fonksiyon — değer metin değilse (nesne/sayı) SQL tarafı jsonb_extract_path_text yine metin döner, bellek tarafı ToString.</summary>
+    public static string? TextObj(Dictionary<string, object>? dict, string key)
+        => dict is not null && dict.TryGetValue(key, out var v) && v is not null ? v.ToString() : null;
+    public static readonly System.Reflection.MethodInfo TextObjMethod =
+        typeof(GridJson).GetMethod(nameof(TextObj), new[] { typeof(Dictionary<string, object>), typeof(string) })!;
+
 }

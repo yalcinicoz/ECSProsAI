@@ -369,7 +369,19 @@ public class OrderController : ControllerBase
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
         if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
 
-        var result = await _mediator.Send(new CompleteRefundCommand(returnId, request.RefundMethod, request.Amount, uid, request.Details), ct);
+        var result = await _mediator.Send(new CompleteRefundCommand(returnId, request.RefundMethod, request.Amount, uid, request.Details, request.Iban, request.AccountHolder), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>15.4g: iadenin havale bilgisi (IBAN + hesap sahibi) — ödeme öncesi girilir/düzeltilir.</summary>
+    [HttpPut("returns/{returnId:guid}/refund-bank")]
+    [RequirePermission(Permissions.OrdersReturnsManage)]
+    public async Task<IActionResult> SetReturnRefundBank(Guid returnId, [FromBody] RefundBankRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var result = await _mediator.Send(new ECSPros.Order.Application.Commands.SetReturnRefundBank.SetReturnRefundBankCommand(returnId, request.Iban, request.AccountHolder, uid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
     }
@@ -885,7 +897,8 @@ public record SetChannelInvoiceSettingsRequest(
 public record SetInvoiceIntegratorUrlRequest(string? IntegratorInvoiceUrl);
 
 public record CompleteRefundRequest(
-    string RefundMethod, decimal Amount, Dictionary<string, object>? Details = null);
+    string RefundMethod, decimal Amount, Dictionary<string, object>? Details = null, string? Iban = null, string? AccountHolder = null);
+public record RefundBankRequest(string? Iban, string? AccountHolder);
 
 public record CreateInvoiceRequest(
     Guid InvoiceSeriesId, string InvoiceType, DateTime InvoiceDate,

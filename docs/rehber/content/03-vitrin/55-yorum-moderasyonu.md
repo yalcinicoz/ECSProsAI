@@ -37,6 +37,7 @@ Arama, ürün ya da kanal filtresi yoktur. Satır tıklanınca detay açılmaz. 
 ## Butonlar ve aksiyonlar
 | Buton/Aksiyon | Nerede | Ne olur | Ön koşul / yetki |
 |---|---|---|---|
+| + Yorum Ekle | Başlık altı, sağ | "Yorum Ekle (personel girişi)" penceresi: Firma → Kanal, Ürün kodu, Puan, Üye (isteğe bağlı arama), Görünen ad, Konu, Yorum, "Onaylı olarak yayınla". Eski "Ürün Yorum Ekle" karşılığı; üye seçilmezse yalnız görünen ad yayınlanır. | `storefront.moderation.manage`; kanal yetki kapsamında olmalı |
 | Onayla | Satır, İşlem sütunu | Yorum `Onaylı` olur, sitede yayınlanır ve ürün puanına dahil edilir. Onay sorulmaz. | `Onaylı` olmayan satırlarda. |
 | Reddet | Satır, İşlem sütunu | Tarayıcı penceresi **"Red nedeni (üyeye gösterilir):"** açılır; varsayılan metin `Yayın kriterlerine uygun değil.` Tamam → yorum `Reddedildi` olur, neden kaydedilir. İptal → işlem yapılmaz. | `Reddedildi` olmayan satırlarda. |
 | Fotoğraf küçük resmi | Yorum sütunu | Fotoğrafı yeni sekmede tam boy açar. | Fotoğraflı yorumlarda. |

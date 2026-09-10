@@ -69,7 +69,7 @@ public sealed class OrderGridDbTests
         var rows = await OrderGrid.Schema.ApplySort(OrderGrid.ApplyAll(db.Orders.AsNoTracking(), named, null), null)
             .Select(o => new OrderExportRow(o.OrderNumber, o.ExternalOrderNumber, o.CreatedAt, o.Status, o.PaymentStatus, o.PaymentMethod,
                 o.ShippingRecipientName, o.ShippingRecipientPhone, o.ShippingAddressLine, o.ShippingPostalCode, o.RequestedCargoName, o.OrderType,
-                o.Subtotal, o.TotalDiscount, o.TotalExpense, o.TotalTax, o.GrandTotal, o.CurrencyCode)).Take(3).ToListAsync();
+                o.Subtotal, o.TotalDiscount, o.TotalExpense, o.TotalTax, o.GrandTotal, o.CurrencyCode, null, null)).Take(3).ToListAsync();   // 15.4h: not kolonları
         Assert.IsTrue(rows.Count <= 3);
 
         // beyaz liste: bilinmeyen alan sorgu kurulmadan reddedilir

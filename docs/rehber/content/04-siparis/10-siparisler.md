@@ -54,6 +54,7 @@ Sayaçlar dakikada bir kendiliğinden yenilenir. Sekme değiştirince sayfa 1'e 
 | DURUM | Sipariş durumu rozeti (aşağıdaki tablo). |
 | KARGO | Müşterinin teslimat adımında seçtiği kargo firması (kargoya veriş bunu varsayılan alır); yoksa "—". Sütun filtresiyle kargo firmasına göre listelenir (eski "Kargo Firmaları Sipariş"). |
 | TARİH | Oluşturulma tarihi ve saati. |
+| NOTLAR (varsayılan gizli) | Müşterinin sipariş notu ve iç not (kısaltılmış; tamamı ipucu ve sipariş detayında). Sütun filtresi: müşteri notu / iç not metni. Hızlı filtre **Notu olan** + tarih aralığı = eski "Sipariş Üye Notları" listesi. |
 | (son sütun) | "Detay →" — satırın tamamı tıklanabilir. |
 
 SİPARİŞ NO sütununun filtre penceresinde **Ürün kodu / adı (kalem)** filtresi vardır: sipariş kalemlerinde o ürün kodu

@@ -392,6 +392,8 @@ public class ReturnConfiguration : IEntityTypeConfiguration<Return>
         builder.Property(x => x.RefundMethod).HasMaxLength(30).IsRequired();
         builder.Property(x => x.RefundStatus).HasMaxLength(30).IsRequired();
         builder.Property(x => x.RefundNotApplicableReason).HasMaxLength(40);   // İade planı (2026-09-10)
+        builder.Property(x => x.RefundIban).HasMaxLength(34);                    // 15.4g
+        builder.Property(x => x.RefundAccountHolder).HasMaxLength(150);
         builder.Property(x => x.RefundAmount).HasPrecision(18, 2);
         builder.HasIndex(x => x.LegacyReturnId).IsUnique().HasFilter("\"LegacyReturnId\" IS NOT NULL");
         builder.HasIndex(x => x.ReturnNumber).IsUnique();

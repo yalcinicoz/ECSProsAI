@@ -471,19 +471,22 @@ canlı değişiklik için kullanıcı onayı ve bakım penceresi.
       set ürünü (Sevgili/Serbest/Müşteri kombin). Set-ürün modeli istenirse ayrı tasarım.
 - [ ] **15.4c Site Bileşen Yönetimi:** tarih aralıklı, öncelikli, hedef sayfa tipli popup/banner. Karşılık: Vitrin Yönetimi blokları
       (ikon-banner/bilgi-banner…) + Kart Mesajları. Eksik: sayfa-tipi hedefleme + event hedefi + popup tipi.
-- [ ] **15.4d Sipariş Ayır:** `SplitOrderIntoPackages` (paketlere bölme) var; eski modal siparişi iki siparişe mi bölüyordu —
-      eski `OrderController` kodundan teyit, gerekiyorsa "siparişi böl" komutu.
+- [ ] **15.4d Sipariş Ayır:** eski modal `/ortak/data` genel ucuna `datakey=siparis-ayir` gönderiyor; uygulama kodunda karşılığı YOK
+      (veri tabanı tanımlı bir prosedür) — anlamı eski MySQL/`ortak` tanımından okunmadan iş açılmaz (2026-09-10 → 15.5 kapsamına).
 - [ ] **15.4e Kullanıcı Toplama Yönetimi + Özel Sipariş Toplama:** `AssignPickingLines`/`CreatePickingTasks` var; eksik olan
       personele günlük sayıya göre dağıtım ekranı ("Personele Dağıt") ve seçili siparişlerden serbest toplama oluşturma.
 - [ ] **15.4f Set Koli Sipariş Sorgula:** koli komutları + Koli Duvarı var; set/koli/sipariş/personel bazlı sorgu ekranı yok.
-- [ ] **15.4g Müşteriye Ödemeler:** iade akışı `CompleteRefund` + cari çatı var; IBAN/kredi kartı bazlı "ödenecek/ödenmiş"
-      geri ödeme listesi ekranı yok (iade geri ödemeleri ekranı olarak kurgulanır).
-- [ ] **15.4h Sipariş Üye Notları:** alanlar sipariş detayında; tarih aralıklı toplu not listesi yok (grid + filtre, küçük).
+- [x] **15.4g Müşteriye Ödemeler (2026-09-10):** İadeler'e **Ödenecek** sekmesi (received + refund pending); `Return.RefundIban`/
+      `RefundAccountHolder` (migration `AddReturnRefundBank`), `PUT returns/{id}/refund-bank`, Geri Ödeme Yap havalede IBAN zorunlu,
+      ödeme kaydı Details'e IBAN yazılır. Sitede müşteriden IBAN alma formu YOK (tasarım gerekir) — personel girer.
+- [x] **15.4h Sipariş Üye Notları (2026-09-10):** `/orders` NOTLAR kolonu (varsayılan gizli) + "Notu olan" hızlı filtresi + müşteri/iç not
+      metin filtreleri (`GridJson.TextObj` jsonb DbFunction, OrderDbContext'te jsonb parametre tipiyle kayıtlı); Excel'e iki kolon.
 - [ ] **15.4i Kargo Tutarları:** kanal başına sabit bedel + ücretsiz kargo eşiği + `CargoRule` (il/mahalle/ödeme tipi yönlendirme)
       var; kademeli (desi/bölge) tutar tablosu yok — FAZ 3 kargo entegrasyonuyla birlikte.
 - [ ] **15.4j Script Yönetimi:** eski = sayfalara pazarlama scripti + değişken basma. Karşılık: Pazarlama › Takip & Reklam +
       Ayarlar › Entegrasyonlar (GA4/GTM/Ads/Meta/TikTok, consent). Eksik yalnız serbest script alanı — gerekirse GTM ile çözülür.
-- [ ] **15.4k Ürün Yorum Ekle:** moderasyon var, elle yorum girişi yok (küçük).
+- [x] **15.4k Ürün Yorum Ekle (2026-09-10):** Yorum Moderasyonu › **+ Yorum Ekle** (`POST /api/reviews`, `CreateManualProductReviewCommand`:
+      firma→kanal, ürün kodu, isteğe bağlı üye, görünen ad, puan, konu, onaylı yayın; üye-başına-tek-yorum kuralı personel girişinde yok).
 
 **15.5 Doğrulanmadan iş açılmayacaklar (önce eski kod okunacak)**
 - [ ] **15.5a Ürün Özel Açıklamaları** (platform + ürün kodu bazlı açıklama) — kanal ürünü çekmecesinde karşılığı var mı?
