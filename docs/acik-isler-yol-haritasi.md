@@ -430,10 +430,16 @@ canlı değişiklik için kullanıcı onayı ve bakım penceresi.
 > sınıflandırma eski sayfanın ne yaptığına ve yeni taraftaki backend/ekran varlığına bakılarak DÜZELTİLMİŞTİR.
 > Rapor ve Bayi grupları kapsam dışı. Sıra: önce 15.1-15.3 (go-live riski + hazır backend), gerisi fırsat buldukça.
 
-**15.1 Go-live SEO riski — en öncelikli**
-- [ ] **15.1a 301 Yönlendirmeleri + Site URL Yönetimi:** yeni tarafta redirect/slug-geçmişi entity'si YOK. Eski `plurunler.urunUrl`
-      (`...-bluz-1475501`) yeni slug'lardan farklı → go-live'da eski URL'ler 404 verir. Yönlendirme tablosu (kanal bazlı,
-      eski yol → yeni yol, 301/302) + middleware + panel ekranı + eski URL'lerin toplu üretimi (MigrationTool fazı).
+**15.1 Go-live SEO riski — DÜZELTİLDİ (2026-09-10 kod+veri doğrulaması): go-live ŞARTI DEĞİL**
+- Eski ürün URL'leri (`plurunler.urunUrl`, ör. `/kadin-omuz-ve-yan-buzgulu-bluz-1431715`) MigrationTool **FAZ 18** ile
+  `storefront.channel_variants.Slug`'a kanal başına taşınmış (tozlu/julude/mishar 93.583'er varyant) ve site kök rotası
+  (`UrunListesiController` `/{slug}` → `GetProductByChannelSlugQuery`) bunları BİREBİR açıyor. Kategori URL'leri de menü
+  aktarımında eski kategori URL'inden (`channel_categories.Slug`) geliyor. Yani eski adresler yeni sitede 404 vermez;
+  belgedeki "yeni slug'lar farklı" varsayımı yanlıştı.
+- [ ] **15.1a (küçültüldü) Yönlendirme tablosu + 404 raporu:** yalnız istisnalar için — kaldırılan/birleştirilen kategori,
+      eski statik/kampanya sayfaları, ileride slug değişimi (slug geçmişi yok). Küçük iş: `storefront.url_redirects`
+      (kanal, eski yol, yeni yol, 301/302, aktif, tetiklenme) + middleware + panel listesi + 404 sayacı. Öncelik DÜŞÜK;
+      go-live'dan önce yalnız kanalın eski statik sayfa adresleri elle girilir.
 
 **15.2 Backend hazır, yalnız panel ekranı yok — küçük işler**
 - [ ] **15.2a Manken yönetimi:** `Mannequin` entity + `ProductImageController` mannequins GET/POST/PUT var; ekran yok.
@@ -518,7 +524,7 @@ Koli Duvarı + Masa İzleme (barkod bazlı iz sürme için gerekirse 15.4f ile b
 2. Ticari etki sırası önerim: **F1 (satış kanalı F4)** → **F3 (kargo KG1)** → **F2 (tedarik cutover, 0.6 netleşince)**
    → **F4 (Trendyol canlı)** → **F7 (go-live PART B)** → F5/F6 paralel fırsat buldukça → F8/F9 araya serpiştirilir.
 3. Her faz kapanışında bu dokümanda işaretle + PROGRESS panosunu güncelle (K18 kapanış raporu kuralı geçerli).
-4. **FAZ 15 panel eksikleri:** 15.1a (301 yönlendirme, go-live öncesi ŞART) → 15.2 (küçük hazır işler) → 15.3 (raf ekranları,
+4. **FAZ 15 panel eksikleri:** 15.2 (küçük hazır işler) → 15.3 (raf ekranları; 15.1a yönlendirme tablosu artık küçük/düşük öncelik — eski URL'ler zaten çalışıyor, 2026-09-10),
    depo go-live'ına göre) → 15.4 fırsat buldukça; 15.5 önce eski kod okunmadan açılmaz.
 5. **FAZ 16 AI raporlama:** 16.0 kararlar kapanmadan kod yazılmaz; sonra R1 → R2 (referans hesap = üretilen sorgu kapısı) → R3 → R4 → R5.
 6. Çoklu sunucu çalışmasında sıra: **11.1 → 11.2 → 11.3 → 11.4/11.7 → 11.5 → 11.6 → 11.8 →
