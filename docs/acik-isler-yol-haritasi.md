@@ -423,11 +423,83 @@ canlı değişiklik için kullanıcı onayı ve bakım penceresi.
       sekmeleri ✅ CANLIDA (2026-09-07: Nebim 203 grup eşlendi, 158 yeni grup, eşlenmemiş → `gecici` kuralı + dashboard kartı).
 - [ ] **14.3 EM4-EM5** tedarikçi eşlemesi + E7 çözücü.
 
+## FAZ 15 — Panel eksikleri: eski panel karşılaştırması (EKLENDİ 2026-09-10)
+
+> **Kaynak:** `docs/ECSPros_Panel_Eksik_Islevler_Listesi.md` v1.1 (eski EKARE.AdminUI 66 sayfa + 14 modal ↔ yeni panel).
+> **Kod doğrulaması (2026-09-10):** belgedeki "Yok" kalemlerinin bir kısmı ad benzerliğiyle eşlenmişti; aşağıdaki
+> sınıflandırma eski sayfanın ne yaptığına ve yeni taraftaki backend/ekran varlığına bakılarak DÜZELTİLMİŞTİR.
+> Rapor ve Bayi grupları kapsam dışı. Sıra: önce 15.1-15.3 (go-live riski + hazır backend), gerisi fırsat buldukça.
+
+**15.1 Go-live SEO riski — en öncelikli**
+- [ ] **15.1a 301 Yönlendirmeleri + Site URL Yönetimi:** yeni tarafta redirect/slug-geçmişi entity'si YOK. Eski `plurunler.urunUrl`
+      (`...-bluz-1475501`) yeni slug'lardan farklı → go-live'da eski URL'ler 404 verir. Yönlendirme tablosu (kanal bazlı,
+      eski yol → yeni yol, 301/302) + middleware + panel ekranı + eski URL'lerin toplu üretimi (MigrationTool fazı).
+
+**15.2 Backend hazır, yalnız panel ekranı yok — küçük işler**
+- [ ] **15.2a Manken yönetimi:** `Mannequin` entity + `ProductImageController` mannequins GET/POST/PUT var; ekran yok.
+      Eski "Manken Ölçüleri Gir" modalı (Excel: manken × resim seti × ürün ölçüleri) aynı kalemin parçası.
+- [ ] **15.2b Fatura yeniden yazdır:** web'de `/yazdir/fatura/{invoiceId}` var; sipariş/paket ekranında düğme yok.
+- [ ] **15.2c Sipariş grid filtreleri:** "Üründen Sipariş Sorgula" ve "Kargo Firmaları Sipariş" ayrı sayfa değil,
+      `/orders` DataGrid'ine ürün kodu/barkod filtresi + kargo firması sütunu/filtresi olarak eklenir (DataGrid standardı).
+- [ ] **15.2d Ölü dosya temizliği:** `catalog/FilterColorsPage.tsx`, `catalog/FilterPresetsPage.tsx`, `cms/MenusPage.tsx`,
+      `cms/MenuDetailPage.tsx`, `pages/PlaceholderPage.tsx` — hiçbir yerden import edilmiyor; sil ya da rotaya bağla (karar).
+
+**15.3 Raf operasyonları — en büyük blok (backend KISMEN hazır)**
+- [ ] **15.3 Raf/göz operasyon ekranları (eski Depo grubu, 10 sayfa):** `WarehouseSection`/`WarehouseBin` yapısı, Depo Detay'da
+      raf-birim yönetimi, `ReceiveToBin`/`ScanToBin`/`UpdateBinStatus` komutları VAR; eksik olan operasyon ekranları:
+      rafa ürün yerleştir (göz barkodu + ürün barkodu), toplu yerleştir, iadeden rafa, raftan rafa transfer, raf sayım,
+      raf ürün listesi, mağaza depodan reyona / reyondan çıkar (MR/AR/GR). Tek tablet ekran ailesi olarak tasarlanmalı
+      (OP3 okutma ekranları kalıbı). Not: belge "WarehouseLocation entity var" diyordu — gerçek durum bunun ilerisinde.
+
+**15.4 Kısmi karşılığı olan işler (belgede "Yok" yazanlar dahil — düzeltildi)**
+- [ ] **15.4a Stüdyo akışı:** depo tipi `studio` + transfer tipi `studio` var, ekran yok. Eski tarafta 12 görünümlük akış
+      (istek → toplama → paketleme → stüdyo kabul → ütü → fotoğraf → çıkış → depoya kabul → ürün sorgulama). Kapsam büyük;
+      önce iş akışı kurgusu (K16).
+- [ ] **15.4b Kombin:** belgedeki gerekçe hatalıydı (ürün detayındaki "kombinasyon" varyant kombinasyonudur). Karşılıklar:
+      `bundle` kampanya tipi (indirim) + üye koleksiyonları. Eski kombin = kendi kodu/fiyatı/görseli/cinsiyeti olan satılabilir
+      set ürünü (Sevgili/Serbest/Müşteri kombin). Set-ürün modeli istenirse ayrı tasarım.
+- [ ] **15.4c Site Bileşen Yönetimi:** tarih aralıklı, öncelikli, hedef sayfa tipli popup/banner. Karşılık: Vitrin Yönetimi blokları
+      (ikon-banner/bilgi-banner…) + Kart Mesajları. Eksik: sayfa-tipi hedefleme + event hedefi + popup tipi.
+- [ ] **15.4d Sipariş Ayır:** `SplitOrderIntoPackages` (paketlere bölme) var; eski modal siparişi iki siparişe mi bölüyordu —
+      eski `OrderController` kodundan teyit, gerekiyorsa "siparişi böl" komutu.
+- [ ] **15.4e Kullanıcı Toplama Yönetimi + Özel Sipariş Toplama:** `AssignPickingLines`/`CreatePickingTasks` var; eksik olan
+      personele günlük sayıya göre dağıtım ekranı ("Personele Dağıt") ve seçili siparişlerden serbest toplama oluşturma.
+- [ ] **15.4f Set Koli Sipariş Sorgula:** koli komutları + Koli Duvarı var; set/koli/sipariş/personel bazlı sorgu ekranı yok.
+- [ ] **15.4g Müşteriye Ödemeler:** iade akışı `CompleteRefund` + cari çatı var; IBAN/kredi kartı bazlı "ödenecek/ödenmiş"
+      geri ödeme listesi ekranı yok (iade geri ödemeleri ekranı olarak kurgulanır).
+- [ ] **15.4h Sipariş Üye Notları:** alanlar sipariş detayında; tarih aralıklı toplu not listesi yok (grid + filtre, küçük).
+- [ ] **15.4i Kargo Tutarları:** kanal başına sabit bedel + ücretsiz kargo eşiği + `CargoRule` (il/mahalle/ödeme tipi yönlendirme)
+      var; kademeli (desi/bölge) tutar tablosu yok — FAZ 3 kargo entegrasyonuyla birlikte.
+- [ ] **15.4j Script Yönetimi:** eski = sayfalara pazarlama scripti + değişken basma. Karşılık: Pazarlama › Takip & Reklam +
+      Ayarlar › Entegrasyonlar (GA4/GTM/Ads/Meta/TikTok, consent). Eksik yalnız serbest script alanı — gerekirse GTM ile çözülür.
+- [ ] **15.4k Ürün Yorum Ekle:** moderasyon var, elle yorum girişi yok (küçük).
+
+**15.5 Doğrulanmadan iş açılmayacaklar (önce eski kod okunacak)**
+- [ ] **15.5a Ürün Özel Açıklamaları** (platform + ürün kodu bazlı açıklama) — kanal ürünü çekmecesinde karşılığı var mı?
+- [ ] **15.5b MT Kalite Değerlendirme + MT Kalite Soruları** — belge "MT Kalite Yeni Kayıt" modalını taşındı sayıyor ama CRM
+      ticket entity/ekranlarında kalite izi yok; üçü birlikte değerlendirilmeli (puanlı değerlendirme + soru bankası).
+- [ ] **15.5c Depo Eksik Ürün Temizle / Fatura OBM Temizle / Tüm Siparişlere Ürün Ata / ERP Stok Kartı Güncelle** — eski modallar
+      tek onay düğmesi; anlamı controller kodundan okunmalı. ERP stok kartı güncelleme büyük olasılıkla `ErpSourceSyncWorker`
+      ile otomatikleşti → kapatılabilir.
+
+**15.6 Yeni tarafta karşılığı olmayan, karar bekleyen**
+- [ ] **15.6a Hediye Çarkı** (ödül/kazanma oranı/kupon) — pazarlama kararı; yapılırsa kupon altyapısı üzerine.
+- [ ] **15.6b Trendyol BuyBox** — FAZ 4 pazaryeri canlıya almanın (adaptörler stub) arkasında; kendi başına açılmaz.
+- [ ] **15.6c Optimizasyon İşlemleri** — üç düğmeydi (kategori içeriği doldur / arama güncelle / cache temizle); yeni tarafta arama
+      trgm indeksli, cache'ler TTL+sürüm anahtarlı → GEREKSİZ. Yalnız "cache temizle" düğmesi istenirse küçük iş.
+
+**Taşındı sayılan (belgeden farklı olarak iş AÇILMAZ):** Sipariş Ara Birleştirme İzleme/Kontrol → OP3 Ara Ayrıştırma Okutma +
+Koli Duvarı + Masa İzleme (barkod bazlı iz sürme için gerekirse 15.4f ile birlikte).
+
+---
+
 ## Önerilen sıra
 
 1. **FAZ 0'daki hazır girdiler** hangileriyse önce onların açtığı fazlar (örn. DNS geldiyse F5.1 hemen).
 2. Ticari etki sırası önerim: **F1 (satış kanalı F4)** → **F3 (kargo KG1)** → **F2 (tedarik cutover, 0.6 netleşince)**
    → **F4 (Trendyol canlı)** → **F7 (go-live PART B)** → F5/F6 paralel fırsat buldukça → F8/F9 araya serpiştirilir.
 3. Her faz kapanışında bu dokümanda işaretle + PROGRESS panosunu güncelle (K18 kapanış raporu kuralı geçerli).
-4. Çoklu sunucu çalışmasında sıra: **11.1 → 11.2 → 11.3 → 11.4/11.7 → 11.5 → 11.6 → 11.8 →
+4. **FAZ 15 panel eksikleri:** 15.1a (301 yönlendirme, go-live öncesi ŞART) → 15.2 (küçük hazır işler) → 15.3 (raf ekranları,
+   depo go-live'ına göre) → 15.4 fırsat buldukça; 15.5 önce eski kod okunmadan açılmaz.
+5. Çoklu sunucu çalışmasında sıra: **11.1 → 11.2 → 11.3 → 11.4/11.7 → 11.5 → 11.6 → 11.8 →
    11.9/11.T → 12.1-12.4 → ikinci fiziksel sunucu geldiğinde 12.5-12.T**.
