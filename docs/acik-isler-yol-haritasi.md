@@ -493,6 +493,25 @@ Koli Duvarı + Masa İzleme (barkod bazlı iz sürme için gerekirse 15.4f ile b
 
 ---
 
+## FAZ 16 — AI ile işletme raporlama (PLAN v1.0 — 2026-09-10)
+
+> Plan: `docs/ai-raporlama-plani.md` (kaynak PDF + konsolide değerlendirme + değerlendirme dokümanı tek plana indirildi).
+> Omurga tartışma dışı: AI yorumlar, uygulama yetkiyi denetler ve hesaplar; serbest SQL yok; kayıtlı rapor AI'sız çalışır.
+
+- [ ] **16.0 K1-K8 kullanıcı onayı** — kur (v1 yalnız TRY), sözlük tek kaynak, drill-down v1 yok, **kapsam v1 = satış + stok**
+      (+ satış dönemi: go-live sonrası mı, eski geçmiş FAZ 7'de mi), AI sağlayıcı + KVKK, mükerrer toplam mekanizması (§5),
+      takvim kuralları, ölçü karar vericisi (isim). ★ Canlı tespit: yeni DB'de 171 sipariş / 0 ödeme satırı / stok hareketi 0
+      → geçmiş stok raporu v1'de yok; ödeme kaydı akışı R1.3'te doğrulanacak.
+- [ ] **16.1 R1** sözlük kodda+seed, `reporting.*` yetki sabitleri, kaynak envanteri, KVKK paketi, referans hesaplar + sentetik veri.
+- [ ] **16.2 R2** `reporting` şeması, validator + şablonlu sorgu üreticisi (§5.1), lineage/güncellik damgası, limitler + otomatik
+      zaman gruplaması; read replica kararı hacim kanıtıyla.
+- [ ] **16.3 R3** netleştirme UX (özet → chip → şıklı soru), eval seti CI (≥%90, sessiz yanlış varsayım 0), özet sayı doğrulaması, kapsam dışı ret.
+- [ ] **16.4 R4** Raporlarım/sürüm, paylaşım (kapsam uyarısı), sahiplik devri, XLSX+CSV export (GridExport altyapısı).
+- [ ] **16.5 R5** kuyruk/iptal/cache (FAZ 11 ile), token/maliyet sayacı + telemetri, degradasyon, pilot.
+- [ ] **16.6 R6 (v2)** maliyet/kâr/cari/tedarik, drill-down ham satır, arşiv, PDF, zamanlanmış rapor/alarm.
+
+---
+
 ## Önerilen sıra
 
 1. **FAZ 0'daki hazır girdiler** hangileriyse önce onların açtığı fazlar (örn. DNS geldiyse F5.1 hemen).
@@ -501,5 +520,6 @@ Koli Duvarı + Masa İzleme (barkod bazlı iz sürme için gerekirse 15.4f ile b
 3. Her faz kapanışında bu dokümanda işaretle + PROGRESS panosunu güncelle (K18 kapanış raporu kuralı geçerli).
 4. **FAZ 15 panel eksikleri:** 15.1a (301 yönlendirme, go-live öncesi ŞART) → 15.2 (küçük hazır işler) → 15.3 (raf ekranları,
    depo go-live'ına göre) → 15.4 fırsat buldukça; 15.5 önce eski kod okunmadan açılmaz.
-5. Çoklu sunucu çalışmasında sıra: **11.1 → 11.2 → 11.3 → 11.4/11.7 → 11.5 → 11.6 → 11.8 →
+5. **FAZ 16 AI raporlama:** 16.0 kararlar kapanmadan kod yazılmaz; sonra R1 → R2 (referans hesap = üretilen sorgu kapısı) → R3 → R4 → R5.
+6. Çoklu sunucu çalışmasında sıra: **11.1 → 11.2 → 11.3 → 11.4/11.7 → 11.5 → 11.6 → 11.8 →
    11.9/11.T → 12.1-12.4 → ikinci fiziksel sunucu geldiğinde 12.5-12.T**.
