@@ -160,7 +160,7 @@ public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, 
                 if (!pidByCode.TryGetValue(f.ProductCode, out var pid)) continue;
                 if (!fiyatlar.TryGetValue(f.FirmPlatformId, out var pf))
                 {
-                    fiyatlar[f.FirmPlatformId] = pf = await fiyat.GetMinEffectivePricesAsync(f.FirmPlatformId, ct);
+                    fiyatlar[f.FirmPlatformId] = pf = await fiyat.GetKartFiyatlariAsync(f.FirmPlatformId, ct);
                     kampanyalar[f.FirmPlatformId] = await kampanya.ResolveForProductsAsync(f.FirmPlatformId, tumPids, ct);
                 }
                 if (!pf.TryGetValue(pid, out var simdiki) || simdiki <= 0) continue;
@@ -258,7 +258,7 @@ public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, 
                 if (!disp.TryGetValue(k.Kalem.VariantId, out var d) || d.ProductId == Guid.Empty) continue;
                 if (!fiyatlar.TryGetValue(k.FirmPlatformId, out var pf))
                 {
-                    fiyatlar[k.FirmPlatformId] = pf = await fiyat.GetMinEffectivePricesAsync(k.FirmPlatformId, ct);
+                    fiyatlar[k.FirmPlatformId] = pf = await fiyat.GetKartFiyatlariAsync(k.FirmPlatformId, ct);
                     kampanyalar[k.FirmPlatformId] = await kampanya.ResolveForProductsAsync(k.FirmPlatformId, tumPids, ct);
                 }
                 if (!pf.TryGetValue(d.ProductId, out var simdiki) || simdiki <= 0) continue;

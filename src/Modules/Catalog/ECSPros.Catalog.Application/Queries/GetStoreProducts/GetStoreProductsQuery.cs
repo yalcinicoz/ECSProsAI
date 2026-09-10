@@ -242,12 +242,12 @@ public class GetStoreProductsQueryHandler(
 
         // B10 kapanışı (2026-08-27): fiyat filtresi kartta GÖSTERİLEN fiyatla çalışır —
         // kanal override'lı üründe (kataloğun ~%7'si, ort. fark ~290 TL) BasePrice filtresi
-        // kartta 350 TL yazan ürünü ≤400 aralığından düşürebiliyordu. Efektif fiyat (kanal
-        // min ?? varyant BasePrice min) cache'li provider'dan; sözlükte olmayan ürün için
-        // ürün BasePrice'ına düşülür (kartla aynı son basamak).
+        // kartta 350 TL yazan ürünü ≤400 aralığından düşürebiliyordu. Kart fiyatı (varyant başına
+        // kanal ?? BasePrice, en yükseği — 2026-09-10) cache'li provider'dan; sözlükte olmayan ürün
+        // için ürün BasePrice'ına düşülür (kartla aynı son basamak).
         if (request.PriceMin.HasValue || request.PriceMax.HasValue)
         {
-            var efektif = await effectivePrices.GetMinEffectivePricesAsync(request.FirmPlatformId, ct);
+            var efektif = await effectivePrices.GetKartFiyatlariAsync(request.FirmPlatformId, ct);
             var min = request.PriceMin ?? 0m;
             var max = request.PriceMax ?? decimal.MaxValue;
             var uygunIdler = efektif.Where(kv => kv.Value >= min && kv.Value <= max)
@@ -268,7 +268,7 @@ public class GetStoreProductsQueryHandler(
         List<Product> products;
         if (request.Sort is "price_asc" or "price_desc")
         {
-            var fiyatlar = await effectivePrices.GetMinEffectivePricesAsync(request.FirmPlatformId, ct);
+            var fiyatlar = await effectivePrices.GetKartFiyatlariAsync(request.FirmPlatformId, ct);
             var adaylar = await q.Select(p => new { p.Id, p.BasePrice }).ToListAsync(ct);
             var sirali = request.Sort == "price_asc"
                 ? adaylar.OrderBy(a => fiyatlar.GetValueOrDefault(a.Id, a.BasePrice)).ThenBy(a => a.Id)
@@ -555,17 +555,14 @@ public class GetStoreProductsQueryHandler(
         var items = products.Select(p =>
         {
             var activeVariants = p.Variants.Where(v => v.IsActive).ToList();
-            var platformPrices = activeVariants
-                .Where(v => channelPrices.ContainsKey(v.Id))
-                .Select(v => channelPrices[v.Id].Price ?? 0)
-                .Where(price => price > 0)
-                .ToList();
 
             // ★ 2026-09-10 (kullanıcı kararı): bedenler farklı fiyatlıysa kartta EN YÜKSEK fiyat
-            // gösterilir (eskiden en düşük); kategori listesiyle aynı kural. Alan adı (MinPrice)
-            // sözleşme gereği korunur.
-            var variantMax = activeVariants.Select(v => v.BasePrice).Where(price => price > 0).DefaultIfEmpty(0).Max();
-            var minPrice   = platformPrices.Any() ? platformPrices.Max() : variantMax > 0 ? variantMax : p.BasePrice;
+            // gösterilir (eskiden en düşük); kategori listesi ve EffectivePriceProvider (filtre/sıralama)
+            // ile aynı kural: varyant başına efektif fiyat (kanal ?? taban) → en yüksek
+            // (KartFiyatGorunumu.KartTabanFiyati). Alan adı (MinPrice) sözleşme gereği korunur.
+            var kartFiyat = KartFiyatGorunumu.KartTabanFiyati(activeVariants.Select(v =>
+                (channelPrices.TryGetValue(v.Id, out var cp) ? cp.Price ?? 0m : 0m, v.BasePrice)));
+            var minPrice  = kartFiyat > 0 ? kartFiyat : p.BasePrice;
             // İndirim öncesi (çizili) fiyat: kanal CompareAtPrice'ların en yükseği (yalnız satış fiyatı üstündeyse).
             var eskiFiyatlar = activeVariants
                 .Where(v => channelPrices.ContainsKey(v.Id))

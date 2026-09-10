@@ -121,7 +121,7 @@ public class GetStoreFacetsQueryHandler(
             var baseIds = await q.Select(p => p.Id).ToListAsync(ct);
             // B10 (2026-08-27): fiyat bağlamı efektif fiyatla — liste filtresiyle aynı küme
             var efektif = (request.PriceMin.HasValue || request.PriceMax.HasValue)
-                ? await effectivePrices.GetMinEffectivePricesAsync(request.FirmPlatformId, ct)
+                ? await effectivePrices.GetKartFiyatlariAsync(request.FirmPlatformId, ct)
                 : null;
             return await BuildFacetsWithSelections(
                 db, baseIds, request.SelectedValueIds, request.PriceMin, request.PriceMax,

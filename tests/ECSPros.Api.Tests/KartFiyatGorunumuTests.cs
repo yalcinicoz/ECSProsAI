@@ -20,6 +20,24 @@ public sealed class KartFiyatGorunumuTests
         Assert.AreEqual((100m, (decimal?)null), KartFiyatGorunumu.Hesapla(100m, null, kampanyaFiyat: null));
     }
 
+    // 2026-09-10 (kullanıcı kararı): bedenler farklı fiyatlıysa kart EN YÜKSEK fiyatı gösterir; kural varyant
+    // başına efektif fiyat (kanal ?? taban) üzerinden çalışır — kanal fiyatlarının ayrı maks'ı DEĞİL.
+    [TestMethod]
+    public void Kart_taban_fiyati_bedenler_arasinda_en_yuksek_efektif_fiyattir()
+    {
+        // P-00020386 canlı vakası: tek kanal fiyatı stoksuz L'de 299,99; S/M tabandan 399,99'a satılıyor → kart 399,99
+        Assert.AreEqual(399.99m, KartFiyatGorunumu.KartTabanFiyati([(299.99m, 399.99m), (0m, 399.99m), (0m, 399.99m)]));
+        // tüm bedenlerde kanal fiyatı var ve farklı → en yüksek kanal fiyatı
+        Assert.AreEqual(349.99m, KartFiyatGorunumu.KartTabanFiyati([(299.99m, 399.99m), (349.99m, 399.99m)]));
+        // hiç kanal fiyatı yok → en yüksek taban
+        Assert.AreEqual(450m, KartFiyatGorunumu.KartTabanFiyati([(0m, 400m), (0m, 450m)]));
+        // kanal fiyatı tabandan yüksek olabilir (kanal zammı) → o da sayılır
+        Assert.AreEqual(500m, KartFiyatGorunumu.KartTabanFiyati([(500m, 400m), (0m, 450m)]));
+        // olumsuz: hiç pozitif fiyat yok → 0 (tüketici ürün BasePrice'ına düşer)
+        Assert.AreEqual(0m, KartFiyatGorunumu.KartTabanFiyati([(0m, 0m)]));
+        Assert.AreEqual(0m, KartFiyatGorunumu.KartTabanFiyati([]));
+    }
+
     [TestMethod]
     public void Kanal_indiriminde_satis_fiyati_dusuk_cizili_kanal_fiyatidir()
         => Assert.AreEqual((299.99m, (decimal?)399.99m), KartFiyatGorunumu.Hesapla(299.99m, 399.99m, null));

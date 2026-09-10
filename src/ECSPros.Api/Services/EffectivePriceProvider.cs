@@ -5,8 +5,9 @@ using Npgsql;
 namespace ECSPros.Api.Services;
 
 /// <summary>
-/// Ürün başına efektif min fiyat (kanal override → varyant BasePrice önceliği — kart
-/// gösterimiyle aynı). Tek raw-SQL (cross-schema, aynı DB), platform bazlı 2 dk cache.
+/// Ürün başına KART fiyatı (varyant başına kanal fiyatı ?? BasePrice, en yükseği — kart
+/// gösterimiyle aynı, bkz. KartFiyatGorunumu.KartTabanFiyati). Tek raw-SQL (cross-schema, aynı DB),
+/// platform bazlı 2 dk cache.
 /// Kartta ürün BasePrice'a düşen son basamak sözlükte YOKTUR — tüketici
 /// GetValueOrDefault(id, product.BasePrice) ile kapatır.
 /// </summary>
@@ -14,14 +15,14 @@ public sealed class EffectivePriceProvider(NpgsqlDataSource dataSource, IMemoryC
 {
     private static readonly TimeSpan Ttl = TimeSpan.FromMinutes(2);
 
-    // Kart fiyat önceliği (GetStoreProducts): kanal fiyatı olan varyantların min'i;
-    // hiç kanal fiyatı yoksa varyant BasePrice min'i (0'lar sayılmaz).
+    // Kart fiyat kuralı (GetStoreProducts / kategori listesiyle aynı, 2026-09-10): her varyantın
+    // efektif fiyatı = kanal fiyatı (>0) yoksa BasePrice (>0); ürün fiyatı bunların EN YÜKSEĞİ.
+    // ★ Kanal fiyatlarının ve taban fiyatların ayrı ayrı MIN/MAX'ı alınmaz — kanal fiyatı çoğu üründe
+    // bedenlerin yalnız bir kısmında vardır; ayrı alınınca kart 299,99 gösterip S/M 399,99'a satıyordu.
     private const string Sql = @"
         SELECT v.""ProductId"",
-               COALESCE(
-                   MIN(cv.""Price"") FILTER (WHERE cv.""Price"" > 0),
-                   MIN(v.""BasePrice"") FILTER (WHERE v.""BasePrice"" > 0)
-               ) AS fiyat
+               MAX(CASE WHEN cv.""Price"" > 0 THEN cv.""Price""
+                        WHEN v.""BasePrice"" > 0 THEN v.""BasePrice"" END) AS fiyat
         FROM catalog.product_variants v
         LEFT JOIN storefront.channel_variants cv
                ON cv.""VariantId"" = v.""Id""
@@ -29,14 +30,13 @@ public sealed class EffectivePriceProvider(NpgsqlDataSource dataSource, IMemoryC
               AND cv.""IsActive""
         WHERE v.""IsActive"" AND NOT v.""IsDeleted""
         GROUP BY v.""ProductId""
-        HAVING COALESCE(
-                   MIN(cv.""Price"") FILTER (WHERE cv.""Price"" > 0),
-                   MIN(v.""BasePrice"") FILTER (WHERE v.""BasePrice"" > 0)) IS NOT NULL";
+        HAVING MAX(CASE WHEN cv.""Price"" > 0 THEN cv.""Price""
+                        WHEN v.""BasePrice"" > 0 THEN v.""BasePrice"" END) IS NOT NULL";
 
-    public async Task<Dictionary<Guid, decimal>> GetMinEffectivePricesAsync(
+    public async Task<Dictionary<Guid, decimal>> GetKartFiyatlariAsync(
         Guid firmPlatformId, CancellationToken ct = default)
     {
-        return (await cache.GetOrCreateAsync($"effective-min-prices-{firmPlatformId}", async entry =>
+        return (await cache.GetOrCreateAsync($"kart-fiyatlari-{firmPlatformId}", async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = Ttl;
             var map = new Dictionary<Guid, decimal>();
