@@ -48,7 +48,9 @@ public partial record OrderDetailDto(
     Guid? RequestedCargoIntegrationId = null,
     string? RequestedCargoName = null,
     string? PaymentMethod = null,   // 2026-08-04: kart | kapida-nakit | kapida-kart | null
-    decimal ShippingFee = 0);       // 2026-09-09: kargo bedeli (TotalExpense = kapıda ödeme bedeli, ayrı)
+    decimal ShippingFee = 0,        // 2026-09-09: kargo bedeli (TotalExpense = kapıda ödeme bedeli, ayrı)
+    int InstallmentCount = 1,       // 2026-09-10: kart taksit sayısı (1 = tek çekim)
+    decimal InstallmentFee = 0);    // 2026-09-10: müşteriye yansıtılan vade farkı (GrandTotal içinde)
 
 // ── M4 (2026-09-09, mobil): sipariş detayının vitrin etiketleri + akış şeridi + aksiyon bayrakları.
 // Türetilmiş alanlar (handler dokunulmadı). Panel bu alanları okumaz, kendi haritasını kullanır.

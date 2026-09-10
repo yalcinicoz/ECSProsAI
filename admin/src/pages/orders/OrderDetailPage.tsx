@@ -74,6 +74,8 @@ interface OrderDetail {
   payments: OrderPayment[]
   firmPlatformId?: string
   totalExpense?: number
+  installmentCount?: number   // 2026-09-10: kart taksit sayısı (1 = tek çekim)
+  installmentFee?: number     // 2026-09-10: müşteriye yansıtılan vade farkı (toplam içinde)
   shippingPostalCode?: string
   shippingDeliveryNotes?: string
   shippingCityId?: string
@@ -791,6 +793,8 @@ export function OrderDetailPage() {
             <InfoRow label="Ara Toplam" value={money(order.subtotal, cur)} />
             <InfoRow label="İndirim" value={order.totalDiscount > 0 ? `-${money(order.totalDiscount, cur)}` : undefined} />
             <InfoRow label="Masraf" value={order.totalExpense ? money(order.totalExpense, cur) : undefined} />
+            <InfoRow label="Taksit" value={(order.installmentCount ?? 1) > 1 ? `${order.installmentCount} taksit` : undefined} />
+            <InfoRow label="Vade Farkı" value={order.installmentFee ? money(order.installmentFee, cur) : undefined} />
             <InfoRow label="Vergi" value={order.totalTax > 0 ? money(order.totalTax, cur) : undefined} />
             <div className="mt-2 pt-2 flex gap-2 text-sm font-bold" style={{ borderTop: '1px solid var(--border)', color: 'var(--text)' }}>
               <span className="w-32 shrink-0">TOPLAM</span>

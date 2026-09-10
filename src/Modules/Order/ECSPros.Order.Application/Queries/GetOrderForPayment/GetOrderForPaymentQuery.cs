@@ -19,7 +19,9 @@ public record OrderPaymentInfo(
     string CurrencyCode,
     string PaymentStatus,
     string AliciAd,
-    string AliciTelefon);
+    string AliciTelefon,
+    Guid FirmPlatformId = default,      // 2026-09-10: kanal taksit ayarı için
+    decimal InstallmentFee = 0m);       // 2026-09-10: GrandTotal içindeki vade farkı (baz = toplam − bu)
 
 public class GetOrderForPaymentQueryHandler(IOrderDbContext db)
     : IRequestHandler<GetOrderForPaymentQuery, Result<OrderPaymentInfo>>
@@ -31,7 +33,8 @@ public class GetOrderForPaymentQueryHandler(IOrderDbContext db)
             .Select(x => new
             {
                 x.Id, x.OrderNumber, x.MemberId, x.GrandTotal, x.CurrencyCode,
-                x.PaymentStatus, x.ShippingRecipientName, x.ShippingRecipientPhone
+                x.PaymentStatus, x.ShippingRecipientName, x.ShippingRecipientPhone,
+                x.FirmPlatformId, x.InstallmentFee
             })
             .FirstOrDefaultAsync(ct);
         if (o is null) return Result.Failure<OrderPaymentInfo>("Sipariş bulunamadı.");
@@ -40,6 +43,7 @@ public class GetOrderForPaymentQueryHandler(IOrderDbContext db)
         return Result.Success(new OrderPaymentInfo(
             o.Id, o.OrderNumber, o.MemberId, kurus,
             string.IsNullOrWhiteSpace(o.CurrencyCode) ? "TRY" : o.CurrencyCode,
-            o.PaymentStatus, o.ShippingRecipientName, o.ShippingRecipientPhone));
+            o.PaymentStatus, o.ShippingRecipientName, o.ShippingRecipientPhone,
+            o.FirmPlatformId, o.InstallmentFee));
     }
 }

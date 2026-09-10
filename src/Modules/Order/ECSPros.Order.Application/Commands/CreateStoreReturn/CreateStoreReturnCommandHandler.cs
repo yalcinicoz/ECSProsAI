@@ -64,6 +64,10 @@ public class CreateStoreReturnCommandHandler : IRequestHandler<CreateStoreReturn
         foreach (var grup in request.Items.GroupBy(i => kalemMap[i.OrderItemId].Siparis.Id))
         {
             var siparis = kalemMap[grup.First().OrderItemId].Siparis;
+            // Vade farkı payı (2026-09-10, kullanıcı kararı): iade edilen ürünün tutarına o ürünün vade farkı
+            // payı EKLENEREK müşteriye ödenir; pay kalem tutarı oranında (TaksitKurali.KalemPaylari — tek kural).
+            var vadeFarkiPaylari = ECSPros.Shared.Contracts.TaksitKurali.KalemPaylari(
+                siparis.InstallmentFee, siparis.Items.Select(i => (i.Id, i.Total)));
             var iade = new Return
             {
                 ReturnNumber = $"RET-{simdi:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}",
@@ -92,8 +96,9 @@ public class CreateStoreReturnCommandHandler : IRequestHandler<CreateStoreReturn
                         reasons = istek.Reasons.Select(r => new { main = r.Main, subs = r.Subs }),
                         other = istek.OtherText
                     }, SnapshotJsonOptions),
-                    UnitRefundAmount = kalem.Quantity == 0 ? 0 : kalem.Total / kalem.Quantity,
-                    TotalRefundAmount = kalem.Total,
+                    UnitRefundAmount = kalem.Quantity == 0 ? 0
+                        : Math.Round((kalem.Total + vadeFarkiPaylari.GetValueOrDefault(kalem.Id)) / kalem.Quantity, 2, MidpointRounding.AwayFromZero),
+                    TotalRefundAmount = kalem.Total + vadeFarkiPaylari.GetValueOrDefault(kalem.Id),
                     Status = "pending"
                 });
             }

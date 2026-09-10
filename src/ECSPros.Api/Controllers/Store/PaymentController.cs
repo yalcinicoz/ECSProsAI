@@ -2,6 +2,7 @@ using ECSPros.Api.Services.Store;
 using ECSPros.Order.Application.Commands.MockPayment;
 using ECSPros.Order.Application.Commands.PayTrPayment;
 using ECSPros.Order.Application.Queries.GetOrderForPayment;
+using ECSPros.Shared.Contracts;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
@@ -30,6 +31,8 @@ public class PaymentController(
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration,
     IWebHostEnvironment env,
+    IPaymentOptionsProvider paymentOptions,
+    ECSPros.Api.Services.IStoreContext storeContext,
     ILogger<PaymentController> logger) : ControllerBase
 {
     /// <summary>Adım 1: sipariş + kart → PayTR /odeme → 3D HTML. Kart alanları burada bırakılır.</summary>
@@ -38,15 +41,33 @@ public class PaymentController(
     public async Task<IActionResult> Init([FromBody] PayTrInitRequest req, CancellationToken ct)
     {
         var ayar = await settingsProvider.GetAsync(ct);
-        if (ayar is null)
-            return await MockOdemeAsync(req, ct);
-
         var siparisSonuc = await mediator.Send(new GetOrderForPaymentQuery(req.OrderId), ct);
         if (siparisSonuc.IsFailure) return BadRequest(new { success = false, error = siparisSonuc.Error });
         var siparis = siparisSonuc.Value!;
         if (siparis.PaymentStatus == "paid")
             return BadRequest(new { success = false, error = "Bu sipariş zaten ödenmiş." });
 
+        // Taksit (2026-09-10, kullanıcı kararı): kanal "kendi tablomuz"daysa müşteriye yansıyan vade farkı
+        // SUNUCUDA TaksitKurali ile hesaplanır, siparişe yazılır ve GrandTotal'a girer; PayTR'ye bu toplam
+        // gider (aracının komisyonu bize kalır — PayTR panelinde komisyon "mağazadan" seçili olmalı).
+        // Aracının tablosundaysa fee 0: PayTR baz tutara kendi oranını ekler (önceki davranış).
+        var taksitAdet = req.Installment is >= TaksitKurali.EnAzTaksit and <= TaksitKurali.EnCokTaksit ? req.Installment.Value : 1;
+        var kanalOdeme = await paymentOptions.GetAsync(siparis.FirmPlatformId, ct);
+        decimal vadeFarki = 0m;
+        if (kanalOdeme.KendiTaksitTablosu && taksitAdet > 1)
+        {
+            var baz = siparis.TutarKurus / 100m - siparis.InstallmentFee;   // önceki denemenin vade farkı hariç
+            var vf = TaksitKurali.VadeFarki(baz, taksitAdet, kanalOdeme.InstallmentTable);
+            if (vf is null)
+                return BadRequest(new { success = false, error = "Seçilen taksit sayısı bu satış kanalında sunulmuyor." });
+            vadeFarki = vf.Value;
+        }
+        var uygula = await mediator.Send(new SiparisTaksitUygulaCommand(siparis.OrderId, taksitAdet, vadeFarki), ct);
+        if (uygula.IsFailure) return BadRequest(new { success = false, error = uygula.Error });
+        var odenecekTutar = uygula.Value;   // vade farkı dahil yeni GrandTotal
+
+        if (ayar is null)
+            return await MockOdemeAsync(req, ct);
         // Maskeli PAN'ı çıkar ve HEMEN siparişe yaz (tam PAN/CVV asla saklanmaz)
         var maskeli = PayTrDirectService.MaskePan(req.CardNumber ?? "");
         await mediator.Send(new PayTrPaymentBaslatCommand(siparis.OrderId, maskeli, TestMode: ayar.TestMode), ct);
@@ -69,7 +90,7 @@ public class PaymentController(
         // (iFrame API kuruş/integer ister; Direct API DEĞİL — resmi postman koleksiyonuyla doğrulandı
         // 2026-07-30. Kuruş göndermek PayTR'de 100× yüksek tutar gösterip tahsil ediyordu.)
         // Token hash de bu ondalık değeri kullanır; basket zaten aynı TL tutarında.
-        var amount = (siparis.TutarKurus / 100m)
+        var amount = odenecekTutar
             .ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
 
         var token = PayTrDirectService.Adim1Token(
@@ -84,7 +105,7 @@ public class PaymentController(
         var kok = $"{scheme}://{Request.Host}";
         var sepet = PayTrDirectService.SepetBase64(new[]
         {
-            ($"Siparis {siparis.OrderNumber}", siparis.TutarKurus / 100m, 1)
+            ($"Siparis {siparis.OrderNumber}", odenecekTutar, 1)
         });
 
         var form = new Dictionary<string, string>
@@ -187,29 +208,53 @@ public class PaymentController(
     public async Task<IActionResult> Taksit([FromBody] PayTrTaksitRequest req, CancellationToken ct)
     {
         var ayar = await settingsProvider.GetAsync(ct);
-        if (ayar is null) return Ok(new { success = true, taksitler = Array.Empty<object>() });
-
         var bin = new string((req.Bin ?? "").Where(char.IsDigit).ToArray());
         if (bin.Length < 6) return Ok(new { success = true, taksitler = Array.Empty<object>() });
         bin = bin[..6];
 
+        // Kanal + baz tutar: siparişten (varsa) — baz, önceki denemede yazılmış vade farkı HARİÇ tutardır;
+        // sipariş yoksa gövdedeki tutar + kanal (mobil X-Firm-Platform başlığı → FirmPlatformId; web Host).
         decimal bazTutar = req.Tutar is > 0 ? req.Tutar.Value : 0m;
+        var kanalId = req.FirmPlatformId ?? Guid.Empty;
         if (req.OrderId is { } oid)
         {
             var s = await mediator.Send(new GetOrderForPaymentQuery(oid), ct);
-            if (s.IsSuccess) bazTutar = s.Value!.TutarKurus / 100m;
+            if (s.IsSuccess) { bazTutar = s.Value!.TutarKurus / 100m - s.Value.InstallmentFee; kanalId = s.Value.FirmPlatformId; }
         }
+        if (kanalId == Guid.Empty) kanalId = (await storeContext.GetPlatformAsync(ct))?.Id ?? Guid.Empty;
         if (bazTutar <= 0) return Ok(new { success = true, taksitler = Array.Empty<object>() });
 
+        var kanalOdeme = await paymentOptions.GetAsync(kanalId, ct);
+        if (kanalOdeme.KendiTaksitTablosu)
+        {
+            // 2026-09-10 (kullanıcı kararı): kanalın kendi taksit tablosu — vade farkı bizim; PayTR'ye yalnız
+            // kartın kredi/banka kartı olduğu sorulur (banka kartına taksit yok). PayTR ayarı yoksa kredi varsayılır.
+            var krediKarti = true;
+            if (ayar is not null)
+            {
+                var binDetay = await paytr.BinDetayAsync(ayar.MerchantId, ayar.MerchantKey, ayar.MerchantSalt, bin, ct);
+                krediKarti = PayTrDirectService.KrediKartiMi(binDetay.Icerik) ?? true;
+            }
+            var kendi = TaksitKurali.Secenekler(bazTutar, krediKarti ? kanalOdeme.InstallmentTable : null);
+            return Ok(new
+            {
+                success = true,
+                kaynak = TaksitKurali.KaynakKendiTablomuz,
+                taksitler = kendi.Select(t => new { adet = t.Adet, birim = t.Birim, toplam = t.Toplam, vadeFarki = t.VadeFarki })
+            });
+        }
+
+        if (ayar is null) return Ok(new { success = true, taksitler = Array.Empty<object>() });
         var reqId = Guid.NewGuid().ToString("N");
         var oranlar = await paytr.TaksitOranlariAsync(ayar.MerchantId, ayar.MerchantKey, ayar.MerchantSalt, reqId, ct);
-        var binDetay = await paytr.BinDetayAsync(ayar.MerchantId, ayar.MerchantKey, ayar.MerchantSalt, bin, ct);
+        var binDetayP = await paytr.BinDetayAsync(ayar.MerchantId, ayar.MerchantKey, ayar.MerchantSalt, bin, ct);
 
-        var secenekler = PayTrDirectService.TaksitleriHesapla(oranlar.Icerik, binDetay.Icerik, bazTutar);
+        var secenekler = PayTrDirectService.TaksitleriHesapla(oranlar.Icerik, binDetayP.Icerik, bazTutar);
         return Ok(new
         {
             success = true,
-            taksitler = secenekler.Select(t => new { adet = t.Adet, birim = t.Birim, toplam = t.Toplam })
+            kaynak = TaksitKurali.KaynakOdemeAracisi,
+            taksitler = secenekler.Select(t => new { adet = t.Adet, birim = t.Birim, toplam = t.Toplam, vadeFarki = t.Toplam - bazTutar })
         });
     }
 
@@ -299,7 +344,8 @@ public class PaymentController(
 }
 
 /// <summary>Taksit sorgu gövdesi — yalnız BIN (ilk 6 hane) + sipariş/tutar. Kart no/CVV TAŞIMAZ.</summary>
-public record PayTrTaksitRequest(string? Bin, Guid? OrderId, decimal? Tutar);
+/// <summary>FirmPlatformId: sipariş yokken (sepet aşaması) kanal — mobil X-Firm-Platform başlığından filtre doldurur.</summary>
+public record PayTrTaksitRequest(string? Bin, Guid? OrderId, decimal? Tutar, Guid? FirmPlatformId = null);
 
 /// <summary>Init gövdesi. Kart alanları YALNIZ PayTR'a iletmek için — hiçbir yerde saklanmaz.
 /// Installment: seçilen taksit sayısı (1/null = tek çekim; 2..12 = taksit).</summary>

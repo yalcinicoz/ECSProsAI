@@ -339,10 +339,14 @@
                     const nf = new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     taksitListesi.innerHTML = opts.map((o, i) => {
                         const etiket = (o.adet || 1) <= 1 ? "Tek Çekim" : (o.adet + " Taksit");
+                        // 2026-09-10: vade farkı bilgisi — kanalın kendi tablosunda 0 ise "vade farksız" yazılır
+                        const vade = (o.adet || 1) <= 1 ? "" : ((o.vadeFarki || 0) > 0
+                            ? `<small class="ms-fiyat-standart">Vade farkı: ${nf.format(o.vadeFarki)} ₺</small>`
+                            : `<small class="ms-fiyat-standart">Vade farksız</small>`);
                         return `<label class="ms-odeme-taksit-secenegi">
                             <input class="ms-onay-input" type="radio" name="siparis-taksit" value="${o.adet || 1}" ${i === 0 ? "checked" : ""}>
                             <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
-                            <span>${etiket}</span>
+                            <span>${etiket} ${vade}</span>
                             <strong class="ms-fiyat-standart">${nf.format(o.birim || 0)} ₺ <small class="ms-fiyat-standart">Toplam: ${nf.format(o.toplam || 0)} ₺</small></strong>
                         </label>`;
                     }).join("");

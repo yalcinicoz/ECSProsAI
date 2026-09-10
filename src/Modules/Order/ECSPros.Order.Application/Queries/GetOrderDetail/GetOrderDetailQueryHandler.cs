@@ -86,6 +86,8 @@ public class GetOrderDetailQueryHandler : IRequestHandler<GetOrderDetailQuery, R
             order.RequestedCargoIntegrationId,
             order.RequestedCargoName,
             order.PaymentMethod,
-            order.ShippingFee));
+            order.ShippingFee,
+            order.InstallmentCount,
+            order.InstallmentFee));
     }
 }

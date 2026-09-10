@@ -105,6 +105,21 @@ public class PayTrDirectService(
     /// markası oran tablosunda olan kartlarda üretilir (debit/none → yalnız tek çekim).
     /// oran = yüzde (7.48 = %7.48); toplam = baz×(1+oran/100), birim = toplam/adet.
     /// Beklenmedik/eksik yanıtta güvenli tarafa düşer (yalnız tek çekim).</summary>
+    /// <summary>bin-detay yanıtından kart tipi: true=kredi, false=banka/ön ödemeli, null=bilinmiyor (yanıt yok/bozuk).</summary>
+    public static bool? KrediKartiMi(string? binJson)
+    {
+        if (string.IsNullOrWhiteSpace(binJson)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(binJson);
+            if (!doc.RootElement.TryGetProperty("cardType", out var ctEl)) return null;
+            var tip = ctEl.GetString();
+            if (string.IsNullOrWhiteSpace(tip)) return null;
+            return string.Equals(tip, "credit", StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return null; }
+    }
+
     public static List<TaksitSecenegi> TaksitleriHesapla(string? oranlarJson, string? binJson, decimal baz)
     {
         var sonuc = new List<TaksitSecenegi> { new(1, baz, baz) };   // tek çekim hep var

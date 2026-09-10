@@ -44,6 +44,9 @@ public sealed class LegacyOrderSyncService(
     // 2026-09-09: kargo bedeli masraf tipi (eski dfexpensetypes kaydı); 0 = satır yazılmaz,
     // tutar yine expenseTotal/orderTotal içinde gider.
     private int CargoExpenseTypeId => config.GetValue("Legacy:OrderService:CargoExpenseTypeId", 0);
+    // 2026-09-10: müşteriye yansıtılan vade farkı — eski sitenin kalıbıyla aynı: dfexpensetypes 5
+    // "Taksitlendirme Komisyonu" (ürün masrafı), kalem başına net tutar oranında dağıtılır; 0 = satır yazılmaz.
+    private int InstallmentExpenseTypeId => config.GetValue("Legacy:OrderService:InstallmentExpenseTypeId", 5);
     private bool DecimalComma => config.GetValue("Legacy:OrderService:DecimalComma", true);
     private const int MaxAttempt = 5;
 
@@ -499,7 +502,9 @@ public sealed class LegacyOrderSyncService(
         string? MemberFirstName, string? MemberLastName, string? MemberEmail, string? MemberPhone,
         string? MemberIdentityNumber, int? LegacyMemberId, Guid? MemberId, string? CustomerNote,
         decimal ShippingFee,
-        List<Kalem> Items);
+        List<Kalem> Items,
+        int InstallmentCount = 1,       // 2026-09-10: kart taksit sayısı
+        decimal InstallmentFee = 0m);   // 2026-09-10: müşteriye yansıtılan vade farkı (GrandTotal içinde)
 
     private async Task<SiparisVerisi?> SiparisOkuAsync(NpgsqlConnection pg, Guid orderId, CancellationToken ct)
     {
@@ -510,7 +515,8 @@ public sealed class LegacyOrderSyncService(
                    o."ShippingAddressLine", o."ShippingPostalCode",
                    COALESCE(c."NameI18n"->>'tr',''), COALESCE(d."NameI18n"->>'tr',''), n."NameI18n"->>'tr',
                    m."FirstName", m."LastName", m."Email", m."Phone", m."IdentityNumber", m."LegacyMemberId",
-                   o."MemberId", o."CustomerNotes"->>'note', fp."Settings", o."ShippingFee"
+                   o."MemberId", o."CustomerNotes"->>'note', fp."Settings", o."ShippingFee",
+                   o."InstallmentCount", o."InstallmentFee"
             FROM "order".ord_orders o
             LEFT JOIN crm.crm_cities c ON c."Id" = o."ShippingCityId"
             LEFT JOIN crm.crm_districts d ON d."Id" = o."ShippingDistrictId"
@@ -559,7 +565,9 @@ public sealed class LegacyOrderSyncService(
             r.IsDBNull(24) ? null : r.GetGuid(24),
             r.IsDBNull(25) ? null : r.GetString(25),
             r.IsDBNull(27) ? 0m : r.GetDecimal(27),   // 2026-09-09: kargo bedeli (SELECT sonuna eklendi)
-            new List<Kalem>());
+            new List<Kalem>(),
+            r.IsDBNull(28) ? 1 : r.GetInt32(28),      // 2026-09-10: taksit sayısı
+            r.IsDBNull(29) ? 0m : r.GetDecimal(29));  // 2026-09-10: vade farkı
         await r.CloseAsync();
 
         // DİKKAT (dry-run doğrulaması 2026-08-04): ord_order_items.Sku ÜRÜN KODU taşıyor
@@ -783,6 +791,23 @@ public sealed class LegacyOrderSyncService(
             Ekle($"orderExpenses[{masrafSatirNo}].expenseTypeId", CargoExpenseTypeId.ToString());
             Ekle($"orderExpenses[{masrafSatirNo}].expenseAmount", Para(v.ShippingFee));
             Ekle($"orderExpenses[{masrafSatirNo}].expenseDescription", "Kargo Bedeli");
+            masrafSatirNo++;
+        }
+        // 2026-09-10: vade farkı — eski sitenin kalıbı (CheckoutPayment.cs "Vade Farkı Masrafı"): tip 5,
+        // kalem başına, kalemin net tutarı oranında (TaksitKurali.KalemPaylari — yeni tarafla aynı dağıtım).
+        if (!kapida && v.InstallmentFee > 0 && InstallmentExpenseTypeId > 0)
+        {
+            var paylar = ECSPros.Shared.Contracts.TaksitKurali.KalemPaylari(
+                v.InstallmentFee, v.Items.Select(it => (it.Id, (it.UnitPrice - it.DiscountAmount) * it.Quantity)));
+            foreach (var it in v.Items)
+            {
+                var pay = paylar.GetValueOrDefault(it.Id);
+                if (pay <= 0) continue;
+                Ekle($"orderExpenses[{masrafSatirNo}].expenseTypeId", InstallmentExpenseTypeId.ToString());
+                Ekle($"orderExpenses[{masrafSatirNo}].expenseAmount", Para(pay));
+                Ekle($"orderExpenses[{masrafSatirNo}].expenseDescription", "Vade Farkı");
+                masrafSatirNo++;
+            }
         }
 
         // Toplamlar (bizim sunucu-hesaplı sipariş toplamlarımız)
@@ -799,7 +824,8 @@ public sealed class LegacyOrderSyncService(
         Ekle("orderPayments[0].paymentTypeId", odemeTipi.ToString());
         Ekle("orderPayments[0].isPaid", kapida ? "false" : "true");
         Ekle("orderPayments[0].paymentAmount", Para(v.GrandTotal));
-        Ekle("orderPayments[0].installmentCount", "0");
+        // 2026-09-10: kart taksit sayısı (tek çekim = 0, eski sistem sözleşmesi); kapıda ödemede 0
+        Ekle("orderPayments[0].installmentCount", (!kapida && v.InstallmentCount > 1 ? v.InstallmentCount : 0).ToString());
         Ekle("orderPayments[0].paymentDescription", kapida
             ? (odemeTipi == 2 ? "Kapıda Ödeme Nakit" : "Kapıda Ödeme Kart")
             : "Kredi Kartı (Yeni Site)");

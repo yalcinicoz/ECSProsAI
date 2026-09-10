@@ -54,7 +54,42 @@ public class PaymentOptionsProvider(ICoreDbContext db, IMemoryCache cache) : IPa
         return new PaymentOptions(
             yontemler,
             Sayi(settings, "codServiceFee") ?? Varsayilan.CodServiceFee,
-            Sayi(settings, "codMaxOrderTotal") ?? Varsayilan.CodMaxOrderTotal);
+            Sayi(settings, "codMaxOrderTotal") ?? Varsayilan.CodMaxOrderTotal,
+            TaksitKaynagi(settings),
+            TaksitTablosu(settings));
+    }
+
+    // Taksit (2026-09-10): "installmentSource" own|provider (bilinmeyen/boş → provider);
+    // "installmentTable": [{count, rate, enabled?}] — geçersiz satırlar atlanır (TaksitKurali de süzer).
+    private static string TaksitKaynagi(Dictionary<string, object> settings)
+    {
+        if (!settings.TryGetValue("installmentSource", out var v)) return TaksitKurali.KaynakOdemeAracisi;
+        var s = v is JsonElement { ValueKind: JsonValueKind.String } je ? je.GetString() : v as string;
+        return string.Equals(s, TaksitKurali.KaynakKendiTablomuz, StringComparison.OrdinalIgnoreCase)
+            ? TaksitKurali.KaynakKendiTablomuz : TaksitKurali.KaynakOdemeAracisi;
+    }
+
+    private static IReadOnlyList<TaksitTablosuSatiri>? TaksitTablosu(Dictionary<string, object> settings)
+    {
+        if (!settings.TryGetValue("installmentTable", out var v)
+            || v is not JsonElement { ValueKind: JsonValueKind.Array } dizi) return null;
+        var liste = new List<TaksitTablosuSatiri>();
+        foreach (var e in dizi.EnumerateArray())
+        {
+            if (e.ValueKind != JsonValueKind.Object) continue;
+            if (!e.TryGetProperty("count", out var c) || !c.TryGetInt32(out var adet)) continue;
+            decimal oran = 0m;
+            if (e.TryGetProperty("rate", out var r))
+            {
+                if (r.ValueKind == JsonValueKind.Number) oran = r.GetDecimal();
+                else if (r.ValueKind == JsonValueKind.String
+                         && decimal.TryParse(r.GetString(), System.Globalization.NumberStyles.Any,
+                                             System.Globalization.CultureInfo.InvariantCulture, out var op)) oran = op;
+            }
+            if (e.TryGetProperty("enabled", out var en) && en.ValueKind == JsonValueKind.False) continue;
+            liste.Add(new TaksitTablosuSatiri(adet, oran));
+        }
+        return liste;
     }
 
     private static decimal? Sayi(Dictionary<string, object> settings, string key)

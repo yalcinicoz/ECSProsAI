@@ -195,6 +195,23 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
     target?.settings?.['shippingFee'] != null ? String(target.settings['shippingFee']) : '0')
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(
     target?.settings?.['freeShippingThreshold'] != null ? String(target.settings['freeShippingThreshold']) : '0')
+  // Taksit (2026-09-10, kullanıcı kararı): taksitlendirmenin MÜŞTERİ tarafı kanal bazlıdır. Kaynak:
+  // "provider" = ödeme aracısının (PayTR) tablosu (vade farkını aracı kart toplamına ekler),
+  // "own" = kanalın kendi tablosu (müşteriye yansıyan vade farkı bizim; aracının komisyonu bize kalır —
+  // PayTR panelinde komisyon "mağazadan" seçili olmalı, yoksa müşteriye iki kez biner).
+  // Tablo: 2..12 taksit, satır başına vade farkı %, aktif. Yalnız site + mobil kart ödemelerinde uygulanır.
+  const [installmentSource, setInstallmentSource] = useState<'provider' | 'own'>(
+    target?.settings?.['installmentSource'] === 'own' ? 'own' : 'provider')
+  const [installmentTable, setInstallmentTable] = useState<{ count: number; rate: string; enabled: boolean }[]>(() => {
+    const kayitli = target?.settings?.['installmentTable']
+    const map = new Map<number, { rate: string; enabled: boolean }>()
+    if (Array.isArray(kayitli)) for (const r of kayitli as { count?: number; rate?: number; enabled?: boolean }[]) {
+      if (typeof r?.count === 'number') map.set(r.count, { rate: r.rate != null ? String(r.rate) : '0', enabled: r.enabled !== false })
+    }
+    return Array.from({ length: 11 }, (_, i) => i + 2).map(count => ({
+      count, rate: map.get(count)?.rate ?? '0', enabled: map.has(count) ? map.get(count)!.enabled : false,
+    }))
+  })
   // Eski sistem (ECSGYE) platform eşlemesi (2026-08-04, GEÇİCİ — sipariş senkronu için):
   // tozlu=1, julude=2, olurbutik=12, mishar=41. Boş = bu kanal eskiye senkronlanmaz.
   const [legacyPlatformId, setLegacyPlatformId] = useState(
@@ -240,7 +257,7 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
       // Şema dışı mevcut anahtarlar korunur (stockControlEnabled, tema/domain vb. —
       // backend Settings/Credentials'ı olduğu gibi değiştirir, merge etmez)
       // Stok görünürlüğü anahtarları burada özel ele alınıyor — genel korumadan hariç tut.
-      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince', 'paymentMethods', 'codServiceFee', 'codMaxOrderTotal', 'legacyPlatformId', 'cargoDispatchEnabled', 'customerCargoSelection', 'shippingFee', 'freeShippingThreshold'])
+      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince', 'paymentMethods', 'codServiceFee', 'codMaxOrderTotal', 'legacyPlatformId', 'cargoDispatchEnabled', 'customerCargoSelection', 'shippingFee', 'freeShippingThreshold', 'installmentSource', 'installmentTable'])
       if (target) {
         const schemaKeys = new Set(schema.map(f => f.key))
         for (const [k, v] of Object.entries(target.credentials ?? {})) if (v != null && !schemaKeys.has(k)) credentials[k] = v
@@ -254,6 +271,13 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
       if (legacyPlatformId && parseInt(legacyPlatformId) > 0) settings['legacyPlatformId'] = parseInt(legacyPlatformId)
       settings['shippingFee'] = parseFloat(shippingFee) >= 0 ? parseFloat(shippingFee) : 0
       settings['freeShippingThreshold'] = parseFloat(freeShippingThreshold) >= 0 ? parseFloat(freeShippingThreshold) : 0
+      if (installmentSource === 'own' && !installmentTable.some(r => r.enabled)) {
+        throw new Error('Kendi taksit tablomuz seçiliyken en az bir taksit satırı aktif olmalı.')
+      }
+      settings['installmentSource'] = installmentSource
+      settings['installmentTable'] = installmentTable
+        .filter(r => r.enabled)
+        .map(r => ({ count: r.count, rate: parseFloat(r.rate) >= 0 ? parseFloat(r.rate) : 0 }))
       settings['cargoDispatchEnabled'] = cargoDispatch
       settings['customerCargoSelection'] = customerCargoSelection
       for (const f of schema) {
@@ -466,6 +490,60 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
         </p>
       </div>
 
+      {/* Taksit (kanal ayarı, 2026-09-10): müşteriye sunulan taksit tablosu — kaynak seçimi + kendi tablomuz */}
+      <div className="space-y-3 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Kredi Kartı Taksitleri</p>
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input type="radio" name="installment-source" className="mt-0.5 w-4 h-4 accent-[var(--brand)]"
+            checked={installmentSource === 'provider'} onChange={() => setInstallmentSource('provider')} />
+          <span className="text-sm" style={{ color: 'var(--text)' }}>Ödeme aracısının taksit tablosu (PayTR)
+            <span className="block text-xs" style={{ color: 'var(--text-s)' }}>Taksit seçenekleri ve vade farkı PayTR mağaza panelindeki oran tablosundan gelir; müşteri PayTR'nin vade farkını öder.</span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input type="radio" name="installment-source" className="mt-0.5 w-4 h-4 accent-[var(--brand)]"
+            checked={installmentSource === 'own'} onChange={() => setInstallmentSource('own')} />
+          <span className="text-sm" style={{ color: 'var(--text)' }}>Kendi taksit tablomuz (kanala özel)
+            <span className="block text-xs" style={{ color: 'var(--text-s)' }}>Müşteriye yansıyan vade farkı aşağıdaki tablodan hesaplanır; ödeme aracısının komisyonu bize kalır. PayTR panelinde taksit komisyonu &quot;mağazadan&quot; seçili olmalıdır.</span>
+          </span>
+        </label>
+        {installmentSource === 'own' && (
+          <div className="overflow-x-auto">
+            <table className="text-sm w-full" style={{ color: 'var(--text)' }}>
+              <thead>
+                <tr className="text-xs" style={{ color: 'var(--text-s)' }}>
+                  <th className="text-left py-1 pr-2">Aktif</th>
+                  <th className="text-left py-1 pr-2">Taksit</th>
+                  <th className="text-left py-1 pr-2">Vade farkı (%)</th>
+                  <th className="text-left py-1">1.000 TL için toplam</th>
+                </tr>
+              </thead>
+              <tbody>
+                {installmentTable.map((r, i) => (
+                  <tr key={r.count}>
+                    <td className="py-1 pr-2">
+                      <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={r.enabled}
+                        onChange={e => setInstallmentTable(t => t.map((x, j) => j === i ? { ...x, enabled: e.target.checked } : x))} />
+                    </td>
+                    <td className="py-1 pr-2">{r.count} taksit</td>
+                    <td className="py-1 pr-2">
+                      <input type="number" min="0" step="0.01" className="inp !w-28" value={r.rate} disabled={!r.enabled}
+                        onChange={e => setInstallmentTable(t => t.map((x, j) => j === i ? { ...x, rate: e.target.value } : x))} />
+                    </td>
+                    <td className="py-1" style={{ color: 'var(--text-s)' }}>
+                      {r.enabled ? `${(1000 * (1 + (parseFloat(r.rate) >= 0 ? parseFloat(r.rate) : 0) / 100)).toFixed(2)} TL` : '—'}
+                      {r.enabled && parseFloat(r.rate) === 0 && <span className="ml-1 text-xs">(vade farksız)</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+          Yalnız site ve mobil kart ödemelerinde uygulanır. Vade farkı faturada ürünlere yedirilmez, ürünlerin KDV oranına göre ayrı satır olarak yazılır; iadede ürünün vade farkı payı müşteriye ödenir.
+        </p>
+      </div>
       {/* Kargo ücreti (kanal ayarı, 2026-09-09) */}
       <div className="space-y-2 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
         <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Kargo Ücreti</p>

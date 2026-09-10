@@ -79,6 +79,12 @@ public class Order : AggregateRoot
     /// <summary>2026-09-09: kargo bedeli (KargoUcretiKurali ile sunucuda hesaplanır; 0 = ücretsiz).
     /// TotalExpense'ten AYRI tutulur — TotalExpense kapıda ödeme hizmet bedelidir.</summary>
     public decimal ShippingFee { get; set; }
+    /// <summary>2026-09-10 (kullanıcı kararı): kart taksit sayısı (1 = tek çekim) ve MÜŞTERİYE yansıtılan vade
+    /// farkı (kanalın kendi taksit tablosu, TaksitKurali). Ödeme başlatılırken yazılır, GrandTotal'a girer;
+    /// faturada ürünlere yedirilmez, KDV oranına göre ayrı satır(lar); iadede kalem payı müşteriye ödenir.
+    /// Aracının (PayTR) tablosu kullanılıyorsa 0 — vade farkını aracı kart toplamına ekler.</summary>
+    public int InstallmentCount { get; set; } = 1;
+    public decimal InstallmentFee { get; set; }
     public decimal TotalTax { get; set; }
     public decimal GrandTotal { get; set; }
 

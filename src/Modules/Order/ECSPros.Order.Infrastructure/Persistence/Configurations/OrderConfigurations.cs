@@ -30,6 +30,8 @@ public class OrderConfiguration : IEntityTypeConfiguration<Domain.Entities.Order
         builder.Property(x => x.TotalDiscount).HasPrecision(18, 2);
         builder.Property(x => x.TotalExpense).HasPrecision(18, 2);
         builder.Property(x => x.ShippingFee).HasPrecision(18, 2);
+        builder.Property(x => x.InstallmentFee).HasPrecision(18, 2);
+        builder.Property(x => x.InstallmentCount).HasDefaultValue(1);
         builder.Property(x => x.TotalTax).HasPrecision(18, 2);
         builder.Property(x => x.GrandTotal).HasPrecision(18, 2);
         builder.Property(x => x.PackingStationCode).HasMaxLength(50);

@@ -9,11 +9,19 @@ namespace ECSPros.Shared.Contracts;
 public record PaymentOptions(
     IReadOnlyList<string> EnabledMethods,
     decimal CodServiceFee,
-    decimal CodMaxOrderTotal)   // 0 = üst sınır yok
+    decimal CodMaxOrderTotal,   // 0 = üst sınır yok
+    // Taksit (2026-09-10, kullanıcı kararı): "installmentSource" = provider (ödeme aracısının tablosu,
+    // varsayılan — bugünkü davranış) | own (kanalın kendi tablosu "installmentTable": [{count, rate}]).
+    // Kendi tabloda müşteriye yansıyan vade farkı TaksitKurali ile hesaplanır; aracının komisyonu bize kalır.
+    string InstallmentSource = TaksitKurali.KaynakOdemeAracisi,
+    IReadOnlyList<TaksitTablosuSatiri>? InstallmentTable = null)
 {
     public static readonly IReadOnlyList<string> TumYontemler = ["kart", "kapida-nakit", "kapida-kart"];
 
     public bool YontemAcik(string yontem) => EnabledMethods.Contains(yontem);
+
+    /// <summary>Kanal kendi taksit tablosunu kullanıyor mu (aracının oranları yerine).</summary>
+    public bool KendiTaksitTablosu => InstallmentSource == TaksitKurali.KaynakKendiTablomuz;
 }
 
 public interface IPaymentOptionsProvider

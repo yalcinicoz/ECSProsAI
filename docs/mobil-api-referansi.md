@@ -208,7 +208,7 @@ anında, kartta ödeme onayında (PayTR callback / mock). Başarısız kart dene
 | POST | `/checkout/coupon/validate` | — | Kupon doğrula + indirim hesapla |
 | POST | `/checkout` | — | Siparişi tamamla (misafir de verebilir; üye token'ı varsa üyeye bağlanır) |
 | POST | `/payment/paytr/init` | — | Kart ödemesi başlat → **B6:** `{success:true, data:{html}}` (kök `html` eski web istemcisi için de durur); 3D HTML'i WebView'a basılır |
-| POST | `/payment/paytr/taksit` | — | BIN'e göre taksit seçenekleri `{taksitler:[{adet,birim,toplam}]}` |
+| POST | `/payment/paytr/taksit` | — | BIN'e göre taksit seçenekleri `{kaynak:"own"|"provider", taksitler:[{adet,birim,toplam,vadeFarki}]}` — **2026-09-10:** kanal ayarına göre kaynak **kendi tablomuz** (`own`: vade farkı bizim, `vadeFarki` TL) ya da PayTR tablosu (`provider`). Gövde `{bin, orderId?, tutar?, firmPlatformId?}` — sipariş yokken kanal `X-Firm-Platform` başlığından; `tutar` vade farkı HARİÇ baz tutardır. `birim` salt gösterim, tahsilat `toplam`. Seçilen `adet` `/payment/paytr/init` gövdesindeki `installment` alanıyla gider; `own` kanalda sunucu vade farkını siparişe yazar (GrandTotal artar, sipariş detayında `installmentCount`/`installmentFee`), tabloda olmayan adet 400 döner |
 
 Sipariş sonrası kupon kullanımı ve sözleşme versiyonları sunucu tarafında işlenir.
 TCKN eşiği (`Store:TcknThreshold`) üstü tutarlarda kimlik no zorunluluğu sunucu doğrular.

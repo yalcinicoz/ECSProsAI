@@ -12,6 +12,11 @@ public interface IProductService
     /// </summary>
     Task<Dictionary<Guid, VariantDisplayInfo>> GetVariantDisplayAsync(
         IReadOnlyCollection<Guid> variantIds, CancellationToken ct = default);
+
+    /// <summary>Varyantların KDV oranı (%; ürün TaxRate) — vade farkının KDV oranına göre dağıtımı için
+    /// (TaksitKurali.KdvSatirlari, 2026-09-10). Bulunamayan varyant sözlükte yer almaz.</summary>
+    Task<Dictionary<Guid, decimal>> GetVariantTaxRatesAsync(
+        IReadOnlyCollection<Guid> variantIds, CancellationToken ct = default);
 }
 
 public record ProductInfo(

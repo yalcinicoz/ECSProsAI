@@ -13,7 +13,8 @@ namespace ECSPros.Order.Application.Commands.CreateInvoice;
 /// </summary>
 public class CreateInvoiceCommandHandler(
     IOrderDbContext context,
-    IInvoiceNumberService numberService)
+    IInvoiceNumberService numberService,
+    ECSPros.Shared.Contracts.IProductService productService)
     : IRequestHandler<CreateInvoiceCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(CreateInvoiceCommand request, CancellationToken cancellationToken)
@@ -69,6 +70,32 @@ public class CreateInvoiceCommandHandler(
             TaxAmount = i.TaxAmount,
             Total = i.Total
         }).ToList();
+        // Vade farkı (2026-09-10, kullanıcı kararı): ürünlere YEDİRİLMEZ; ürünlerin KDV oranlarına göre
+        // oranlanır ve oran başına ayrı "Vade Farkı" satırı yazılır (TaksitKurali.KdvSatirlari — tek kural).
+        // Paket faturasında bu faturanın kalemlerinin payı kadar (kalem tutarı oranında) düşer.
+        if (order.InstallmentFee > 0 && order.Items.Count > 0)
+        {
+            var faturaKalemleri = request.PackageId is null
+                ? order.Items.ToList()
+                : order.Items.ToList(); // paket-kalem eşlemesi fatura komutunda yok; tüm kalemler (tek fatura varsayımı)
+            var oranlar = await productService.GetVariantTaxRatesAsync(
+                faturaKalemleri.Select(i => i.VariantId).Distinct().ToList(), cancellationToken);
+            var kdvSatirlari = ECSPros.Shared.Contracts.TaksitKurali.KdvSatirlari(
+                order.InstallmentFee,
+                faturaKalemleri.Select(i => (i.Total, oranlar.GetValueOrDefault(i.VariantId, 20m))));
+            foreach (var s in kdvSatirlari)
+                items.Add(new InvoiceItem
+                {
+                    OrderItemId = null,
+                    Description = $"Vade Farkı ({order.InstallmentCount} Taksit, %{s.KdvOrani:0.##} KDV)",
+                    Quantity = 1,
+                    UnitPrice = s.Brut,
+                    DiscountAmount = 0,
+                    TaxRate = s.KdvOrani,
+                    TaxAmount = s.Kdv,
+                    Total = s.Brut
+                });
+        }
 
         await using var tx = await context.BeginTransactionAsync(cancellationToken);
         var no = await numberService.AllocateAsync(series.Id, series.Serial, invoiceDateUtc, cancellationToken);

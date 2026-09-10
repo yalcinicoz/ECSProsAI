@@ -28,6 +28,17 @@ public class CatalogProductService(ICatalogDbContext db) : IProductService
     public Task<bool> VariantExistsAsync(Guid variantId, CancellationToken ct = default) =>
         db.ProductVariants.AsNoTracking().AnyAsync(v => v.Id == variantId, ct);
 
+    public async Task<Dictionary<Guid, decimal>> GetVariantTaxRatesAsync(
+        IReadOnlyCollection<Guid> variantIds, CancellationToken ct = default)
+    {
+        if (variantIds.Count == 0) return new Dictionary<Guid, decimal>();
+        var ids = variantIds.Distinct().ToList();
+        return await db.ProductVariants.AsNoTracking()
+            .Where(v => ids.Contains(v.Id))
+            .Select(v => new { v.Id, v.Product.TaxRate })
+            .ToDictionaryAsync(x => x.Id, x => (decimal)x.TaxRate, ct);
+    }
+
     public async Task<Dictionary<Guid, VariantDisplayInfo>> GetVariantDisplayAsync(
         IReadOnlyCollection<Guid> variantIds, CancellationToken ct = default)
     {
