@@ -943,6 +943,8 @@ public static class DatabaseSeeder
             ("legacy_disliked", "Beğenmedim (Eski Sistem)", "Disliked (Legacy)", 902),
             ("legacy_size", "Beden (Eski Sistem)", "Size (Legacy)", 903),
             ("legacy_not_delivered", "Teslim Edilmedi (Eski Sistem)", "Not Delivered (Legacy)", 904),
+            ("legacy_defective", "Defo (Eski Sistem)", "Defective (Legacy)", 905),      // dfiadenedenleri 4 (2026-09-10)
+            ("legacy_low_quality", "Kalitesiz (Eski Sistem)", "Low Quality (Legacy)", 906), // dfiadenedenleri 5
             ("legacy_unknown", "Bilinmeyen (Eski Sistem)", "Unknown (Legacy)", 999)
         };
         var legacyCodes = legacyReasons.Select(x => x.Code).ToArray();

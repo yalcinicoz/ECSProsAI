@@ -2,6 +2,7 @@ using ECSPros.Api.Services.LegacyImport;
 using ECSPros.Crm.Infrastructure.Persistence;
 using ECSPros.Integration.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MySql.Data.MySqlClient;
 using Npgsql;
@@ -785,6 +786,58 @@ public sealed class LegacyReadImportAcceptanceTests
         await using var reader = await command.ExecuteReaderAsync();
         Assert.IsTrue(await reader.ReadAsync());
         return string.Join('|', Enumerable.Range(0, 10).Select(reader.GetInt64));
+    }
+
+    /// <summary>İade planı legacy düzeltmesi (2026-09-10): canlı iade senkronunun dry-run'ı — eskiye bağlı siparişlerin
+    /// opiadesiparisler kayıtları yeni sözlükle hazırlanır (undelivered/customer, refunded/received/closed), hedef değişmez.</summary>
+    [TestMethod]
+    public async Task LegacyIadeSenkron_DryRun_BagliSiparislerinIadeleriniSozlukleHazirlar()
+    {
+        var legacyConnection = AcceptanceTestEnvironment.Require(
+            "ECSPROS_ACCEPTANCE_LEGACY_READ", "LegacyReadImport:ConnectionString", "legacy MySQL SELECT-only bağlantısı");
+        var targetConnection = AcceptanceTestEnvironment.Require(
+            "ECSPROS_ACCEPTANCE_ERP_TARGET", "ConnectionStrings:DefaultConnection", "hedef PostgreSQL bağlantısı");
+        var options = new LegacyReadImportOptions { ConnectionString = legacyConnection, DryRun = true };
+        await using var dataSource = new NpgsqlDataSourceBuilder(targetConnection).EnableDynamicJson().Build();
+        var source = new MySqlLegacyReadSource(options);
+        var satirlar = new List<string>();
+        var slice = new LegacyReturnImportSlice(
+            new LegacyReturnReader(source), dataSource, new DryRunCheckpointStore(), options,
+            new ListeLogger<LegacyReturnImportSlice>(satirlar));
+
+        var bagli = new List<int>();
+        await using (var connection = new NpgsqlConnection(targetConnection))
+        {
+            await connection.OpenAsync();
+            await using var command = new NpgsqlCommand(
+                """SELECT "LegacyOrderId" FROM "order".ord_orders WHERE "LegacyOrderId" IS NOT NULL AND NOT "IsDeleted" LIMIT 2000""", connection);
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync()) bagli.Add(reader.GetInt32(0));
+        }
+
+        var snapshot = await new LegacyReturnReader(source).ReadForOrdersAsync(bagli, CancellationToken.None);
+        var before = await TargetCommerceFingerprintAsync(targetConnection);
+        var report = await slice.ImportForOrdersAsync(bagli, dryRun: true, CancellationToken.None);
+        var after = await TargetCommerceFingerprintAsync(targetConnection);
+
+        Assert.IsTrue(report.DryRun);
+        Assert.IsTrue(report.Success, report.Error);
+        Assert.AreEqual(before, after, "İade senkron dry-run hedef PostgreSQL'i değiştirdi.");
+        Assert.IsTrue(snapshot.Returns.All(r => LegacyReturnMappings.ReturnType(r.RawType) is "undelivered" or "customer"),
+            "Bağlı siparişlerde bilinmeyen iadeTipi var.");
+        TestContext.WriteLine(
+            $"bagliSiparis={bagli.Count}; kaynakIade={snapshot.Returns.Count} (teslimatsiz={snapshot.Returns.Count(r => r.RawType == 1)}, " +
+            $"musteri={snapshot.Returns.Count(r => r.RawType == 2)}); uyeyeOdenen={snapshot.Returns.Count(r => r.PaidToMemberAmount > 0)}; " +
+            $"hazirlanan={report.Changed}; atlanan={report.Skipped}; engel={report.Error ?? "-"}");
+        foreach (var satir in satirlar) TestContext.WriteLine(satir);
+    }
+
+    private sealed class ListeLogger<T>(List<string> hedef) : ILogger<T>
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            => hedef.Add($"[{logLevel}] {formatter(state, exception)}");
     }
 
     private sealed class DryRunCheckpointStore : ILegacyImportCheckpointStore

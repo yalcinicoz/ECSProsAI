@@ -238,15 +238,37 @@ kırpılır. K6 → `MarkDeliveredCommandHandler` kapıda ödemede `Tahsilat.Kay
 | F4 | ✅ | Panel: sipariş detayı "Teslimatsız İade" butonu+modal, iade detayı tip rozeti / Geri Ödeme kartı (kilit+neden / üst sınır) / tutar sınırı, iade listesi tip+geri ödeme filtreleri sözlükten, "Kapanan" sekmesi; `CreateReturn` yalnız delivered |
 | F5 | ✅ | Vitrin: `returned` "Teslim Edilemedi"; İadelerim'de teslimatsız satır (tip rozeti, "Ödeme iadesi: Bulunmuyor", bilgi metinleri, `closed`); `GET /api/store/lookups` `returnType` ailesi; rehber `20-iadeler.md` + `11-siparis-detay.md`; testler `IadeOdemeKuraliTests` (kural R7-R10, domain R2-R4, sözlük) |
 
-**Bilinen sınırlar:** legacy senkron/aktarım (§5) hâlâ `returned`/`legacy_type_N` yazabilir — sonraki iş. Pazaryeri iade senkronu ve
-iade faturası (FE5) kapsam dışı. Toplama planı satırlarının iptali v1'de yalnız uyarı notu (K4). Teslimatsız iade kapıda ödemeli
+**Bilinen sınırlar:** Pazaryeri iade senkronu ve iade faturası (FE5) kapsam dışı. Toplama planı satırlarının iptali v1'de yalnız uyarı notu (K4). Teslimatsız iade kapıda ödemeli
 misafir siparişinde `Return.MemberId = Guid.Empty` (push gitmez, panelde görünür).
+
+### 6.1 Eski sistem senkron/aktarım düzeltmesi (2026-09-10, kullanıcı: "aynı mantık orda da var, düzelt")
+
+**Eski veri incelemesi (ECSGYE kaynak kodu + canlı MySQL profili, 173K iade):**
+
+| Eski alan | Anlamı | Hedef |
+|-----------|--------|-------|
+| `opiadesiparisler.iadeTipi` | 1 = TeslimatsizIade (sipariş bütünü, kalem nedeni 9, sipariş "Teslim Edilemeden İade Geldi", `iadeTutari` = ödenmiş tahsilat toplamı); 2 = SiparisUrunIade (kalem bazlı, sipariş durumu değişmez) | `undelivered` / `customer` (R1 ile birebir) |
+| `durumu`, `uyeyeOdenenTutar`, `uyeyeOdemeTarihi`, `uyeyeOdemeTipi` | Eski kod hiç yazmıyor (tümü 0/NULL/1) | KULLANILMAZ |
+| `webuyeparalari` (iadeSiparislerId) | musteriIstegi=2 para iadesi alacağı (odemeTarihi dolu = üyeye ödendi); musteriIstegi=1 Değişim (bakiye) | ödendi → `refunded`/completed; alacak var → `received`/pending; yoksa `IadeOdemeKurali` → `received` ya da `closed`/not_applicable |
+| `dfplatforms.iadeOdemesiYap=0` (pazaryerleri) | Üyeye ödeme satırı hiç açılmaz | R10 ile aynı (kural kanal tipinden) |
+| `dfiadenedenleri` | 1 Belirsiz, 2 Beğenmedim, 3 Beden, 4 Defo, 5 Kalitesiz, 9 Teslim Edilmedi | legacy_* (4/5 eklendi); tip 1 kalemleri sistem nedeni "Teslim Edilemedi" |
+| `oporders.paymentTypeId` | 1 kart, 2 kapıda nakit, 3 kapıda kart | hedef siparişte PaymentMethod boşsa buradan (kural + geri ödeme yöntemi) |
+
+**Kod:** `LegacyReturnMappings` (sözlük + `Durum` türetimi, TEK yer), `LegacyReturnReader` (webuyeparalari toplamları,
+`barcode`, sipariş filtresi), `LegacyReturnImportSlice` (hedef sipariş tahsilatı + kanal tipi ile `IadeOdemeKurali`; kalem
+eşleşmesi LegacyOrderLineId yoksa varyant barkoduyla — outbox siparişleri; teslimatsız iadede üst/kalem tutar denetimi
+yok çünkü üst tutar tahsilattır; yeni `ImportForOrdersAsync`), `LegacyOrderSyncService.SyncReturnsAsync` (bağlı
+siparişlerin iadeleri her turda; `Legacy:Sync:Returns`, dry-run `Legacy:Sync:OrderDryRun`), durum senkronunda `returned`
+→ gönderi `returned_to_sender`, `LegacyOrderImportSlice` ödeme yöntemi `card`→`kart`, Core migration
+`SeedLegacyReturnReasons`. Okuma kaynağı yoksa `Legacy:MySqlConnection`'a düşer (oturum READ ONLY).
+Canlı dry-run (56 bağlı sipariş): 10 iade hazır (8 teslimatsız: 5 refunded, 3 kapıda-tahsilatsız closed; 2 müşteri: refunded), 0 engel.
+Legacy iade nedenleri `core_return_reasons`'ta (lookup değil) → panel neden adı "—" gösterir (bilinen sınır).
 
 ---
 
 ## 5. Kapsam Dışı
 
-- Legacy senkron/aktarım eşlemeleri (sonraki iş).
+- ~~Legacy senkron/aktarım eşlemeleri (sonraki iş).~~ → §6.1 ile yapıldı (2026-09-10).
 - Pazaryeri iade senkronu (pazaryeri modülü).
 - İade faturası üretimi (fatura entegrasyon planı FE5).
 - Kısmi (paket bazlı) teslimatsız iade (K1 v2).

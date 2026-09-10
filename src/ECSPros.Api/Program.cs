@@ -538,6 +538,12 @@ if (string.IsNullOrWhiteSpace(legacyReadImportOptions.ConnectionString))
     legacyReadImportOptions.ConnectionString =
         builder.Configuration.GetConnectionString("LegacyReadImport") ?? string.Empty;
 }
+// İade planı (2026-09-10): canlı iade senkronu (LegacyOrderSyncService.SyncReturnsAsync) aynı okuma kaynağını
+// kullanır; ayrı SELECT-only bağlantı verilmemişse Legacy:MySqlConnection'a düşer — MySqlLegacyReadSource oturumu
+// yine SET SESSION TRANSACTION READ ONLY + rollback ile yalnız okur. Import worker'ı Enabled bayrağına bağlıdır, bu
+// bağlantıyla kendiliğinden açılmaz.
+if (string.IsNullOrWhiteSpace(legacyReadImportOptions.ConnectionString))
+    legacyReadImportOptions.ConnectionString = builder.Configuration["Legacy:MySqlConnection"] ?? string.Empty;
 legacyReadImportOptions.Validate();
 builder.Services.AddSingleton(legacyReadImportOptions);
 builder.Services.AddSingleton<ECSPros.Api.Services.LegacyImport.ILegacyReadSource,

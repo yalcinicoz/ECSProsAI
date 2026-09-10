@@ -30,7 +30,8 @@ public sealed class LegacyOrderSyncService(
     NpgsqlDataSource dataSource,
     IConfiguration config,
     IHttpClientFactory httpClientFactory,
-    ILogger<LegacyOrderSyncService> logger)
+    ILogger<LegacyOrderSyncService> logger,
+    IServiceScopeFactory scopeFactory)
 {
     private string MySqlConn => config["Legacy:MySqlConnection"] ?? "";
     // DİKKAT: B dilimlerinin Legacy:Sync:DryRun bayrağından BAĞIMSIZ — canlıda katalog
@@ -287,6 +288,57 @@ public sealed class LegacyOrderSyncService(
     private static readonly Dictionary<string, int> YeniDurumSirasi = new()
     { ["pending"] = 0, ["confirmed"] = 1, ["processing"] = 2, ["shipped"] = 3, ["delivered"] = 4 };
 
+    /// <summary>
+    /// İade senkronu (2026-09-10, İade akışı planı legacy düzeltmesi): eski panelde açılan iadeler
+    /// (opiadesiparisler; 1 = Teslimatsız İade, 2 = Müşteri İadesi) eskiye bağlı siparişler için yeni sisteme
+    /// LegacyReturnId ile yazılır — sözlük ve geri ödeme kuralı LegacyReturnImportSlice/LegacyReturnMappings'te
+    /// (go-live tam importuyla AYNI kod). Müşteri iadesi sipariş durumunu değiştirmediğinden durum senkronu bunu
+    /// göremezdi; bu adım tüm bağlı siparişleri tarar. Okuma READ ONLY MySQL oturumuyla (LegacyReadImport kaynağı;
+    /// bağlantı verilmemişse Legacy:MySqlConnection'a düşer). Legacy:Sync:Returns=false ile kapatılır.
+    /// </summary>
+    public async Task<LegacySyncService.Report> SyncReturnsAsync(CancellationToken ct)
+    {
+        var t0 = DateTime.UtcNow;
+        try
+        {
+            if (!config.GetValue("Legacy:Sync:Returns", true))
+                return new(true, DryRun, "order-returns", 0, "Legacy:Sync:Returns kapalı.", null, Ms(t0));
+
+            using var scope = scopeFactory.CreateScope();
+            var kaynak = scope.ServiceProvider.GetRequiredService<LegacyImport.ILegacyReadSource>();
+            if (!kaynak.IsConfigured)
+                return new(true, DryRun, "order-returns", 0, "Legacy okuma bağlantısı yok — iade senkronu atlandı.", null, Ms(t0));
+            var dilim = scope.ServiceProvider.GetServices<LegacyImport.ILegacyCommerceImportSlice>()
+                .OfType<LegacyImport.LegacyReturnImportSlice>().FirstOrDefault();
+            if (dilim is null)
+                return new(false, DryRun, "order-returns", 0, "", "LegacyReturnImportSlice kayıtlı değil.", Ms(t0));
+
+            var bagliIdler = new List<int>();
+            await using (var pg = await dataSource.OpenConnectionAsync(ct))
+            await using (var cmd = new NpgsqlCommand("""
+                SELECT "LegacyOrderId" FROM "order".ord_orders
+                WHERE "LegacyOrderId" IS NOT NULL AND NOT "IsDeleted"
+                ORDER BY "CreatedAt" DESC
+                LIMIT 2000
+                """, pg))
+            await using (var r = await cmd.ExecuteReaderAsync(ct))
+                while (await r.ReadAsync(ct)) bagliIdler.Add(r.GetInt32(0));
+
+            if (bagliIdler.Count == 0)
+                return new(true, DryRun, "order-returns", 0, "Eskiye bağlı sipariş yok.", null, Ms(t0));
+
+            var rapor = await dilim.ImportForOrdersAsync(bagliIdler, DryRun, ct);
+            var detay = $"bağlı sipariş={bagliIdler.Count}; yazılan/değişen={rapor.Changed}; atlanan iade={rapor.Skipped}"
+                + (rapor.Error is null ? "" : $"; engeller: {rapor.Error}");
+            return new(rapor.Success, DryRun, "order-returns", rapor.Changed, detay, rapor.Success ? null : rapor.Error, Ms(t0));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Legacy iade senkron dilimi hatası");
+            return new(false, DryRun, "order-returns", 0, "", ex.Message, Ms(t0));
+        }
+    }
+
     public async Task<LegacySyncService.Report> SyncOrderStatusAsync(CancellationToken ct)
     {
         var t0 = DateTime.UtcNow;
@@ -394,6 +446,19 @@ public sealed class LegacyOrderSyncService(
             cmd.Parameters.AddWithValue("inv", (object?)e.faturaNo ?? DBNull.Value);
             cmd.Parameters.AddWithValue("id", orderId);
             await cmd.ExecuteNonQueryAsync(ct);
+        }
+
+        // İade planı (2026-09-10): "Teslim Edilemeden İade Geldi" → gönderi returned_to_sender (MarkUndeliveredReturn
+        // ile aynı iz). İade KAYDI ayrı adımda (SyncReturnsAsync) eski opiadesiparisler'den LegacyReturnId ile açılır.
+        if (yeniDurum == "returned")
+        {
+            await using var geri = new NpgsqlCommand("""
+                UPDATE "order".ord_shipments SET
+                    "Status" = 'returned_to_sender', "ReturnedAt" = COALESCE("ReturnedAt", now()), "UpdatedAt" = now()
+                WHERE "OrderId" = @oid AND "Status" = 'shipped' AND NOT "IsDeleted"
+                """, pg, tx);
+            geri.Parameters.AddWithValue("oid", orderId);
+            await geri.ExecuteNonQueryAsync(ct);
         }
 
         // Kargoya verildi/teslim: müşteri takip modalı ord_shipments'tan okur — eski kargo

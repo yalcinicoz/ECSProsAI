@@ -86,6 +86,9 @@ public sealed class LegacySyncWorker(
                         // F2: eskiye bağlanmış açık siparişlerin durum + kargo bilgisi geri çekilir
                         // (aynı kadans; LegacyOrderId'li sipariş yokken maliyeti tek SELECT).
                         await RaporlaAsync(await orderSync.SyncOrderStatusAsync(stoppingToken), stoppingToken);
+                        // İade planı (2026-09-10): eski panelde açılan iadeler (teslimatsız + müşteri) yeni sisteme
+                        // LegacyReturnId ile yazılır; aynı kadans, bağlı sipariş yokken maliyeti tek SELECT.
+                        await RaporlaAsync(await orderSync.SyncReturnsAsync(stoppingToken), stoppingToken);
                     }
                 }
             }

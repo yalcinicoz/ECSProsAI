@@ -720,9 +720,11 @@ public sealed class LegacyOrderImportSlice(
         _ => null
     };
 
+    // Order.PaymentMethod sözlüğü: kart | kapida-nakit | kapida-kart (DurumEtiketleri.OdemeYontemi; "card" değil —
+    // İade planı IadeOdemeKurali.KapidaOdeme/ReturnConstants.RefundMethodFor bu kodları okur).
     private static string? PaymentMethodValue(int sourceId) => sourceId switch
     {
-        1 => "card",
+        1 => "kart",
         2 => "kapida-nakit",
         3 => "kapida-kart",
         _ => null

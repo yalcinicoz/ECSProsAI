@@ -3333,7 +3333,10 @@ yok. Secret'lar repository dışında tutuluyor; GitHub'a gönderim yapılmadı.
 Migration'lar canlı + demo DB'ye uygulandı (`AddReturnFlowFields` eklemeli; Core `SeedUndeliveredReturnReason` veri). Yeni uç
 `POST /api/orders/{id}/undelivered-return`; `IadeOdemeKurali` TEK kural (Shared.Contracts); PayTR/mock/teslimde-tahsilat artık
 `ord_order_payments` satırı yazıyor (eski siparişler `PaymentStatus=paid` → GrandTotal ile uyumlu). Panel/vitrin/rehber/testler
-tamam (§6 planda). ★ AÇIK: legacy senkron `returned` yazımı + `legacy_type_N` sözlüğe çekme — ayrı iş. Önceki plan özeti:
+tamam (§6 planda). **Legacy senkron/aktarım da düzeltildi (§6.1):** iadeTipi 1/2 → undelivered/customer (eski kaynak koddan
+doğrulandı), üyeye ödeme `webuyeparalari`'ndan, geri ödeme uygunluğu aynı `IadeOdemeKurali`; yeni `SyncReturnsAsync` bağlı
+siparişlerin eski iadelerini her turda LegacyReturnId ile yazar (canlı dry-run 10/10 hazır, 0 engel; gerçek yazım restart sonrası
+`Legacy:Sync:OrderDryRun=false` ile); durum senkronu `returned`'da gönderiyi returned_to_sender yapar. Önceki plan özeti:
 `docs/iade-akisi-plani.md`. Kullanıcı kuralları (R1-R10): iki iade tipi — Teslimatsız İade (kargoya verilmiş
 ya da faturalı-kargosuz sipariş; tek sipariş iade durumu `returned`) ve Müşteri İadesi (sipariş durumunu
 DEĞİŞTİRMEZ); fatura öncesi yalnız İptal; para iadesi YALNIZ tahsilat varsa (teslimsiz kapıda ödeme → asla),

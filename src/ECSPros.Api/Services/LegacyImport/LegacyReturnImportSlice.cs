@@ -1,4 +1,6 @@
 using System.Text.Json;
+using ECSPros.Order.Domain.Entities;
+using ECSPros.Shared.Contracts;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -6,7 +8,11 @@ namespace ECSPros.Api.Services.LegacyImport;
 
 /// <summary>
 /// Legacy iadeleri tarihsel snapshot olarak yazar. Domain event, stok iadesi ve gerçek para iadesi üretmez.
-/// Eksik sipariş/satır/neden eşlemesinde bütün dilim transaction öncesinde durur.
+/// Tam import (<see cref="RunAsync"/>): eksik sipariş/satır/neden eşlemesinde bütün dilim transaction öncesinde durur.
+/// Canlı senkron (<see cref="ImportForOrdersAsync"/>, 2026-09-10): eskiye bağlı siparişlerin iadeleri; hatalı iade
+/// atlanır, diğerleri yazılır, checkpoint tutulmaz.
+/// Sözlük eşlemesi <see cref="LegacyReturnMappings"/> (iadeTipi 1/2 → undelivered/customer, üyeye ödeme →
+/// refunded/received/closed, geri ödeme uygunluğu <see cref="IadeOdemeKurali"/> ile hedef siparişin tahsilatından).
 /// </summary>
 public sealed class LegacyReturnImportSlice(
     ILegacyReturnReader reader,
@@ -36,22 +42,7 @@ public sealed class LegacyReturnImportSlice(
             var potentialChanged = prepared.Sum(x => 1 + x.Items.Count);
             if (options.DryRun) return new(Slice, true, true, potentialChanged, 0);
 
-            var changed = 0;
-            await using var transaction = await connection.BeginTransactionAsync(ct);
-            try
-            {
-                foreach (var item in prepared)
-                {
-                    changed += await UpsertReturnAsync(connection, transaction, item, ct);
-                    changed += await ReconcileItemsAsync(connection, transaction, item, ct);
-                }
-                await transaction.CommitAsync(ct);
-            }
-            catch
-            {
-                await transaction.RollbackAsync(CancellationToken.None);
-                throw;
-            }
+            var changed = await WriteAsync(connection, prepared, ct);
 
             var watermark = snapshot.Returns.Select(x => x.CreatedAt ?? x.ReturnDate)
                 .Concat(snapshot.Logs.Select(x => x.CreatedAt)).Where(x => x.HasValue)
@@ -76,6 +67,65 @@ public sealed class LegacyReturnImportSlice(
 
     private LegacyImportSliceReport Fail(string error, int skipped) => new(Slice, false, options.DryRun, 0, skipped, error);
 
+    /// <summary>
+    /// Canlı senkron (LegacyOrderSyncService): eskiye bağlı siparişlerin iadelerini eski sistemden okuyup hedefe yazar.
+    /// Tam importtan farkı: bir iadenin eşleme hatası yalnız o iadeyi atlar (log + rapor), diğerleri yazılır;
+    /// checkpoint tutulmaz. <paramref name="dryRun"/> true ise yalnız rapor.
+    /// </summary>
+    public async Task<LegacyImportSliceReport> ImportForOrdersAsync(
+        IReadOnlyCollection<int> legacyOrderIds, bool dryRun, CancellationToken ct)
+    {
+        if (legacyOrderIds.Count == 0) return new(Slice, true, dryRun, 0, 0);
+        var snapshot = await reader.ReadForOrdersAsync(legacyOrderIds, ct);
+        if (snapshot.Returns.Count == 0) return new(Slice, true, dryRun, 0, 0);
+
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
+        var references = await LoadReferencesAsync(connection, snapshot, ct);
+        var (prepared, errors) = Prepare(snapshot, references);
+        foreach (var error in errors.Take(20)) logger.LogWarning("Legacy iade senkron engeli (iade atlandı): {Error}", error);
+        if (dryRun)
+        {
+            foreach (var x in prepared)
+                logger.LogInformation(
+                    "Legacy iade DRY-RUN {Number}: siparis={LegacyOrderId} tip={Type} durum={Status} geriOdeme={RefundStatus}{Reason} tutar={Amount} yontem={Method} kalem={Items}",
+                    x.Number, x.Source.OrderId, LegacyReturnMappings.ReturnType(x.Source.RawType), x.Hedef.Status, x.Hedef.RefundStatus,
+                    x.Hedef.RefundNotApplicableReason is null ? "" : $"/{x.Hedef.RefundNotApplicableReason}", x.RefundAmount, x.RefundMethod, x.Items.Count);
+            return new(Slice, true, true, prepared.Sum(x => 1 + x.Items.Count), errors.Count,
+                errors.Count == 0 ? null : string.Join(" | ", errors.Take(5)));
+        }
+
+        var changed = await WriteAsync(connection, prepared, ct);
+        return new(Slice, true, false, changed, errors.Count, errors.Count == 0 ? null : string.Join(" | ", errors.Take(5)));
+    }
+
+    private static async Task<int> WriteAsync(NpgsqlConnection connection, List<PreparedReturn> prepared, CancellationToken ct)
+    {
+        var changed = 0;
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+        try
+        {
+            foreach (var item in prepared)
+            {
+                changed += await UpsertReturnAsync(connection, transaction, item, ct);
+                changed += await ReconcileItemsAsync(connection, transaction, item, ct);
+                // Barkodla eşleşen kalemlere eski satır Id'si işlenir — sonraki turlar ve diğer dilimler doğrudan bulur.
+                foreach (var ri in item.Items.Where(x => x.MatchedByBarcode))
+                    await ExecuteAsync(connection, transaction, """
+                        UPDATE "order".ord_order_items SET "LegacyOrderLineId"=@lineId
+                         WHERE "Id"=@id AND "LegacyOrderLineId" IS NULL
+                           AND NOT EXISTS (SELECT 1 FROM "order".ord_order_items x WHERE x."LegacyOrderLineId"=@lineId)
+                        """, ct, ("id", ri.OrderItem.Id), ("lineId", ri.Source.OrderLineId));
+            }
+            await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+        return changed;
+    }
+
     private static async Task<TargetReferences> LoadReferencesAsync(
         NpgsqlConnection connection, LegacyReturnSnapshot snapshot, CancellationToken ct)
     {
@@ -84,14 +134,26 @@ public sealed class LegacyReturnImportSlice(
         if (orderIds.Length > 0)
         {
             await using var command = connection.CreateCommand();
+            // İade planı §2.5: geri ödeme uygunluğu hedef siparişin TAHSİLATINDAN (tamamlanmış ödeme satırları; eski
+            // siparişlerde satır yoksa PaymentStatus=paid → GrandTotal) ve kanal tipinden (pazaryeri) hesaplanır.
             command.CommandText = """
-                SELECT "Id","LegacyOrderId","MemberId" FROM "order".ord_orders
-                 WHERE "LegacyOrderId"=ANY(@ids) AND NOT "IsDeleted"
+                SELECT o."Id",o."LegacyOrderId",o."MemberId",o."PaymentMethod",o."PaymentStatus",o."GrandTotal",o."Status",
+                       COALESCE((SELECT SUM(p."Amount") FROM "order".ord_order_payments p
+                                  WHERE p."OrderId"=o."Id" AND p."Status"='completed' AND NOT p."IsDeleted"),0),
+                       COALESCE((SELECT pt."IsMarketplace" FROM core.core_firm_platforms fp
+                                   JOIN core.core_platform_types pt ON pt."Id"=fp."PlatformTypeId"
+                                  WHERE fp."Id"=o."FirmPlatformId"),false)
+                  FROM "order".ord_orders o
+                 WHERE o."LegacyOrderId"=ANY(@ids) AND NOT o."IsDeleted"
                 """;
             command.Parameters.AddWithValue("ids", orderIds);
             await using var dbReader = await command.ExecuteReaderAsync(ct);
             while (await dbReader.ReadAsync(ct))
-                orders[dbReader.GetInt32(1)] = new(dbReader.GetGuid(0), dbReader.GetInt32(1), dbReader.IsDBNull(2) ? null : dbReader.GetGuid(2));
+                orders[dbReader.GetInt32(1)] = new(
+                    dbReader.GetGuid(0), dbReader.GetInt32(1), dbReader.IsDBNull(2) ? null : dbReader.GetGuid(2),
+                    dbReader.IsDBNull(3) ? null : dbReader.GetString(3), dbReader.IsDBNull(4) ? "" : dbReader.GetString(4),
+                    dbReader.GetDecimal(5), dbReader.IsDBNull(6) ? "" : dbReader.GetString(6),
+                    dbReader.GetDecimal(7), dbReader.GetBoolean(8));
         }
 
         var lineIds = snapshot.Items.Select(x => x.OrderLineId).Distinct().ToArray();
@@ -109,6 +171,30 @@ public sealed class LegacyReturnImportSlice(
             while (await dbReader.ReadAsync(ct))
                 orderItems[dbReader.GetInt32(1)] = new(
                     dbReader.GetGuid(0), dbReader.GetInt32(1), dbReader.GetGuid(2), dbReader.GetGuid(3), dbReader.GetInt32(4));
+        }
+
+        // Outbox'la eskiye yazılmış siparişlerin kalemlerinde LegacyOrderLineId yok → varyant barkoduyla eşleme
+        // (LegacyOrderSyncService ile aynı anahtar: Barcode ?? Sku ?? item.Sku).
+        var itemsByBarcode = new Dictionary<(Guid OrderId, string Barcode), TargetOrderItem>();
+        if (orders.Count > 0)
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                SELECT i."Id",i."LegacyOrderLineId",i."OrderId",i."VariantId",i."Quantity",
+                       COALESCE(NULLIF(v."Barcode",''), NULLIF(v."Sku",''), i."Sku")
+                  FROM "order".ord_order_items i
+                  LEFT JOIN catalog.product_variants v ON v."Id"=i."VariantId"
+                 WHERE i."OrderId"=ANY(@ids) AND NOT i."IsDeleted"
+                """;
+            command.Parameters.AddWithValue("ids", orders.Values.Select(x => x.Id).ToArray());
+            await using var dbReader = await command.ExecuteReaderAsync(ct);
+            while (await dbReader.ReadAsync(ct))
+            {
+                var barkod = dbReader.IsDBNull(5) ? "" : dbReader.GetString(5).Trim();
+                if (barkod.Length == 0) continue;
+                itemsByBarcode.TryAdd((dbReader.GetGuid(2), barkod), new(
+                    dbReader.GetGuid(0), dbReader.IsDBNull(1) ? 0 : dbReader.GetInt32(1), dbReader.GetGuid(2), dbReader.GetGuid(3), dbReader.GetInt32(4)));
+            }
         }
 
         var reasons = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
@@ -144,7 +230,7 @@ public sealed class LegacyReturnImportSlice(
                 if (!row.IsDeleted) numberOwners.TryAdd(row.ReturnNumber, row);
             }
         }
-        return new(orders, orderItems, reasons, existing, numberOwners);
+        return new(orders, orderItems, itemsByBarcode, reasons, existing, numberOwners);
     }
 
     private (List<PreparedReturn> Prepared, List<string> Errors) Prepare(
@@ -157,19 +243,25 @@ public sealed class LegacyReturnImportSlice(
         foreach (var source in snapshot.Returns)
         {
             var rowErrors = new List<string>();
+            // Misafir siparişinde MemberId yok → Return.MemberId=Guid.Empty (MarkUndeliveredReturn ile aynı kural).
             if (!references.Orders.TryGetValue(source.OrderId, out var order))
                 rowErrors.Add($"iade {source.Id}: legacy sipariş {source.OrderId} hedefte yok");
-            else if (!order.MemberId.HasValue)
-                rowErrors.Add($"iade {source.Id}: hedef siparişin üyesi yok");
             items.TryGetValue(source.Id, out var sourceItems); sourceItems ??= [];
             if (sourceItems.Count == 0) rowErrors.Add($"iade {source.Id}: kaynak kalemi yok");
             var resolved = new List<PreparedReturnItem>();
             foreach (var sourceItem in sourceItems)
             {
+                var barkodlaEslesti = false;
                 if (!references.OrderItems.TryGetValue(sourceItem.OrderLineId, out var orderItem))
                 {
-                    rowErrors.Add($"iade {source.Id}: legacy sipariş satırı {sourceItem.OrderLineId} hedefte yok");
-                    continue;
+                    if (order is not null && sourceItem.Barcode.Length > 0
+                        && references.OrderItemsByBarcode.TryGetValue((order.Id, sourceItem.Barcode.Trim()), out orderItem))
+                        barkodlaEslesti = true;
+                    else
+                    {
+                        rowErrors.Add($"iade {source.Id}: legacy sipariş satırı {sourceItem.OrderLineId} hedefte yok");
+                        continue;
+                    }
                 }
                 if (order is not null && orderItem.OrderId != order.Id)
                 {
@@ -181,13 +273,21 @@ public sealed class LegacyReturnImportSlice(
                     rowErrors.Add($"iade {source.Id}: kalem {sourceItem.Id} miktarı uyuşmuyor");
                     continue;
                 }
-                var reasonCode = LegacyReturnMappings.ReasonCode(sourceItem.ReasonId);
-                if (!references.Reasons.TryGetValue(reasonCode, out var reasonId))
+                // Teslimatsız iade kalemleri yeni sistemle aynı SABİT sistem nedenine bağlanır ("Teslim Edilemedi");
+                // müşteri iadesi kalemleri eski neden koduyla (core_return_reasons legacy_*) eşlenir.
+                Guid reasonId;
+                if (source.RawType == LegacyReturnMappings.RawTypeUndelivered)
+                    reasonId = ReturnConstants.UndeliveredReasonId;
+                else
                 {
-                    rowErrors.Add($"iade {source.Id}: hedef iade nedeni {reasonCode} yok");
-                    continue;
+                    var reasonCode = LegacyReturnMappings.ReasonCode(sourceItem.ReasonId);
+                    if (!references.Reasons.TryGetValue(reasonCode, out reasonId))
+                    {
+                        rowErrors.Add($"iade {source.Id}: hedef iade nedeni {reasonCode} yok");
+                        continue;
+                    }
                 }
-                resolved.Add(new(sourceItem, orderItem, reasonId));
+                resolved.Add(new(sourceItem, orderItem, reasonId, barkodlaEslesti));
             }
             references.Existing.TryGetValue(source.Id, out var existing);
             if (existing is { IsDeleted: true }) rowErrors.Add($"iade {source.Id}: hedef legacy kayıt silinmiş");
@@ -205,14 +305,32 @@ public sealed class LegacyReturnImportSlice(
                 options.ReturnAmountMismatchPolicy,
                 LegacyReturnAmountMismatchPolicies.UseItemTotal,
                 StringComparison.OrdinalIgnoreCase);
-            if (!useItemTotal && Math.Abs(itemTotal - source.ReturnAmount) > 0.02m)
+            // Teslimatsız iadede (iadeTipi=1) eski üst tutar = ÖDENMİŞ TAHSİLAT toplamı (kargo/masraf dahil, K5 ile aynı),
+            // kalem toplamı = ürün net → fark tasarım gereği; uyuşmazlık denetimi yalnız müşteri iadesinde.
+            var teslimatsiz = source.RawType == LegacyReturnMappings.RawTypeUndelivered;
+            if (teslimatsiz) useItemTotal = false;
+            else if (!useItemTotal && Math.Abs(itemTotal - source.ReturnAmount) > 0.02m)
                 rowErrors.Add($"iade {source.Id}: üst/kalem tutarı uyuşmuyor");
             if (rowErrors.Count > 0) { errors.AddRange(rowErrors); continue; }
             logs.TryGetValue(source.OrderId, out var returnLogs); returnLogs ??= [];
+
+            // ── Hedef durum + geri ödeme (TEK kural + eski sistemin "üyeye ödendi" gerçeği) ──
+            var kaynakTutar = useItemTotal ? itemTotal : source.ReturnAmount;
+            var odemeYontemi = order!.PaymentMethod ?? LegacyReturnMappings.OrderPaymentMethod(source.OrderPaymentTypeId);
+            var kural = IadeOdemeKurali.Degerlendir(new IadeOdemeKurali.Girdi(
+                order.IsMarketplace,
+                IadeOdemeKurali.TahsilEdilen(order.CompletedPayments, order.PaymentStatus, order.GrandTotal),
+                0m, odemeYontemi, order.Status == "delivered"));
+            var hedef = LegacyReturnMappings.Durum(source.PaidToMemberAmount, source.CreditToMemberAmount, kaynakTutar, kural);
+            var degisimYalniz = sourceItems.Count > 0 && sourceItems.All(x => x.RawCustomerRequest == LegacyReturnMappings.CustomerRequestExchange);
+            var refundMethod = hedef.RefundStatus == ReturnConstants.RefundNotApplicable
+                ? ReturnConstants.RefundMethodNone
+                : LegacyReturnMappings.RefundMethod(odemeYontemi, degisimYalniz);
+
             prepared.Add(new(
-                source, existing?.Id ?? Guid.NewGuid(), existing is not null, order!, number,
-                date!.Value, useItemTotal ? itemTotal : source.ReturnAmount, itemTotal,
-                useItemTotal ? "item_total" : "header", resolved, returnLogs));
+                source, existing?.Id ?? Guid.NewGuid(), existing is not null, order, number,
+                date!.Value, hedef.RefundAmount, itemTotal,
+                useItemTotal ? "item_total" : "header", resolved, returnLogs, hedef, refundMethod, kaynakTutar));
         }
         return (prepared, errors);
     }
@@ -231,9 +349,12 @@ public sealed class LegacyReturnImportSlice(
                 ["sourceHeaderAmount"] = item.Source.ReturnAmount,
                 ["sourceItemTotal"] = item.ItemTotal,
                 ["resolvedRefundAmount"] = item.RefundAmount,
+                ["sourceRefundAmount"] = item.SourceAmount,
                 ["refundAmountBasis"] = item.RefundAmountBasis,
                 ["paidToMemberAmount"] = item.Source.PaidToMemberAmount,
                 ["paidToMemberAt"] = item.Source.PaidToMemberAt,
+                ["creditToMemberAmount"] = item.Source.CreditToMemberAmount,
+                ["exchangeCreditAmount"] = item.Source.ExchangeCreditAmount,
                 ["integrated"] = item.Source.Integrated,
                 ["logCount"] = item.Logs.Count,
                 ["lastLogStatus"] = item.Logs.OrderByDescending(x => x.CreatedAt).FirstOrDefault()?.RawStatus
@@ -244,20 +365,22 @@ public sealed class LegacyReturnImportSlice(
             return await ExecuteAsync(connection, transaction, """
                 UPDATE "order".ord_returns SET
                     "ReturnNumber"=@number,"OrderId"=@orderId,"MemberId"=@memberId,"ReturnType"=@type,
-                    "Status"='legacy_imported',"InspectionNotes"=@metadata,"RefundMethod"=@refundMethod,
-                    "RefundStatus"=@refundStatus,"RefundAmount"=@amount,"UpdatedAt"=@date
+                    "Status"=@status,"InspectionNotes"=@metadata,"RefundMethod"=@refundMethod,
+                    "RefundStatus"=@refundStatus,"RefundNotApplicableReason"=@naReason,"RefundAmount"=@amount,
+                    "ReturnCargoReceivedAt"=COALESCE("ReturnCargoReceivedAt",@date),"UpdatedAt"=@date
                  WHERE "Id"=@id AND "LegacyReturnId"=@legacyId AND NOT "IsDeleted"
                    AND ROW("ReturnNumber","OrderId","MemberId","ReturnType","Status","InspectionNotes",
-                           "RefundMethod","RefundStatus","RefundAmount")
-                       IS DISTINCT FROM ROW(@number,@orderId,@memberId,@type,'legacy_imported',@metadata,
-                                            @refundMethod,@refundStatus,@amount)
+                           "RefundMethod","RefundStatus","RefundNotApplicableReason","RefundAmount")
+                       IS DISTINCT FROM ROW(@number,@orderId,@memberId,@type,@status,@metadata,
+                                            @refundMethod,@refundStatus,@naReason,@amount)
                 """, ct, p);
         return await ExecuteAsync(connection, transaction, """
             INSERT INTO "order".ord_returns
                 ("Id","LegacyReturnId","ReturnNumber","OrderId","MemberId","ReturnType","Status",
-                 "InspectionNotes","RefundMethod","RefundStatus","RefundAmount","ImageUrls","CreatedAt","IsDeleted")
-            VALUES (@id,@legacyId,@number,@orderId,@memberId,@type,'legacy_imported',@metadata,
-                    @refundMethod,@refundStatus,@amount,ARRAY[]::text[],@date,false)
+                 "InspectionNotes","RefundMethod","RefundStatus","RefundNotApplicableReason","RefundAmount",
+                 "ReturnCargoReceivedAt","ImageUrls","CreatedAt","IsDeleted")
+            VALUES (@id,@legacyId,@number,@orderId,@memberId,@type,@status,@metadata,
+                    @refundMethod,@refundStatus,@naReason,@amount,@date,ARRAY[]::text[],@date,false)
             """, ct, p);
     }
 
@@ -298,8 +421,8 @@ public sealed class LegacyReturnImportSlice(
                         ("Id","LegacyReturnItemId","ReturnId","OrderItemId","VariantId","Quantity",
                          "ReturnReasonId","CustomerNotes","UnitRefundAmount","TotalRefundAmount","Status","CreatedAt","IsDeleted")
                     VALUES (@id,@legacyId,@returnId,@orderItemId,@variantId,@quantity,@reasonId,@notes,
-                            @unit,@total,'legacy_imported',@createdAt,false)
-                    """, ct, ("id", Guid.NewGuid()), ("legacyId", sourceItem.Source.Id), ("returnId", item.Id),
+                            @unit,@total,@status,@createdAt,false)
+                    """, ct, ("id", Guid.NewGuid()), ("legacyId", sourceItem.Source.Id), ("returnId", item.Id), ("status", item.Hedef.ItemStatus),
                     ("orderItemId", sourceItem.OrderItem.Id), ("variantId", sourceItem.OrderItem.VariantId),
                     ("quantity", sourceItem.Source.OrderLineQuantity), ("reasonId", sourceItem.ReasonId),
                     ("notes", notes), ("unit", unit), ("total", sourceItem.Source.Amount), ("createdAt", item.DateUtc));
@@ -308,13 +431,13 @@ public sealed class LegacyReturnImportSlice(
                     UPDATE "order".ord_return_items SET
                         "OrderItemId"=@orderItemId,"VariantId"=@variantId,"Quantity"=@quantity,
                         "ReturnReasonId"=@reasonId,"CustomerNotes"=@notes,"UnitRefundAmount"=@unit,
-                        "TotalRefundAmount"=@total,"Status"='legacy_imported',"UpdatedAt"=@updatedAt
+                        "TotalRefundAmount"=@total,"Status"=@status,"UpdatedAt"=@updatedAt
                      WHERE "Id"=@id AND "ReturnId"=@returnId AND "LegacyReturnItemId"=@legacyId AND NOT "IsDeleted"
                        AND ROW("OrderItemId","VariantId","Quantity","ReturnReasonId","CustomerNotes",
                                "UnitRefundAmount","TotalRefundAmount","Status")
                            IS DISTINCT FROM ROW(@orderItemId,@variantId,@quantity,@reasonId,@notes,
-                                                @unit,@total,'legacy_imported')
-                    """, ct, ("id", target.Id), ("legacyId", sourceItem.Source.Id), ("returnId", item.Id),
+                                                @unit,@total,@status)
+                    """, ct, ("id", target.Id), ("legacyId", sourceItem.Source.Id), ("returnId", item.Id), ("status", item.Hedef.ItemStatus),
                     ("orderItemId", sourceItem.OrderItem.Id), ("variantId", sourceItem.OrderItem.VariantId),
                     ("quantity", sourceItem.Source.OrderLineQuantity), ("reasonId", sourceItem.ReasonId),
                     ("notes", notes), ("unit", unit), ("total", sourceItem.Source.Amount), ("updatedAt", item.DateUtc));
@@ -330,9 +453,9 @@ public sealed class LegacyReturnImportSlice(
     private static (string Name, object? Value)[] Parameters(PreparedReturn x, string metadata) =>
     [
         ("id", x.Id), ("legacyId", x.Source.Id), ("number", x.Number), ("orderId", x.Order.Id),
-        ("memberId", x.Order.MemberId!.Value), ("type", LegacyReturnMappings.ReturnType(x.Source.RawType)),
-        ("metadata", metadata), ("refundMethod", LegacyReturnMappings.RefundMethod(x.Source.RawRefundMethod)),
-        ("refundStatus", x.Source.PaidToMemberAt.HasValue ? "legacy_paid" : "legacy_pending"),
+        ("memberId", x.Order.MemberId ?? Guid.Empty), ("type", LegacyReturnMappings.ReturnType(x.Source.RawType)),
+        ("status", x.Hedef.Status), ("metadata", metadata), ("refundMethod", x.RefundMethod),
+        ("refundStatus", x.Hedef.RefundStatus), ("naReason", x.Hedef.RefundNotApplicableReason),
         ("amount", x.RefundAmount), ("date", x.DateUtc)
     ];
 
@@ -367,19 +490,23 @@ public sealed class LegacyReturnImportSlice(
     }
     private static string ReturnNumber(int sourceId) => $"LRET-{sourceId}";
 
-    private sealed record TargetOrder(Guid Id, int LegacyId, Guid? MemberId);
+    private sealed record TargetOrder(
+        Guid Id, int LegacyId, Guid? MemberId, string? PaymentMethod, string PaymentStatus, decimal GrandTotal,
+        string Status, decimal CompletedPayments, bool IsMarketplace);
     private sealed record TargetOrderItem(Guid Id, int LegacyId, Guid OrderId, Guid VariantId, int Quantity);
     private sealed record TargetReturn(Guid Id, int? LegacyId, string ReturnNumber, bool IsDeleted);
     private sealed record TargetReturnItem(Guid Id, int LegacyId, bool IsDeleted);
     private sealed record TargetReferences(
         IReadOnlyDictionary<int, TargetOrder> Orders,
         IReadOnlyDictionary<int, TargetOrderItem> OrderItems,
+        IReadOnlyDictionary<(Guid OrderId, string Barcode), TargetOrderItem> OrderItemsByBarcode,
         IReadOnlyDictionary<string, Guid> Reasons,
         IReadOnlyDictionary<int, TargetReturn> Existing,
         IReadOnlyDictionary<string, TargetReturn> NumberOwners);
-    private sealed record PreparedReturnItem(LegacyReturnItemSourceRow Source, TargetOrderItem OrderItem, Guid ReasonId);
+    private sealed record PreparedReturnItem(LegacyReturnItemSourceRow Source, TargetOrderItem OrderItem, Guid ReasonId, bool MatchedByBarcode = false);
     private sealed record PreparedReturn(
         LegacyReturnSourceRow Source, Guid Id, bool Exists, TargetOrder Order, string Number,
         DateTime DateUtc, decimal RefundAmount, decimal ItemTotal, string RefundAmountBasis,
-        IReadOnlyList<PreparedReturnItem> Items, IReadOnlyList<LegacyReturnLogSourceRow> Logs);
+        IReadOnlyList<PreparedReturnItem> Items, IReadOnlyList<LegacyReturnLogSourceRow> Logs,
+        LegacyReturnMappings.HedefDurum Hedef, string RefundMethod, decimal SourceAmount);
 }
