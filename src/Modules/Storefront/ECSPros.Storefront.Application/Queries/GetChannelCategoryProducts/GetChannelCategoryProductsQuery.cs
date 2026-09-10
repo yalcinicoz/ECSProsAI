@@ -137,10 +137,12 @@ public class GetChannelCategoryProductsQueryHandler(
     // deserialize'da null döner ve indirim satırı görünmezdi; sürüm artırıldı.
     // v10: DTO'ya Sizes (kartta sepete ekle beden seçenekleri) eklendi — eski v9 kayıtlarında
     // alan null kalır ve kartta sepete ekle görünmezdi; sürüm artırıldı (2026-08-14).
+    // v12: kart fiyatı bedenler arasında EN YÜKSEK fiyat oldu (eskiden en düşük) — eski v11
+    //      kayıtları düşük fiyatı taşıdığından sürüm artırıldı (2026-09-10).
     // v11: AxisColors'a InStock (stoksuz renk tooltip'te soluk) eklendi — eski v10 kayıtları
     // varsayılan true okunup solgunluk hiç görünmeyecekti; sürüm artırıldı (2026-08-14).
     private static string CacheKey(Guid categoryId, string listingMode, bool showOutOfStock, int page, int pageSize) =>
-        $"channelcat:products:v11:{categoryId}:{listingMode}:{(showOutOfStock ? "oos" : "std")}:{page}:{pageSize}";
+        $"channelcat:products:v12:{categoryId}:{listingMode}:{(showOutOfStock ? "oos" : "std")}:{page}:{pageSize}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
 
     private async Task<PagedResult<ChannelCategoryProductItemDto>?> TryGetCacheAsync(string key, CancellationToken ct)
@@ -569,11 +571,13 @@ public class GetChannelCategoryProductsQueryHandler(
             {
                 var vids = g.Select(x => x.VariantId).Distinct().ToList();
                 // Rengin kanal (satış) fiyatı: temsilci varyantta; fiyatlanmamışlar 0, atlanır.
+                // ★ 2026-09-10 (kullanıcı kararı): bedenler farklı fiyatlıysa kartta EN YÜKSEK fiyat
+                // gösterilir (eskiden en düşük). Filtre/sıralama da bu fiyatı kullanır.
                 var kanal = vids.Select(v => variantChannelPrice.GetValueOrDefault(v))
-                                .Where(p => p > 0).DefaultIfEmpty(0).Min();
+                                .Where(p => p > 0).DefaultIfEmpty(0).Max();
                 // Kanal fiyatı yoksa BasePrice'a düş (kart yine bir fiyat gösterebilsin).
                 var baz = vids.Select(v => variantPrice.GetValueOrDefault(v))
-                              .Where(p => p > 0).DefaultIfEmpty(0).Min();
+                              .Where(p => p > 0).DefaultIfEmpty(0).Max();
                 // İndirim öncesi fiyat: rengin varyantları arasındaki en yüksek pozitif CompareAt.
                 var eskiFiyat = vids.Select(v => variantCompareAt.GetValueOrDefault(v))
                                     .Where(c => c > 0).DefaultIfEmpty(0).Max();
@@ -595,8 +599,8 @@ public class GetChannelCategoryProductsQueryHandler(
             .ToDictionary(g => g.Key, g => g.Select(v => v.Id).ToList());
         foreach (var (pid, vids) in eksensizVaryantlar)
         {
-            var kanal = vids.Select(v => variantChannelPrice.GetValueOrDefault(v)).Where(pr => pr > 0).DefaultIfEmpty(0).Min();
-            var baz = vids.Select(v => variantPrice.GetValueOrDefault(v)).Where(pr => pr > 0).DefaultIfEmpty(0).Min();
+            var kanal = vids.Select(v => variantChannelPrice.GetValueOrDefault(v)).Where(pr => pr > 0).DefaultIfEmpty(0).Max();
+            var baz = vids.Select(v => variantPrice.GetValueOrDefault(v)).Where(pr => pr > 0).DefaultIfEmpty(0).Max();
             var eskiFiyat = vids.Select(v => variantCompareAt.GetValueOrDefault(v)).Where(c => c > 0).DefaultIfEmpty(0).Max();
             colorPairs.Add(new KartPair(pid, Guid.Empty, vids, kanal > 0 ? kanal : baz, kanal, eskiFiyat));
         }

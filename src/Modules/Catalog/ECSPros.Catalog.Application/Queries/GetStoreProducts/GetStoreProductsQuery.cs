@@ -561,8 +561,11 @@ public class GetStoreProductsQueryHandler(
                 .Where(price => price > 0)
                 .ToList();
 
-            var variantMin = activeVariants.Any() ? activeVariants.Min(v => v.BasePrice) : 0;
-            var minPrice   = platformPrices.Any() ? platformPrices.Min() : variantMin > 0 ? variantMin : p.BasePrice;
+            // ★ 2026-09-10 (kullanıcı kararı): bedenler farklı fiyatlıysa kartta EN YÜKSEK fiyat
+            // gösterilir (eskiden en düşük); kategori listesiyle aynı kural. Alan adı (MinPrice)
+            // sözleşme gereği korunur.
+            var variantMax = activeVariants.Select(v => v.BasePrice).Where(price => price > 0).DefaultIfEmpty(0).Max();
+            var minPrice   = platformPrices.Any() ? platformPrices.Max() : variantMax > 0 ? variantMax : p.BasePrice;
             // İndirim öncesi (çizili) fiyat: kanal CompareAtPrice'ların en yükseği (yalnız satış fiyatı üstündeyse).
             var eskiFiyatlar = activeVariants
                 .Where(v => channelPrices.ContainsKey(v.Id))

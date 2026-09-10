@@ -16,7 +16,7 @@ namespace ECSPros.Shared.Contracts;
 /// </summary>
 public static class KartFiyatGorunumu
 {
-    /// <param name="minPrice">Kampanya öncesi satış fiyatı (kanal fiyatı → varyant → en düşük pozitif).</param>
+    /// <param name="minPrice">Kampanya öncesi satış fiyatı (kanal fiyatı → varyant; listede bedenler arasında EN YÜKSEK pozitif, 2026-09-10).</param>
     /// <param name="kanalCizili">Kanal <c>CompareAtPrice</c>'ı (yoksa null).</param>
     /// <param name="kampanyaFiyat">Ürün-bazlı kampanyalı fiyat (yoksa/sepet-bağımlıysa null).</param>
     /// <returns>(satış fiyatı, çizili referans — indirim yoksa null).</returns>
