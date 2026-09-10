@@ -177,8 +177,11 @@ function GrupDetayModal({ grupId, onClose }: { grupId: string; onClose: () => vo
                   {satirlar.map(k => {
                     const secili = k.id in mevcutSecim
                     const kanalSayisi = mevcutSecim[k.id]?.length ?? 0
+                    // 2026-09-10: kanal paneli tıklanan satırın HEMEN altında açılır (eskiden modülün
+                    // tüm satırlarının altına çiziliyordu, kullanıcı aşağıda aramak zorundaydı).
                     return (
-                      <div key={k.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
+                      <div key={k.id}>
+                      <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
                         style={{ background: secili ? 'var(--surface2)' : 'transparent' }}>
                         <input type="checkbox" checked={secili} onChange={() => toggle(k)} />
                         <span className="text-sm flex-1" style={{ color: 'var(--text)' }}>
@@ -199,10 +202,8 @@ function GrupDetayModal({ grupId, onClose }: { grupId: string; onClose: () => vo
                           <span className="text-xs" style={{ color: 'var(--text-s)' }}>kanaldan bağımsız</span>
                         )}
                       </div>
-                    )
-                  })}
-                  {satirlar.filter(k => kanalAcik === k.id).map(k => (
-                    <div key={`kanal-${k.id}`} className="ml-6 mb-2 p-2 rounded-lg"
+                      {kanalAcik === k.id && secili && (
+                    <div className="ml-6 mt-1 mb-2 p-2 rounded-lg"
                       style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                       <div className="text-xs mb-1" style={{ color: 'var(--text-s)' }}>
                         {k.ad} — hangi kanallarda geçerli?
@@ -228,7 +229,10 @@ function GrupDetayModal({ grupId, onClose }: { grupId: string; onClose: () => vo
                         tüm kanallar (bugünkü liste)
                       </button>
                     </div>
-                  ))}
+                      )}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             ))}
