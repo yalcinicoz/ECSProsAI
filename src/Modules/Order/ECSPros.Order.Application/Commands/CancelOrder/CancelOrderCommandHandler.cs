@@ -24,9 +24,26 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Res
         if (order is null)
             return Result.Failure<bool>("Sipariş bulunamadı.");
 
+        // İade planı R4 (2026-09-10): fatura kesilmeden önce yalnız İPTAL vardır; fatura kesildiyse iptal DEĞİL
+        // Teslimatsız İade uygulanır. Domain fatura tablosunu bilmez → ön koşul burada.
+        if (order.Status == "processing")
+        {
+            var faturaVar = await _context.Invoices.AsNoTracking()
+                .AnyAsync(i => i.OrderId == order.Id && i.Status != "cancelled", cancellationToken);
+            if (faturaVar)
+                return Result.Failure<bool>("Faturası kesilmiş sipariş iptal edilemez, Teslimatsız İade uygulayın.");
+        }
+
+        // K4: toplama planı olan işlemdeki siparişte izin var; toplanmış ürünler rafa geri alınmalı (v1: yalnız uyarı notu).
+        var reason = request.Reason;
+        if (order.Status == "processing" && order.PickingPlanId.HasValue)
+            reason = string.IsNullOrWhiteSpace(reason)
+                ? "Toplama planı vardı — toplanmış ürünler rafa geri alınmalı."
+                : reason + " (Toplama planı vardı — toplanmış ürünler rafa geri alınmalı.)";
+
         try
         {
-            order.Cancel(request.CancelledBy, request.Reason);
+            order.Cancel(request.CancelledBy, reason);
         }
         catch (InvalidOperationException ex)
         {

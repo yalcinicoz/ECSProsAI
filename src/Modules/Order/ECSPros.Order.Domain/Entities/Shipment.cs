@@ -23,6 +23,8 @@ public class Shipment : BaseEntity
     public DateTime? ApiSentAt { get; set; }
     public DateOnly? EstimatedDeliveryDate { get; set; }
     public DateTime? DeliveredAt { get; set; }
+    /// <summary>İade planı §2.3/3: teslimatsız iadede gönderi <c>returned_to_sender</c> olur, zamanı buraya yazılır.</summary>
+    public DateTime? ReturnedAt { get; set; }
     public string? DeliverySignature { get; set; }
     public string? DeliveryNotes { get; set; }
     public int PackageCount { get; set; } = 1;

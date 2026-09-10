@@ -14,11 +14,16 @@ public class OrderCancelledEventHandler : INotificationHandler<OrderCancelledEve
         _context = context;
     }
 
-    public async Task Handle(OrderCancelledEvent notification, CancellationToken cancellationToken)
+    public Task Handle(OrderCancelledEvent notification, CancellationToken cancellationToken)
+        => SiparisRezervasyonlariniSerbestBirakAsync(_context, notification.OrderId, cancellationToken);
+
+    /// <summary>Siparişin "reserved" rezervasyonlarını serbest bırakır — iptal ve kargosuz Teslimatsız İade
+    /// (İade planı §2.3/5) aynı işlemi kullanır.</summary>
+    public static async Task SiparisRezervasyonlariniSerbestBirakAsync(IInventoryDbContext _context, Guid orderId, CancellationToken cancellationToken)
     {
         // Faz 0 (StockTx): kilitlemek için varyantlar ön-sorguyla belirlenir; gövde kilit altında TAZE okur.
         var variantIds = await _context.StockReservations.AsNoTracking()
-            .Where(r => r.ReferenceType == "order" && r.ReferenceId == notification.OrderId && r.Status == "reserved")
+            .Where(r => r.ReferenceType == "order" && r.ReferenceId == orderId && r.Status == "reserved")
             .Select(r => r.VariantId).Distinct().ToListAsync(cancellationToken);
         if (variantIds.Count == 0) return;
 
@@ -26,7 +31,7 @@ public class OrderCancelledEventHandler : INotificationHandler<OrderCancelledEve
         {
         var reservations = await _context.StockReservations
             .Where(r => r.ReferenceType == "order"
-                     && r.ReferenceId == notification.OrderId
+                     && r.ReferenceId == orderId
                      && r.Status == "reserved")
             .ToListAsync(cancellationToken);
 

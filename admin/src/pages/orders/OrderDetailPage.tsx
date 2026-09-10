@@ -16,6 +16,7 @@ import {
   PAYMENT_METHOD_MAP,
   PAYMENT_STATUS_MAP,
   RETURN_STATUS_MAP,
+  RETURN_TYPE_MAP,
   INVOICE_SOURCE_MAP,
 } from './orderConstants'
 import { OrderPackagesSection } from './OrderPackagesSection'
@@ -214,6 +215,10 @@ export function OrderDetailPage() {
   const [deliverOpen, setDeliverOpen] = useState(false)
   const [warehouseId, setWarehouseId] = useState('')
   const [cancelReason, setCancelReason] = useState('')
+  // İade planı §2.8 (2026-09-10): Teslimatsız İade modalı (neden zorunlu)
+  const [undeliveredOpen, setUndeliveredOpen] = useState(false)
+  const [undeliveredReason, setUndeliveredReason] = useState('')
+  const [undeliveredNotes, setUndeliveredNotes] = useState('')
   const [shipIntegrationId, setShipIntegrationId] = useState('')
   // 2026-09-02: müşteri tercihi yoksa otomatik öneri (öncelik + mahalle + ödeme uygunluğu)
   const [shipSuggestion, setShipSuggestion] = useState('')
@@ -390,6 +395,15 @@ export function OrderDetailPage() {
     mutationFn: async () => actionMutation('deliver', {})(),
     onSuccess: () => setDeliverOpen(false),
   })
+  const undeliveredMutation = useMutation({
+    mutationFn: async () => actionMutation('undelivered-return', { reason: undeliveredReason.trim(), notes: undeliveredNotes || null })(),
+    onSuccess: () => {
+      setUndeliveredOpen(false)
+      queryClient.invalidateQueries({ queryKey: ['order-returns', id] })
+      queryClient.invalidateQueries({ queryKey: ['order-invoices', id] })
+      queryClient.invalidateQueries({ queryKey: ['returns'] })
+    },
+  })
 
   // confirm modal body'si ayrı (warehouseId form state'i)
   const doConfirm = useMutation({
@@ -479,6 +493,12 @@ export function OrderDetailPage() {
     setInvoiceOpen(true)
   }
 
+  // İade planı R2-R4: aktif (iptal edilmemiş) fatura var mı → işlemdeki sipariş iptal edilemez, Teslimatsız İade uygulanır
+  const aktifFaturaVar = orderInvoices.some(i => i.status !== 'cancelled')
+  const gonderiVar = shipments.length > 0
+  const teslimatsizIadeMumkun = order.status === 'shipped' || (order.status === 'processing' && aktifFaturaVar && !gonderiVar)
+  const iptalMumkun = ['pending', 'confirmed'].includes(order.status) || (order.status === 'processing' && !aktifFaturaVar)
+
   const geo = (gid?: string) => (gid ? geoNames[gid] : undefined)
   const shippingGeo = [geo(order.shippingNeighborhoodId), geo(order.shippingDistrictId), geo(order.shippingCityId)]
     .filter(Boolean).join(' / ')
@@ -526,11 +546,19 @@ export function OrderDetailPage() {
           {order.status === 'shipped' && (
             <Button size="sm" onClick={() => { setActionError(''); setDeliverOpen(true) }}>Teslim Edildi</Button>
           )}
-          {['pending', 'confirmed'].includes(order.status) && (
+          {teslimatsizIadeMumkun && (
+            <Button size="sm" variant="danger" onClick={() => { setActionError(''); setUndeliveredReason(''); setUndeliveredNotes(''); setUndeliveredOpen(true) }}>Teslimatsız İade</Button>
+          )}
+          {iptalMumkun && (
             <Button size="sm" variant="danger" onClick={() => { setActionError(''); setCancelOpen(true) }}>İptal Et</Button>
           )}
         </div>
       </div>
+      {order.status === 'processing' && aktifFaturaVar && (
+        <p className="text-xs mb-1" style={{ color: 'var(--text-s)' }}>
+          Faturası kesilmiş sipariş iptal edilemez; müşteriye ulaşmayacaksa <b>Teslimatsız İade</b> uygulayın.
+        </p>
+      )}
 
       {/* Üst bilgi satırı */}
       <p className="text-sm mb-5" style={{ color: 'var(--text-s)' }}>
@@ -702,6 +730,7 @@ export function OrderDetailPage() {
             <Section title={`İadeler (${orderReturns.length})`}>
               {orderReturns.map(r => {
                 const rst = RETURN_STATUS_MAP[r.status] ?? { label: r.status, variant: 'neutral' as const }
+                const rtip = RETURN_TYPE_MAP[r.returnType]
                 return (
                   <Link key={r.id} to={`/orders/returns/${r.id}`}
                     className="flex flex-wrap items-center gap-2 text-sm py-1.5 hover:bg-[var(--surface2)] rounded-lg px-1"
@@ -710,6 +739,7 @@ export function OrderDetailPage() {
                     <span className="font-medium" style={{ color: 'var(--text)' }}>
                       {r.refundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                     </span>
+                    {rtip && <Badge variant={rtip.variant}>{rtip.label}</Badge>}
                     <Badge variant={rst.variant}>{rst.label}</Badge>
                     <span className="text-xs ml-auto" style={{ color: 'var(--text-s)' }}>Detay →</span>
                   </Link>
@@ -840,6 +870,26 @@ export function OrderDetailPage() {
         <div className="flex justify-end gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
           <Button variant="secondary" onClick={() => setCancelOpen(false)}>Vazgeç</Button>
           <Button variant="danger" onClick={() => cancelMutation.mutate()} loading={cancelMutation.isPending}>İptal Et</Button>
+        </div>
+      </Modal>
+
+      <Modal open={undeliveredOpen} onClose={() => setUndeliveredOpen(false)} title="Teslimatsız İade">
+        <p className="text-sm mb-3" style={{ color: 'var(--text-m)' }}>
+          Paket müşteriye ulaştırılamadı / kabul edilmedi ya da faturalı sipariş kargoya verilmeyecek. Sipariş
+          &quot;Teslimatsız İade&quot; olur, gönderi iade işaretlenir, <b>fatura iptal edilir</b>, tüm kalemlerle onaylı bir iade
+          kaydı açılır. Ürün depoya ulaşınca iade kaydından <b>Teslim Al</b> yapılır; müşteriye para iadesi yalnız tahsilat
+          varsa hesaplanır (kapıda ödeme teslimsiz → yok; pazaryeri → yok). Bu işlem geri alınamaz.
+        </p>
+        <label className="flbl">Neden <span className="text-red-500">*</span></label>
+        <textarea className="ta" rows={2} value={undeliveredReason} onChange={e => setUndeliveredReason(e.target.value)}
+          placeholder="Örn. Müşteri paketi kabul etmedi / adreste bulunamadı" />
+        <label className="flbl mt-3">Not <span className="text-xs" style={{ color: 'var(--text-s)' }}>(isteğe bağlı)</span></label>
+        <textarea className="ta" rows={2} value={undeliveredNotes} onChange={e => setUndeliveredNotes(e.target.value)} />
+        {actionError && <p className="text-sm mt-2 text-red-500">{actionError}</p>}
+        <div className="flex justify-end gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+          <Button variant="secondary" onClick={() => setUndeliveredOpen(false)}>Vazgeç</Button>
+          <Button variant="danger" onClick={() => undeliveredMutation.mutate()} loading={undeliveredMutation.isPending}
+            disabled={!undeliveredReason.trim()}>Teslimatsız İade Uygula</Button>
         </div>
       </Modal>
 

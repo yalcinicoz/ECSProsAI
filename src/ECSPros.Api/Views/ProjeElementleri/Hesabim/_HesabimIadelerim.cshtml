@@ -59,6 +59,11 @@
                             <strong>@iade.TarihMetni</strong>
                         </div>
                         <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            @if (iade.ReturnType == "undelivered")
+                            {
+                            @* İade planı §2.9 (2026-09-10): teslimatsız iade — müşteri aksiyonu yok, tip rozeti *@
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-iade">Teslim Edilemedi</span>
+                            }
                             <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-@iade.DurumSinifi">@iade.DurumMetni</span>
                             @if (false)
                             {
@@ -142,8 +147,17 @@
 
                     <div class="ms-hesabim-siparis-alt">
                         <div class="ms-hesabim-siparis-tutar">
+                            @if (iade.GeriOdemeVar)
+                            {
                             <span>@(iade.Tamamlandi ? "İade Tutarı" : "Beklenen İade Tutarı")</span>
                             <strong class="ms-urun-fiyat">@iade.BeklenenTutar.ToString("N2", msIadeTrKultur) TL</strong>
+                            }
+                            else
+                            {
+                            @* İade planı R7-R10: tahsilat yoksa / pazaryeriyse para iadesi hesaplanmaz — tutar gösterilmez *@
+                            <span>Ödeme iadesi</span>
+                            <strong>Bulunmuyor</strong>
+                            }
                         </div>
                         <div class="ms-hesabim-siparis-aksiyonlar">
                             @if (iade.Tamamlandi && iade.Urunler.FirstOrDefault()?.UrunLink is string urunLink)

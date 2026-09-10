@@ -57,6 +57,9 @@ public class MockPaymentUygulaCommandHandler(
         };
         order.CustomerNotes = mevcut;
         order.PaymentStatus = "paid";
+        // İade planı §2.6: tahsilat satırı (geri ödeme kuralı buna bakar) — mock da gerçek akışla aynı izi bırakır.
+        await Tahsilat.KaydetAsync(db, order, Guid.Empty, order.GrandTotal, Tahsilat.KaynakMock, null, ct);
+        order.PaymentStatus = "paid";
         await db.SaveChangesAsync(ct);
 
         // A4 (2026-09-07): mock ödeme alındı → sepet temizle.

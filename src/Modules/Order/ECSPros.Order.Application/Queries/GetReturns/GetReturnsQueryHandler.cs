@@ -36,7 +36,8 @@ public class GetReturnsQueryHandler : IRequestHandler<GetReturnsQuery, Result<Pa
                 r.RefundStatus,
                 r.RefundAmount,
                 r.CreatedAt,
-                r.CargoReturnCode))
+                r.CargoReturnCode,
+                r.RefundNotApplicableReason))
             .ToListAsync(cancellationToken);
 
         return Result.Success(new PagedResult<ReturnListDto>(items, total, request.Page, request.PageSize));

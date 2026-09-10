@@ -26,7 +26,10 @@ public partial record ReturnDetailDto(
     List<ReturnItemDto> Items,
     List<ReturnRefundDto> Refunds,
     string? CargoReturnCode = null,     // E8: kargo iade kodu
-    List<string>? ImageUrls = null);    // E8: talep görselleri
+    List<string>? ImageUrls = null,     // E8: talep görselleri
+    // İade planı (2026-09-10): geri ödeme yok nedeni + şu an ödenebilecek üst sınır (IadeOdemeKurali; panel tutar alanı bununla sınırlı)
+    string? RefundNotApplicableReason = null,
+    decimal RefundUpperLimit = 0);
 
 // M4 (2026-09-09, mobil): iade detayının vitrin etiketi + 4 adımlı iade akışı (reddedilende boş).
 public partial record ReturnDetailDto
@@ -35,6 +38,10 @@ public partial record ReturnDetailDto
     public string StatusColor => DurumEtiketleri.Renk(DurumEtiketleri.Vitrin.IadeDurumu, Status);
     public string StatusVariant => DurumEtiketleri.Varyant(DurumEtiketleri.Vitrin.IadeDurumu, Status);
     public List<AkisAdimi> Timeline => DurumEtiketleri.IadeAkisi(Status);
+    /// <summary>Vitrin iade tipi etiketi (undelivered → "Teslim Edilemedi", customer → "İade").</summary>
+    public string ReturnTypeLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.IadeTipi, ReturnType);
+    /// <summary>Müşteriye para iadesi var mı (not_applicable değilse).</summary>
+    public bool RefundApplicable => RefundStatus != "not_applicable";
 }
 
 public record ReturnItemDto(
@@ -48,7 +55,8 @@ public record ReturnItemDto(
     decimal TotalRefundAmount,
     string Status,
     string? InspectionResult,
-    string? InspectionNotes);
+    string? InspectionNotes,
+    bool StockAlreadyIn = false);   // İade planı: stok hiç çıkmamıştı (kargosuz teslimatsız iade)
 
 public record ReturnRefundDto(
     Guid Id,

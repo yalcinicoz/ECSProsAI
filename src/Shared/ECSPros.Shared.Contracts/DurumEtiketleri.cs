@@ -55,13 +55,16 @@ public static class DurumEtiketleri
             E("pending", "Bekleyen", Warning), E("confirmed", "Onaylı", Warning),
             E("processing", "İşlemde", Warning), E("shipped", "Kargoda", Success),
             E("delivered", "Teslim", Success), E("cancelled", "İptal", Danger),
-            E("returned", "İade", Danger),
+            // İade akışı planı R5 (2026-09-10): `returned` YALNIZ teslimatsız iadedir — müşteri iadesi
+            // sipariş durumunu değiştirmez; eski "İade" etiketi bu yüzden yanıltıcıydı.
+            E("returned", "Teslimatsız İade", Danger),
         ];
 
         public static readonly IReadOnlyList<DurumEtiketi> OdemeDurumu =
         [
             E("pending", "Bekliyor", Warning), E("unpaid", "Ödenmedi", Warning),
             E("paid", "Ödendi", Success), E("partial", "Kısmi", Warning),
+            E("underpaid", "Eksik Ödeme", Danger),   // PayTR callback tutarı sipariş tutarından düşük
             E("refunded", "İade Edildi", Neutral), E("failed", "Başarısız", Danger),
         ];
 
@@ -75,7 +78,34 @@ public static class DurumEtiketleri
         [
             E("requested", "Talep Edildi", Warning), E("approved", "Onaylandı", Warning),
             E("received", "Teslim Alındı", Success), E("refunded", "Geri Ödendi", Success),
+            // İade planı §2.3: geri ödeme UYGUN DEĞİLSE teslim alma sonrası iade kendiliğinden kapanır
+            // ("refunded" yanıltıcı olurdu — para ödenmedi).
+            E("closed", "Tamamlandı (geri ödeme yok)", Neutral),
             E("rejected", "Reddedildi", Danger),
+        ];
+
+        /// <summary>İade planı R1: iki iade tipi. <c>undelivered</c> = paket müşteriye ulaşmadı / kabul edilmedi
+        /// ya da faturalı ama kargosuz; <c>customer</c> = teslim sonrası müşteri iadesi.</summary>
+        public static readonly IReadOnlyList<DurumEtiketi> IadeTipi =
+        [
+            E("undelivered", "Teslimatsız İade", Danger), E("customer", "Müşteri İadesi", Info),
+        ];
+
+        /// <summary>İade geri ödeme durumu; <c>not_applicable</c> = para iadesi hesaplanmaz (nedeni
+        /// <see cref="GeriOdemeYokNedeni"/>).</summary>
+        public static readonly IReadOnlyList<DurumEtiketi> GeriOdemeDurumu =
+        [
+            E("pending", "Bekliyor", Warning), E("completed", "Tamamlandı", Success),
+            E("not_applicable", "Geri ödeme yok", Neutral),
+        ];
+
+        /// <summary>Geri ödeme yapılmama nedeni (İade planı R7-R10; <c>Return.RefundNotApplicableReason</c>).</summary>
+        public static readonly IReadOnlyList<DurumEtiketi> GeriOdemeYokNedeni =
+        [
+            E("cod_not_collected", "Kapıda ödeme — tahsilat yapılmadı", Neutral),
+            E("marketplace", "Pazaryeri siparişi — iadeyi pazaryeri yapar", Neutral),
+            E("unpaid", "Müşteriden tahsilat yok", Neutral),
+            E("already_refunded", "Tahsil edilen tutarın tamamı zaten iade edildi", Neutral),
         ];
 
         public static readonly IReadOnlyList<DurumEtiketi> YorumDurumu =
@@ -102,13 +132,16 @@ public static class DurumEtiketleri
             E("pending", "Sipariş Alındı", Info), E("confirmed", "Sipariş Alındı", Info),
             E("processing", "Hazırlanıyor", Warning), E("shipped", "Kargoda", Info),
             E("delivered", "Teslim Edildi", Success), E("cancelled", "İptal Edildi", Danger),
-            E("returned", "İade Edildi", Neutral),
+            // İade planı K7 (2026-09-10): `returned` yalnız teslimatsız iade → müşteriye "Teslim Edilemedi";
+            // eski "İade Edildi" müşteri iadesiyle karışıyordu (o, sipariş durumunu değiştirmez).
+            E("returned", "Teslim Edilemedi", Neutral),
         ];
 
         public static readonly IReadOnlyList<DurumEtiketi> OdemeDurumu =
         [
             E("pending", "Ödeme Bekleniyor", Warning), E("unpaid", "Ödeme Alınmadı", Warning),
             E("paid", "Ödeme Alındı", Success), E("partial", "Kısmi Ödeme", Warning),
+            E("underpaid", "Eksik Ödeme", Danger),
             E("refunded", "Ödeme İade Edildi", Neutral), E("failed", "Ödeme Başarısız", Danger),
         ];
 
@@ -123,7 +156,14 @@ public static class DurumEtiketleri
         [
             E("requested", "İade Talebi Alındı", Warning), E("approved", "İade Onaylandı", Warning),
             E("received", "İade İnceleniyor", Warning), E("refunded", "İade Tamamlandı", Success),
+            E("closed", "İade Tamamlandı", Success),   // geri ödeme yok — müşteri "tamamlandı" görür
             E("rejected", "İade Reddedildi", Danger),
+        ];
+
+        /// <summary>Müşteri dilinde iade tipi: teslimatsız iade müşteriye "Teslim Edilemedi" olarak görünür.</summary>
+        public static readonly IReadOnlyList<DurumEtiketi> IadeTipi =
+        [
+            E("undelivered", "Teslim Edilemedi", Neutral), E("customer", "İade", Info),
         ];
 
         public static readonly IReadOnlyList<DurumEtiketi> YorumDurumu =
@@ -146,6 +186,7 @@ public static class DurumEtiketleri
                 ["paymentStatus"] = OdemeDurumu,
                 ["paymentMethod"] = OdemeYontemi,
                 ["returnStatus"] = IadeDurumu,
+                ["returnType"] = IadeTipi,          // İade planı (2026-09-10)
                 ["reviewStatus"] = YorumDurumu,
                 ["questionStatus"] = SoruDurumu,
             };
@@ -204,6 +245,7 @@ public static class DurumEtiketleri
         "approved" => (2, true),
         "received" => (3, true),
         "refunded" => (4, false),
+        "closed" => (4, false),     // geri ödeme yok — akış tamamlandı
         "rejected" => (0, false),
         _ => (1, true),
     };
@@ -214,6 +256,9 @@ public static class DurumEtiketleri
     /// </summary>
     public static List<AkisAdimi> SiparisAkisi(string? status)
         => Akis(SiparisAkisAdimlari, SiparisAdimi(status));
+
+    /// <summary>İade akışı bitti mi (para ödendi ya da ödeme gerekmedi) — İade planı §2.3.</summary>
+    public static bool IadeTamamlandi(string? returnStatus) => returnStatus is "refunded" or "closed";
 
     /// <summary>İadenin akış şeridi; reddedilen iadede boş liste.</summary>
     public static List<AkisAdimi> IadeAkisi(string? status)

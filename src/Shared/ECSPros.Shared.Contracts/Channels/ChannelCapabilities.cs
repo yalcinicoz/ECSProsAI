@@ -168,6 +168,9 @@ public sealed class ChannelCapabilities
 public interface IChannelCapabilityResolver
 {
     Task<ChannelCapabilities> GetAsync(Guid firmPlatformId, CancellationToken ct = default);
+    /// <summary>Kanalın tipi pazaryeri mi (<c>core_platform_types.IsMarketplace</c>) — İade planı R10:
+    /// pazaryeri siparişinde müşteriye para iadesi yapılmaz. Kanal bulunamazsa false.</summary>
+    Task<bool> IsMarketplaceAsync(Guid firmPlatformId, CancellationToken ct = default);
     /// <summary>Platform tipi kodu için varsayılan (kanal ezmesi yok).</summary>
     ChannelCapabilities DefaultsFor(string platformTypeCode);
     void Invalidate(Guid? firmPlatformId = null);

@@ -965,6 +965,25 @@ public static class DatabaseSeeder
         if (context.ChangeTracker.HasChanges())
             await context.SaveChangesAsync();
 
+        // İade planı (2026-09-10): sistem nedeni "Teslim Edilemedi" — Teslimatsız İade kalemleri bu SABİT Id ile
+        // açılır (ReturnConstants.UndeliveredReasonId). Pasif: müşteri iade formunda görünmez, panel adını çözer.
+        // Canlıya Core migration'ı (SeedUndeliveredReturnReason) aynı Id'yi yazar; burası Dev için idempotent.
+        var teslimEdilemediId = ECSPros.Order.Domain.Entities.ReturnConstants.UndeliveredReasonId;
+        var iadeTipi = await context.LookupTypes.FirstOrDefaultAsync(t => t.Code == "return_reason");
+        if (iadeTipi is not null && !await context.LookupValues.IgnoreQueryFilters().AnyAsync(v => v.Id == teslimEdilemediId))
+        {
+            context.LookupValues.Add(new LookupValue
+            {
+                Id = teslimEdilemediId,
+                LookupTypeId = iadeTipi.Id,
+                NameI18n = new() { { "tr", "Teslim Edilemedi" }, { "en", "Undelivered" } },
+                ExtraData = new() { ["systemCode"] = "undelivered", ["subReasons"] = new List<string>() },
+                IsActive = false,
+                SortOrder = 900
+            });
+            await context.SaveChangesAsync();
+        }
+
         if (await context.LookupTypes.AnyAsync(t => t.Code == "return_reason"))
             return;
 

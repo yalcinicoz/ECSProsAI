@@ -165,7 +165,8 @@ Fatura numarası: `seri kodu + yıl + 9 haneli sıra` (ör. `MSH2026000000001`).
 | `confirmed` → `processing` | İşleme Al (toplama görevi oluşturulunca da otomatik) | Toplama/paketleme başlar. |
 | `processing` → `shipped` | Kargoya Ver | Gönderi kaydı; rezervasyonlar "toplandı" olur, **stok miktarı gerçekten düşer**. |
 | `shipped` → `delivered` | Teslim Edildi | Gönderiler teslim; (pazaryeri satıcı hakedişleri bu adımdan üretilir). |
-| `pending` / `confirmed` → `cancelled` | İptal Et | Rezervasyonlar serbest bırakılır. Sonraki durumlarda iptal edilemez ("'…' durumundaki sipariş iptal edilemez."). |
+| `pending` / `confirmed` / `processing` (faturasız) → `cancelled` | İptal Et | Rezervasyonlar serbest bırakılır. Faturası kesilmiş işlemdeki sipariş iptal edilemez ("Faturası kesilmiş sipariş iptal edilemez, Teslimatsız İade uygulayın."); buton gizlenir, açıklama görünür. Toplama planı olan siparişte toplanmış ürünler rafa geri alınmalı (İç Not'a uyarı düşer). |
+| `shipped` / `processing` (faturalı, kargosuz) → `returned` | Teslimatsız İade (neden zorunlu) | Sipariş "Teslimatsız İade"; gönderi iade işaretlenir; **fatura iptal** edilir (entegratöre iptal kuyruklanır); tüm kalemlerle **onaylı** iade kaydı açılır; kargoya verilmemişse rezervasyonlar serbest bırakılır. Geri ödeme uygunluğu tahsilat kuralıyla yazılır (bkz. İadeler). Faturasız işlemdeki siparişte kullanılamaz — İptal Et vardır. |
 
 Diğer kurallar:
 - Yanlış durumda buton görünmez; yine de istek giderse sunucu "'İşlemde' durumundaki sipariş onaylanamaz." gibi bir hata döner.
@@ -186,9 +187,14 @@ Diğer kurallar:
 6. Teslimat gerçekleşince **Teslim Edildi**.
 
 **Sipariş iptali**
-1. Durumun Bekleyen ya da Onaylı olduğunu doğrulayın.
+1. Durumun Bekleyen, Onaylı ya da faturası kesilmemiş İşlemde olduğunu doğrulayın.
 2. **İptal Et** → nedeni yazın (isteğe bağlı) → kırmızı **İptal Et**.
 3. Durum İptal olur; neden İç Not'ta görünür.
+
+**Teslimatsız iade (paket geri döndü / faturalı sipariş gönderilmeyecek)**
+1. Durum Kargoda ya da faturalı-kargosuz İşlemde olmalı.
+2. **Teslimatsız İade** → nedeni yazın (zorunlu) → **Teslimatsız İade Uygula**.
+3. Sipariş "Teslimatsız İade" olur; İadeler kartında onaylı iade görünür; devamı İadeler sayfasından (Teslim Al → varsa Geri Ödeme).
 
 ## İpuçları ve sık karşılaşılan durumlar
 > **Dikkat:** İptal ve paket birleştirme geri alınamaz. Birleştirme bilinçli bir istisnadır; normal akış paket başına fatura ve kargodur.

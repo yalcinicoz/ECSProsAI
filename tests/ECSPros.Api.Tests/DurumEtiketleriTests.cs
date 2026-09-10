@@ -28,7 +28,7 @@ public sealed class DurumEtiketleriTests
         Assert.AreEqual("Kargoda", OrderGrid.StatusLabel("shipped"));
         Assert.AreEqual("Teslim", OrderGrid.StatusLabel("delivered"));
         Assert.AreEqual("İptal", OrderGrid.StatusLabel("cancelled"));
-        Assert.AreEqual("İade", OrderGrid.StatusLabel("returned"));
+        Assert.AreEqual("Teslimatsız İade", OrderGrid.StatusLabel("returned"));   // İade planı R5 (2026-09-10)
         Assert.AreEqual("Ödendi", OrderGrid.PaymentStatusLabel("paid"));
         Assert.AreEqual("Kart (Online)", OrderGrid.PaymentMethodLabel("kart"));
     }

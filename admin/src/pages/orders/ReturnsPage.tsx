@@ -6,20 +6,21 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
-import { RETURN_STATUS_MAP } from './orderConstants'
+import { RETURN_STATUS_MAP, RETURN_TYPE_MAP, REFUND_STATUS_MAP, REFUND_METHOD_MAP } from './orderConstants'
 import { DataGrid, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
 import { errText } from '@/components/ui/DataTable.utils'
 
-// Sunucu Enum alanları yalnız in|eq kabul eder → seçenek listeleri (ReturnGrid: returnType/refundMethod/refundStatus serbest değerli enum)
-const RETURN_TYPE_OPTIONS = [{ value: 'return', label: 'İade' }, { value: 'refund', label: 'Geri ödeme' }]
-const REFUND_STATUS_OPTIONS = [{ value: 'pending', label: 'Bekliyor' }, { value: 'completed', label: 'Tamamlandı' }]
-const REFUND_METHOD_OPTIONS = [{ value: 'original_payment', label: 'Orijinal ödeme' }, { value: 'wallet', label: 'Cüzdan' }]
+// Sunucu Enum alanları yalnız in|eq kabul eder → seçenek listeleri sözlükten (İade planı 2026-09-10: IadeTipi / GeriOdemeDurumu)
+const RETURN_TYPE_OPTIONS = Object.entries(RETURN_TYPE_MAP).map(([value, v]) => ({ value, label: v.label }))
+const REFUND_STATUS_OPTIONS = Object.entries(REFUND_STATUS_MAP).map(([value, v]) => ({ value, label: v.label }))
+const REFUND_METHOD_OPTIONS = Object.entries(REFUND_METHOD_MAP).map(([value, label]) => ({ value, label }))
 
 const TABS = [
   { key: 'requested', label: 'Talep Edilen' },
   { key: 'approved',  label: 'Onaylı' },
   { key: 'received',  label: 'Teslim Alınan' },
   { key: 'refunded',  label: 'Geri Ödenen' },
+  { key: 'closed',    label: 'Kapanan' },
   { key: 'rejected',  label: 'Reddedilen' },
   { key: '',          label: 'Tümü' },
 ]
@@ -36,6 +37,7 @@ export interface ReturnSummary {
   refundAmount: number
   createdAt: string
   cargoReturnCode?: string
+  refundNotApplicableReason?: string | null
 }
 
 interface PagedResult<T> {
@@ -194,11 +196,11 @@ export function ReturnsPage() {
   const columns: GridColumn<ReturnSummary>[] = [
     { key: 'returnNumber', header: 'İADE NO', filter: { type: 'text', label: 'İade no', ops: ['startswith', 'contains', 'eq'] }, filters: [{ field: 'trackingNumber', label: 'Kargo takip no', type: 'text' }], frozen: true, lockVisible: true, sortable: true, minWidth: 140,
       cell: r => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{r.returnNumber}</code> },
-    { key: 'returnType', header: 'TİP', sortable: true, priority: 3, filter: { type: 'enum', label: 'Tip', options: RETURN_TYPE_OPTIONS }, cell: r => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{r.returnType === 'refund' ? 'İade' : r.returnType}</span> },
+    { key: 'returnType', header: 'TİP', sortable: true, priority: 3, filter: { type: 'enum', label: 'Tip', options: RETURN_TYPE_OPTIONS }, cell: r => { const t = RETURN_TYPE_MAP[r.returnType]; return t ? <Badge variant={t.variant}>{t.label}</Badge> : <span className="text-sm" style={{ color: 'var(--text-m)' }}>{r.returnType}</span> } },
     { key: 'refundAmount', header: 'TUTAR', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Tutar' },
       cell: r => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{r.refundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span> },
     { key: 'refundStatus', header: 'GERİ ÖDEME', filter: { type: 'enum', multiple: true, label: 'Geri ödeme durumu', options: REFUND_STATUS_OPTIONS }, filters: [{ field: 'refundMethod', label: 'Geri ödeme yöntemi', type: 'enum', multiple: true, options: REFUND_METHOD_OPTIONS }], sortable: true, priority: 2,
-      cell: r => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{r.refundMethod}{r.refundStatus ? ` · ${r.refundStatus}` : ''}</span> },
+      cell: r => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{REFUND_METHOD_MAP[r.refundMethod] ?? r.refundMethod}{r.refundStatus ? ` · ${REFUND_STATUS_MAP[r.refundStatus]?.label ?? r.refundStatus}` : ''}</span> },
     { key: 'status', header: 'DURUM', lockVisible: true, sortable: true, priority: 1,
       filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(RETURN_STATUS_MAP).map(([value, v]) => ({ value, label: v.label })) },
       cell: r => { const st = RETURN_STATUS_MAP[r.status] ?? { label: r.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },

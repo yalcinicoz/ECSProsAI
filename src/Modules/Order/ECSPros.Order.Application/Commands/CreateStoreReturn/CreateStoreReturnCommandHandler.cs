@@ -11,10 +11,12 @@ namespace ECSPros.Order.Application.Commands.CreateStoreReturn;
 public class CreateStoreReturnCommandHandler : IRequestHandler<CreateStoreReturnCommand, Result<List<StoreReturnCreatedDto>>>
 {
     private readonly IOrderDbContext _context;
+    private readonly ECSPros.Shared.Contracts.Channels.IChannelCapabilityResolver _kanal;
 
-    public CreateStoreReturnCommandHandler(IOrderDbContext context)
+    public CreateStoreReturnCommandHandler(IOrderDbContext context, ECSPros.Shared.Contracts.Channels.IChannelCapabilityResolver kanal)
     {
         _context = context;
+        _kanal = kanal;
     }
 
     // Türkçe karakterler \uXXXX yerine okunur yazılsın (snapshot admin/panelde de görüntülenir)
@@ -73,9 +75,9 @@ public class CreateStoreReturnCommandHandler : IRequestHandler<CreateStoreReturn
                 ReturnNumber = $"RET-{simdi:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}",
                 OrderId = siparis.Id,
                 MemberId = request.MemberId,
-                ReturnType = "return",
-                Status = "requested",
-                RefundMethod = "original_payment",
+                ReturnType = ReturnConstants.TypeCustomer,   // İade planı R1 (2026-09-10)
+                Status = ReturnConstants.StatusRequested,
+                RefundMethod = ReturnConstants.RefundMethodFor(siparis.PaymentMethod),
                 RefundStatus = "pending",
                 CargoReturnCode = KargoIadeKoduUret(),
                 ImageUrls = request.ImageUrls ?? new List<string>()
@@ -104,6 +106,9 @@ public class CreateStoreReturnCommandHandler : IRequestHandler<CreateStoreReturn
             }
 
             iade.RefundAmount = iade.Items.Sum(i => i.TotalRefundAmount); // beklenen tutar
+            // İade planı §2.5: geri ödeme uygunluğu oluşturma anında (pazaryeri / tahsilat yok → not_applicable).
+            var uygunluk = await IadeOdemeDegerlendirme.DegerlendirAsync(_context, _kanal, siparis, null, ct);
+            IadeOdemeDegerlendirme.Uygula(iade, uygunluk);
             _context.Returns.Add(iade);
             sonuclar.Add(new StoreReturnCreatedDto(
                 iade.Id, iade.ReturnNumber, siparis.OrderNumber, iade.CargoReturnCode!, iade.RefundAmount));

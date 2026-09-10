@@ -11,7 +11,7 @@ namespace ECSPros.Order.Application.Queries.GetReturns;
 /// <summary>İadeler DataGrid şeması (F4): beyaz listeli sıralama/filtre + adlandırılmış filtreler + global arama; liste ve export aynı modeli kullanır.</summary>
 public static class ReturnGrid
 {
-    public static readonly string[] Statuses = { "requested", "approved", "received", "refunded", "rejected" };
+    public static readonly string[] Statuses = { "requested", "approved", "received", "refunded", "closed", "rejected" };
 
     public static readonly GridSchema<Return> Schema = new GridSchema<Return>()
         .Kanal(r => r.Order.FirmPlatformId)   // Y3 (K2): iadenin kanalı SİPARİŞTEN gelir
@@ -62,7 +62,8 @@ public static class ReturnGrid
 
     public static string StatusLabel(string s)   // M4: metin DurumEtiketleri.Panel.IadeDurumu'nda
         => DurumEtiketleri.Etiket(DurumEtiketleri.Panel.IadeDurumu, s);
-    public static string TypeLabel(string s) => s == "refund" ? "İade" : s;
+    public static string TypeLabel(string s)   // İade planı: metin DurumEtiketleri.Panel.IadeTipi'nde
+        => DurumEtiketleri.Etiket(DurumEtiketleri.Panel.IadeTipi, s);
 }
 
 public record ReturnListFilters(Guid? OrderId = null, Guid? MemberId = null, string? Status = null, string? Search = null);

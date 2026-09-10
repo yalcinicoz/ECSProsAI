@@ -1,4 +1,4 @@
-# İade Akışı Planı — v1 (2026-09-10)
+# İade Akışı Planı — v1.1 (2026-09-10) — F0-F5 UYGULANDI
 
 Sipariş iadesi ve müşteriye geri ödeme mantığının tek yerde oturtulması. Eski sistem aktarım/senkron
 kodları (LegacyOrderSyncService, LegacyOrderStatusMapper, LegacyReturnImportSlice) bu planın KAPSAMI
@@ -202,9 +202,12 @@ Legacy aktarım/senkron düzeltmeleri (durum eşlemesi, `legacy_type_N` → söz
 
 ---
 
-## 4. Açık Kararlar
+## 4. Kararlar (K1-K8 — "Öneri" sütunundaki değerlerle UYGULANDI, 2026-09-10)
 
-| # | Soru | Öneri |
+> Uygulama, kullanıcının "planı incele ve uygula" talebi üzerine her karar için ÖNERİ sütunundaki değerle yapıldı.
+> Farklı bir karar istenirse ilgili nokta tek yerden değiştirilir (aşağıda "Kodda" sütunu).
+
+| # | Soru | Öneri (UYGULANAN) |
 |---|------|-------|
 | **K1** | Teslimatsız İade **sipariş bütünü** mü, **paket bazlı** mı? (Çok paketli siparişte bir paket dönebilir; fatura paket başına.) | v1 sipariş bütünü; paket bazlı v2 (Order kısmi durum gerektirir). |
 | **K2** | Kargoya verilmemiş faturalı siparişte "iade" fiziksel olarak paketin açılıp rafa dönmesi. `receive` adımı zorunlu mu, yoksa komut anında otomatik `received` mi? | `receive` zorunlu (muayene + depo seçimi tek yerde); stok girişi atlanır (§2.3/5). |
@@ -214,6 +217,30 @@ Legacy aktarım/senkron düzeltmeleri (durum eşlemesi, `legacy_type_N` → söz
 | **K6** | Kapıda ödeme tahsilatı `MarkDelivered`'da otomatik mi, yoksa kargo firmasının tahsilat mutabakatı beklenir mi? | Otomatik (teslim = tahsilat, R9'un doğrudan karşılığı); mutabakat farkı Finance'te ayrı iş. |
 | **K7** | `returned` vitrin etiketi "Teslim Edilemedi" olsun mu? (Mevcut "İade Edildi".) | Evet. |
 | **K8** | Müşteri iadesi panelden açılırken `shipped` şartı kaldırılıyor (E6). Kargo firmasında müşteri "reddettim" deyip iade talebi açan durum → operasyon Teslimatsız İade'yi kullanır. Onaylıyor musunuz? | Evet. |
+
+**Kodda:** K1 → `MarkUndeliveredReturnCommand` sipariş bütünü (tüm kalemler). K2 → iade `approved` açılır, `receive` zorunlu;
+`ReturnItem.StockAlreadyIn` kalemlerde stok girişi atlanır. K3 → `FaturaIptal.Uygula` (CancelInvoice ile aynı kod; entegratöre
+iptal kuyruklanır); iade faturası FE5. K4 → `CancelOrderCommandHandler`: `processing` + toplama planı varsa İç Not'a uyarı, rezervasyon
+serbest (mevcut olay). K5 → teslimatsız: `RefundAmount = UstSinir` (tahsil edilenin tamamı); müşteri iadesi: kalem toplamı, üst sınırla
+kırpılır. K6 → `MarkDeliveredCommandHandler` kapıda ödemede `Tahsilat.KaydetAsync(source=cod_on_delivery)`. K7 → `DurumEtiketleri.Vitrin`
+`returned="Teslim Edilemedi"`. K8 → `CreateReturnCommandHandler` yalnız `delivered`, tip sabit `customer`.
+
+---
+
+## 6. Uygulama Durumu (2026-09-10)
+
+| Faz | Durum | Dokunulan yerler |
+|-----|-------|------------------|
+| F0 | ✅ | `DurumEtiketleri` (IadeTipi, GeriOdemeDurumu, GeriOdemeYokNedeni, `closed`, `returned` etiketleri, `underpaid`); `IadeOdemeKurali` (Shared.Contracts); `ReturnConstants`; `Return.RefundNotApplicableReason`, `ReturnItem.StockAlreadyIn`, `Shipment.ReturnedAt`; migration `20260910171457_AddReturnFlowFields` (+ `ReturnType` return/refund → customer backfill); Core migration `20260910170000_SeedUndeliveredReturnReason` (sistem nedeni, sabit Id); `CompleteRefund` savunma hattı + üst sınır; kalem tutarı `IadeOdemeDegerlendirme.KalemTutari` |
+| F1 | ✅ | `MarkDelivered` kapıda ödeme tahsilatı; `AddOrderPayment` PaymentStatus türetimi; **ek:** PayTR callback + mock ödeme artık `ord_order_payments` satırı yazıyor (plan "zaten var" sanıyordu; canlıda 0 satırdı) — eski siparişler için `IadeOdemeKurali.TahsilEdilen` `PaymentStatus=paid` → GrandTotal geriye dönük uyumu; `IPaymentMethodResolver` (Core ödeme yöntemi Id'si) |
+| F2 | ✅ | `Order.MarkUndeliveredReturn` + `OrderReturnedUndeliveredEvent`; `MarkUndeliveredReturnCommand` (`POST /api/orders/{id}/undelivered-return`, `orders.returns.manage`); gönderi `returned_to_sender`; Inventory `OrderReturnedUndeliveredEventHandler` (kargosuz → rezervasyon serbest); `ReceiveReturn` StockAlreadyIn atlar + not_applicable → `closed`; `IChannelCapabilityResolver.IsMarketplaceAsync` |
+| F3 | ✅ | `Order.CancellableStatuses` + processing; `CancelOrderCommandHandler` fatura ön koşulu; panel İptal Et gizleme + açıklama |
+| F4 | ✅ | Panel: sipariş detayı "Teslimatsız İade" butonu+modal, iade detayı tip rozeti / Geri Ödeme kartı (kilit+neden / üst sınır) / tutar sınırı, iade listesi tip+geri ödeme filtreleri sözlükten, "Kapanan" sekmesi; `CreateReturn` yalnız delivered |
+| F5 | ✅ | Vitrin: `returned` "Teslim Edilemedi"; İadelerim'de teslimatsız satır (tip rozeti, "Ödeme iadesi: Bulunmuyor", bilgi metinleri, `closed`); `GET /api/store/lookups` `returnType` ailesi; rehber `20-iadeler.md` + `11-siparis-detay.md`; testler `IadeOdemeKuraliTests` (kural R7-R10, domain R2-R4, sözlük) |
+
+**Bilinen sınırlar:** legacy senkron/aktarım (§5) hâlâ `returned`/`legacy_type_N` yazabilir — sonraki iş. Pazaryeri iade senkronu ve
+iade faturası (FE5) kapsam dışı. Toplama planı satırlarının iptali v1'de yalnız uyarı notu (K4). Teslimatsız iade kapıda ödemeli
+misafir siparişinde `Return.MemberId = Guid.Empty` (push gitmez, panelde görünür).
 
 ---
 

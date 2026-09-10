@@ -442,12 +442,25 @@ public class HesabimController(
                 "approved"  => ("iade", "devam", 2),
                 "received"  => ("iade", "devam", 3),
                 "refunded"  => ("iade-onaylandi", "tamamlanan", 4),
+                "closed"    => ("iade-onaylandi", "tamamlanan", 4),   // İade planı: geri ödeme yok, akış tamam
                 "rejected"  => ("iade", "tamamlanan", 0),
                 _           => ("iade", "devam", 1)
             };
             var durumMetni = DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.IadeDurumu, iade.Status);
+            var teslimatsiz = iade.ReturnType == "undelivered";   // İade planı §2.9: müşteri aksiyonu yok, bilgi metni farklı
+            var geriOdemeVar = iade.RefundApplicable;
 
-            var (bilgiBaslik, bilgiMetin, bilgiUyari) = iade.Status switch
+            var (bilgiBaslik, bilgiMetin, bilgiUyari) = teslimatsiz ? iade.Status switch
+            {
+                "closed" => ("Teslim edilemeyen siparişiniz kapatıldı",
+                    "Paket firmamıza geri döndü ve iade işlemi tamamlandı. Tahsilat yapılmadığı için ödeme iadesi bulunmamaktadır.", false),
+                "refunded" => ("Ödeme iadeniz tamamlandı",
+                    $"Teslim edilemeyen siparişinizin {iade.RefundAmount.ToString("N2", tr)} TL tutarındaki ödemesi iade edildi.", false),
+                "received" => ("Paket firmamıza ulaştı",
+                    geriOdemeVar ? "Teslim edilemeyen siparişinizin paketi depomuza döndü; ödeme iadesi başlatılacak." : "Teslim edilemeyen siparişinizin paketi depomuza döndü.", true),
+                _ => ("Siparişiniz teslim edilemedi",
+                    "Paket size ulaştırılamadığı için iade sürecine alındı. Yapmanız gereken bir işlem yoktur; paket firmamıza döndüğünde süreç burada güncellenir.", true)
+            } : iade.Status switch
             {
                 "requested" => ("İade talebiniz alındı",
                     $"Paketi kargo iade kodunuzla anlaşmalı kargoya bırakabilirsiniz. Talebiniz incelendikten sonra süreç adımları burada güncellenir.", true),
@@ -457,6 +470,8 @@ public class HesabimController(
                     "İade kargonuz depoya ulaştı. Ürün kontrolü tamamlandıktan sonra ödeme iadesi başlatılacak.", true),
                 "refunded"  => ("İade ödemeniz tamamlandı",
                     $"İade onaylandı ve {iade.RefundAmount.ToString("N2", tr)} TL ödeme iadesi kartınıza gönderildi.", false),
+                "closed"    => ("İadeniz tamamlandı",
+                    "Ürün depomuza ulaştı ve iade işlemi tamamlandı. Bu sipariş için tahsilat yapılmadığından ödeme iadesi bulunmamaktadır.", false),
                 "rejected"  => ("İade talebiniz onaylanmadı",
                     string.IsNullOrWhiteSpace(iade.InspectionNotes)
                         ? "Yapılan inceleme sonucunda iade talebiniz uygun bulunmadı. Detay için müşteri hizmetlerine ulaşabilirsiniz."
@@ -483,7 +498,8 @@ public class HesabimController(
                 iade.Status, durumMetni, durumSinifi, filtre, adim,
                 urunler, iade.CargoReturnCode,
                 bilgiBaslik, bilgiMetin, bilgiUyari,
-                iade.RefundAmount, iade.Status == "refunded"));
+                iade.RefundAmount, DurumEtiketleri.IadeTamamlandi(iade.Status),
+                iade.ReturnType, geriOdemeVar));
         }
 
         // Modal: iade edilebilir kalemler — reddedilmemiş bir iadede yer alan kalem

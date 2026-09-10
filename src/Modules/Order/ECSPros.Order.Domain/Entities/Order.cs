@@ -117,7 +117,12 @@ public class Order : AggregateRoot
     public ICollection<OrderGift> Gifts { get; set; } = new List<OrderGift>();
 
     private static readonly string[] ConfirmableStatuses = ["pending"];
-    private static readonly string[] CancellableStatuses = ["pending", "confirmed"];
+    // İade planı R4 (2026-09-10): fatura kesilmeden önceki her aşamada yalnız İPTAL vardır → `processing`
+    // de iptal edilebilir; "faturası var mı" ön koşulu handler'da (domain fatura tablosunu bilmez).
+    private static readonly string[] CancellableStatuses = ["pending", "confirmed", "processing"];
+    // İade planı R2/R3: Teslimatsız İade yalnız kargoya verilmiş (shipped) ya da faturalı-kargosuz (processing)
+    // siparişte; faturalı-mı / kargolu-mu kontrolü handler'da.
+    private static readonly string[] UndeliveredReturnableStatuses = ["shipped", "processing"];
     private static readonly string[] ProcessableStatuses = ["confirmed"];
     private static readonly string[] ShippableStatuses = ["processing"];
     private static readonly string[] DeliverableStatuses = ["shipped"];
@@ -172,6 +177,28 @@ public class Order : AggregateRoot
             .ToList();
 
         AddDomainEvent(new OrderShippedEvent(Id, updatedBy, shippedItems));
+    }
+
+    /// <summary>
+    /// Teslimatsız İade (İade planı §2.2-2.3): paket müşteriye ulaştırılamadı / kabul edilmedi ya da faturası
+    /// kesildi ama hiç kargoya verilmedi. Sipariş durumu <c>returned</c> olur (R5: bu durum YALNIZ teslimatsız
+    /// iade içindir). Kargoya verilmemişse stok yalnız rezerveydi → olay <paramref name="wasShipped"/>=false ile
+    /// yayılır ve Inventory rezervasyonları serbest bırakır; kargoya verilmişse stok zaten tüketildi, depo
+    /// girişi iadenin "teslim al" adımında olur.
+    /// </summary>
+    public void MarkUndeliveredReturn(Guid updatedBy, string reason)
+    {
+        if (!UndeliveredReturnableStatuses.Contains(Status))
+            throw new InvalidOperationException($"'{Status}' durumundaki sipariş için Teslimatsız İade uygulanamaz.");
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new InvalidOperationException("Teslimatsız İade için neden zorunludur.");
+
+        var wasShipped = Status == "shipped";
+        Status = "returned";
+        InternalNotes = $"[Teslimatsız İade] {reason.Trim()}\n{InternalNotes}";
+
+        var items = Items.Select(i => new OrderedItem(i.VariantId, i.Quantity)).ToList();
+        AddDomainEvent(new OrderReturnedUndeliveredEvent(Id, updatedBy, wasShipped, items));
     }
 
     public void MarkDelivered(Guid updatedBy)

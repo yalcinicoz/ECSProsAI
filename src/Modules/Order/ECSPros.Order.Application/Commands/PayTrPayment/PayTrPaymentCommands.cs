@@ -46,7 +46,8 @@ public class PayTrPaymentBaslatCommandHandler(IOrderDbContext db)
 }
 
 public class PayTrCallbackUygulaCommandHandler(
-    IOrderDbContext db, IPublisher publisher, ILogger<PayTrCallbackUygulaCommandHandler> logger)
+    IOrderDbContext db, IPublisher publisher, ILogger<PayTrCallbackUygulaCommandHandler> logger,
+    IPaymentMethodResolver odemeYontemi)
     : IRequestHandler<PayTrCallbackUygulaCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(PayTrCallbackUygulaCommand request, CancellationToken ct)
@@ -65,6 +66,7 @@ public class PayTrCallbackUygulaCommandHandler(
         // ONAYLANMAZ (operasyona düşmez). PayTR callback total_amount genelde KURUŞ; Direct API TL
         // echo'su ihtimaline karşı iki yorum da denenir, GrandTotal'a en yakın olan alınır.
         bool eksikOdeme = false;
+        decimal tahsilEdilen = order.GrandTotal;
         if (request.Basarili && decimal.TryParse(request.TotalAmount,
                 System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var ta) && ta > 0)
         {
@@ -73,6 +75,7 @@ public class PayTrCallbackUygulaCommandHandler(
             var odenen = Math.Abs(kurusYorum - order.GrandTotal) <= Math.Abs(tlYorum - order.GrandTotal)
                 ? kurusYorum : tlYorum;
             eksikOdeme = odenen + 0.02m < order.GrandTotal;   // tahsil edilen, sipariş tutarından düşük
+            tahsilEdilen = odenen;
             if (eksikOdeme)
                 logger.LogWarning("PayTR callback EKSİK ÖDEME: OrderNumber={Oid} sipariş={GT} tahsil={Odenen} (total_amount={Ta})",
                     request.MerchantOid, order.GrandTotal, odenen, request.TotalAmount);
@@ -96,6 +99,18 @@ public class PayTrCallbackUygulaCommandHandler(
         order.CustomerNotes = mevcut;
         // Eksik ödeme "paid" sayılmaz → operasyona düşmez; personel inceler.
         order.PaymentStatus = !request.Basarili ? "failed" : eksikOdeme ? "underpaid" : "paid";
+
+        // İade planı §2.6 (2026-09-10): tahsilat KAYDI — geri ödeme kuralı (IadeOdemeKurali) bu satıra bakar.
+        // Eksik ödemede de fiilen tahsil edilen yazılır (iade üst sınırı gerçek tutar olur); PaymentStatus yukarıda
+        // belirlendi, Tahsilat.KaydetAsync'in türettiği değerle EZİLMEZ (underpaid ayrımı korunur).
+        if (request.Basarili)
+        {
+            var durum = order.PaymentStatus;
+            var yontemId = await odemeYontemi.GetIdByCodeAsync(IPaymentMethodResolver.CoreCodeFor(order.PaymentMethod), ct) ?? Guid.Empty;
+            await Tahsilat.KaydetAsync(db, order, yontemId, tahsilEdilen, Tahsilat.KaynakPayTr, null, ct,
+                new Dictionary<string, object> { ["totalAmount"] = request.TotalAmount ?? "" });
+            order.PaymentStatus = durum;
+        }
         await db.SaveChangesAsync(ct);
 
         // A4 (2026-09-07): ödeme alındı → sepet kalemleri sunucuda temizlenir (eksik ödemede de — sipariş oluştu).

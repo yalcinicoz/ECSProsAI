@@ -255,6 +255,24 @@ public class OrderController : ControllerBase
         return Ok(new { success = true });
     }
 
+    /// <summary>Teslimatsız İade (İade planı §2.3): kargoya verilmiş ya da faturalı-kargosuz sipariş `returned` olur,
+    /// gönderi iade, fatura iptal, tüm kalemlerle onaylı iade kaydı açılır; geri ödeme uygunluğu kuralla yazılır.
+    /// Faturasız işlemdeki sipariş için hata (İptal Et kullanılır).</summary>
+    [HttpPost("{orderId:guid}/undelivered-return")]
+    [RequirePermission(Permissions.OrdersReturnsManage)]
+    public async Task<IActionResult> MarkUndeliveredReturn(Guid orderId, [FromBody] UndeliveredReturnRequest request,
+        [FromServices] ECSPros.Api.Services.Push.PushEtkilesim push, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+
+        var result = await _mediator.Send(new ECSPros.Order.Application.Commands.MarkUndeliveredReturn.MarkUndeliveredReturnCommand(
+            orderId, uid, request.Reason, request.Notes), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await push.IadeDurumuAsync(result.Value, "Siparişiniz teslim edilemedi, iade sürecine alındı", "undelivered", ct);
+        return Ok(new { success = true, data = new { returnId = result.Value } });
+    }
+
     // ─── Returns ──────────────────────────────────────────────────────────────
 
     /// <summary>İade taleplerini listeler.</summary>
@@ -298,7 +316,7 @@ public class OrderController : ControllerBase
     public async Task<IActionResult> CreateReturn(Guid orderId, [FromBody] CreateReturnRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreateReturnCommand(
-            orderId, request.MemberId, request.ReturnType, request.CustomerNotes, request.RefundMethod,
+            orderId, request.MemberId, request.CustomerNotes, request.RefundMethod,
             request.Items.Select(i => new ReturnItemRequest(i.OrderItemId, i.VariantId, i.Quantity, i.ReturnReasonId, i.CustomerNotes)).ToList()), ct);
 
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
@@ -841,8 +859,10 @@ public record CreateReturnItemRequest(
     Guid OrderItemId, Guid VariantId, int Quantity, Guid ReturnReasonId, string? CustomerNotes);
 
 public record CreateReturnRequest(
-    Guid MemberId, string ReturnType, string? CustomerNotes,
-    string RefundMethod, List<CreateReturnItemRequest> Items);
+    Guid MemberId, string? CustomerNotes,
+    string RefundMethod, List<CreateReturnItemRequest> Items);   // İade planı: tip sabit customer (istemciden alınmaz)
+
+public record UndeliveredReturnRequest(string Reason, string? Notes = null);
 
 public record ReceiveReturnRequest(Guid WarehouseId, string? InspectionNotes);
 

@@ -48,10 +48,23 @@ public sealed class ChannelCapabilityResolver : IChannelCapabilityResolver
 
     public ChannelCapabilities DefaultsFor(string platformTypeCode) => ChannelCapabilities.DefaultsFor(platformTypeCode);
 
+    private static string PazaryeriKey(Guid id) => $"chmkt:{id:N}";
+
+    public async Task<bool> IsMarketplaceAsync(Guid firmPlatformId, CancellationToken ct = default)
+    {
+        if (_cache.TryGetValue(PazaryeriKey(firmPlatformId), out bool cached)) return cached;
+        var deger = await _db.FirmPlatforms.AsNoTracking()
+            .Where(fp => fp.Id == firmPlatformId)
+            .Select(fp => (bool?)fp.PlatformType.IsMarketplace)
+            .FirstOrDefaultAsync(ct) ?? false;
+        _cache.Set(PazaryeriKey(firmPlatformId), deger, Ttl);
+        return deger;
+    }
+
     public void Invalidate(Guid? firmPlatformId = null)
     {
         // FAZ 10 / A9: yerel silme + diğer düğümlere yayın (pub/sub; Redis'siz yalnız yerel).
-        if (firmPlatformId.HasValue) _cacheBust.Bust(Key(firmPlatformId.Value));
+        if (firmPlatformId.HasValue) { _cacheBust.Bust(Key(firmPlatformId.Value)); _cacheBust.Bust(PazaryeriKey(firmPlatformId.Value)); }
         // Tümünü temizleme gerekirse TTL (2 dk) yeterli — tip düzeyi değişiklik nadir.
     }
 }

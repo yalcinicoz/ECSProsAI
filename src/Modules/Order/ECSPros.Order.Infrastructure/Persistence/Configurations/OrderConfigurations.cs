@@ -391,6 +391,7 @@ public class ReturnConfiguration : IEntityTypeConfiguration<Return>
         builder.Property(x => x.ReturnTrackingNumber).HasMaxLength(100);
         builder.Property(x => x.RefundMethod).HasMaxLength(30).IsRequired();
         builder.Property(x => x.RefundStatus).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.RefundNotApplicableReason).HasMaxLength(40);   // İade planı (2026-09-10)
         builder.Property(x => x.RefundAmount).HasPrecision(18, 2);
         builder.HasIndex(x => x.LegacyReturnId).IsUnique().HasFilter("\"LegacyReturnId\" IS NOT NULL");
         builder.HasIndex(x => x.ReturnNumber).IsUnique();
@@ -410,6 +411,7 @@ public class ReturnItemConfiguration : IEntityTypeConfiguration<ReturnItem>
         builder.Property(x => x.InspectionResult).HasMaxLength(30);
         builder.Property(x => x.UnitRefundAmount).HasPrecision(18, 2);
         builder.Property(x => x.TotalRefundAmount).HasPrecision(18, 2);
+        builder.Property(x => x.StockAlreadyIn).HasDefaultValue(false);   // İade planı (2026-09-10)
         builder.HasIndex(x => x.LegacyReturnItemId).IsUnique().HasFilter("\"LegacyReturnItemId\" IS NOT NULL");
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

@@ -17,6 +17,10 @@ public class ReturnItem : BaseEntity
     public string Status { get; set; } = string.Empty;
     public string? InspectionResult { get; set; }
     public string? InspectionNotes { get; set; }
+    /// <summary>İade planı §2.3/5: kargoya verilmemiş faturalı siparişin teslimatsız iadesinde stok hiç
+    /// çıkmamıştı (yalnız rezerve) — rezervasyon iade anında serbest bırakılır ve "teslim al" adımı bu kalem
+    /// için stok girişi YAPMAZ (çift sayım önlenir).</summary>
+    public bool StockAlreadyIn { get; set; }
 
     public Return Return { get; set; } = null!;
 }

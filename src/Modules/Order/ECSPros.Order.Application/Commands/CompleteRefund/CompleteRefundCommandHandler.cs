@@ -11,11 +11,14 @@ public class CompleteRefundCommandHandler : IRequestHandler<CompleteRefundComman
 {
     private readonly IOrderDbContext _context;
     private readonly ISender _sender;
+    private readonly ECSPros.Shared.Contracts.Channels.IChannelCapabilityResolver _kanal;
 
-    public CompleteRefundCommandHandler(IOrderDbContext context, ISender sender)
+    public CompleteRefundCommandHandler(IOrderDbContext context, ISender sender,
+        ECSPros.Shared.Contracts.Channels.IChannelCapabilityResolver kanal)
     {
         _context = context;
         _sender = sender;
+        _kanal = kanal;
     }
 
     public async Task<Result<bool>> Handle(CompleteRefundCommand request, CancellationToken cancellationToken)
@@ -31,6 +34,23 @@ public class CompleteRefundCommandHandler : IRequestHandler<CompleteRefundComman
 
         if (request.Amount <= 0)
             return Result.Failure<bool>("Geri ödeme tutarı sıfırdan büyük olmalıdır.");
+
+        // İade planı §2.5 (b) — İKİNCİ SAVUNMA HATTI: iade kaydı "geri ödeme yok" diyorsa ya da kural şu an
+        // uygun bulmuyorsa (pazaryeri / tahsilat yok / tamamı iade edilmiş) ödeme YAPILMAZ; tutar tahsil edilen
+        // kalanı (üst sınır) aşamaz — panel elle tutar girse bile (E9).
+        if (@return.RefundStatus == ReturnConstants.RefundNotApplicable)
+            return Result.Failure<bool>("Bu iadede müşteriye para iadesi yoktur: "
+                + ECSPros.Shared.Contracts.DurumEtiketleri.Etiket(ECSPros.Shared.Contracts.DurumEtiketleri.Panel.GeriOdemeYokNedeni, @return.RefundNotApplicableReason) + ".");
+
+        var order = await _context.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.Id == @return.OrderId, cancellationToken);
+        if (order is null)
+            return Result.Failure<bool>("İadenin siparişi bulunamadı.");
+        var uygunluk = await IadeOdemeDegerlendirme.DegerlendirAsync(_context, _kanal, order, @return.Id, cancellationToken);
+        if (!uygunluk.Uygun)
+            return Result.Failure<bool>("Müşteriye para iadesi yapılamaz: "
+                + ECSPros.Shared.Contracts.DurumEtiketleri.Etiket(ECSPros.Shared.Contracts.DurumEtiketleri.Panel.GeriOdemeYokNedeni, uygunluk.Neden) + ".");
+        if (request.Amount > uygunluk.UstSinir + 0.005m)
+            return Result.Failure<bool>($"Geri ödeme tutarı tahsil edilen tutarı aşamaz (üst sınır {uygunluk.UstSinir:N2}).");
 
         var now = DateTime.UtcNow;
 
@@ -68,8 +88,8 @@ public class CompleteRefundCommandHandler : IRequestHandler<CompleteRefundComman
 
         _context.ReturnRefunds.Add(refund);
 
-        @return.Status = "refunded";
-        @return.RefundStatus = "completed";
+        @return.Status = ReturnConstants.StatusRefunded;
+        @return.RefundStatus = ReturnConstants.RefundCompleted;
         @return.RefundAmount = request.Amount;
         @return.UpdatedAt = now;
         @return.UpdatedBy = request.ProcessedBy;

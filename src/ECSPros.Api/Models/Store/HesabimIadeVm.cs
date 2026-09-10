@@ -18,7 +18,9 @@ public record HesabimIadeVm(
     string BilgiMetin,
     bool BilgiUyari,                 // true → ms-hesabim-iade-bilgi-uyari
     decimal BeklenenTutar,
-    bool Tamamlandi);                // refunded → "İade Tutarı", değilse "Beklenen İade Tutarı"
+    bool Tamamlandi,                 // refunded/closed → "İade Tutarı", değilse "Beklenen İade Tutarı"
+    string ReturnType = "customer",  // İade planı (2026-09-10): undelivered → "Teslim Edilemedi" rozeti, müşteri aksiyonu yok
+    bool GeriOdemeVar = true);       // not_applicable → tutar satırı gizlenir (para iadesi hesaplanmaz)
 
 /// <summary>Yeni İade Talebi modalındaki iade edilebilir (veya edilmiş) sipariş kalemi.</summary>
 public record HesabimIadeEdilebilirUrunVm(

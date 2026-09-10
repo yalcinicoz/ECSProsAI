@@ -40,6 +40,12 @@ public class AddOrderPaymentCommandHandler : IRequestHandler<AddOrderPaymentComm
         };
 
         _db.OrderPayments.Add(payment);
+
+        // İade planı §2.6: PaymentStatus türetilmiş özet — tamamlanmış ödemeler toplamı ≥ GrandTotal → paid, aksi partial.
+        var mevcutToplam = await Tahsilat.TamamlananToplamAsync(_db, order.Id, ct);
+        order.PaymentStatus = Tahsilat.PaymentStatusFor(mevcutToplam + payment.Amount, order.GrandTotal);
+        order.UpdatedAt = DateTime.UtcNow;
+
         await _db.SaveChangesAsync(ct);
 
         return Result.Success(payment.Id);

@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IOrderNumberService, Services.OrderNumberService>();
         services.AddScoped<IFirmResolver, Services.FirmResolver>(); // OP2: otomatik fatura serisi
         services.AddScoped<IInvoiceNumberService, Services.InvoiceNumberService>(); // FE0: seri×yıl sayacı
+        services.AddScoped<IPaymentMethodResolver, Services.PaymentMethodResolver>(); // İade planı §2.6: tahsilat satırı
 
         return services;
     }

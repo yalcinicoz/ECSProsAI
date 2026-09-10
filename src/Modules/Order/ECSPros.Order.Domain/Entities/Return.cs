@@ -9,6 +9,9 @@ public class Return : BaseEntity
     public string ReturnNumber { get; set; } = string.Empty;
     public Guid OrderId { get; set; }
     public Guid MemberId { get; set; }
+    /// <summary>İade planı R1 (2026-09-10): <see cref="ReturnConstants.TypeUndelivered"/> (Teslimatsız İade) |
+    /// <see cref="ReturnConstants.TypeCustomer"/> (Müşteri İadesi). Eski kayıtlarda legacy_type_N kalmış olabilir
+    /// (aktarım düzeltmesi bu planın dışında).</summary>
     public string ReturnType { get; set; } = string.Empty;
     public string? CustomerNotes { get; set; }
     public string Status { get; set; } = string.Empty;
@@ -20,7 +23,11 @@ public class Return : BaseEntity
     public DateTime? InspectionCompletedAt { get; set; }
     public Guid? InspectionCompletedBy { get; set; }
     public string RefundMethod { get; set; } = string.Empty;
+    /// <summary>pending | completed | not_applicable (İade planı R7-R10: para iadesi hesaplanmaz; nedeni
+    /// <see cref="RefundNotApplicableReason"/>).</summary>
     public string RefundStatus { get; set; } = string.Empty;
+    /// <summary>cod_not_collected | marketplace | unpaid | already_refunded — <c>IadeOdemeKurali</c> neden kodu.</summary>
+    public string? RefundNotApplicableReason { get; set; }
     public decimal RefundAmount { get; set; }
     /// <summary>E8: paketi anlaşmalı kargoya kodla bırakma için üretilen iade kodu
     /// (IAD-XXXXXX). Gerçek kargo entegrasyonuna (H2) dek takip numarasından ayrı tutulur.</summary>

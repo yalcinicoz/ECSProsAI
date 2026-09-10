@@ -9,11 +9,13 @@ public class MarkDeliveredCommandHandler : IRequestHandler<MarkDeliveredCommand,
 {
     private readonly IOrderDbContext _context;
     private readonly IPublisher _publisher;
+    private readonly IPaymentMethodResolver _odemeYontemi;
 
-    public MarkDeliveredCommandHandler(IOrderDbContext context, IPublisher publisher)
+    public MarkDeliveredCommandHandler(IOrderDbContext context, IPublisher publisher, IPaymentMethodResolver odemeYontemi)
     {
         _context = context;
         _publisher = publisher;
+        _odemeYontemi = odemeYontemi;
     }
 
     public async Task<Result<bool>> Handle(MarkDeliveredCommand request, CancellationToken cancellationToken)
@@ -43,6 +45,16 @@ public class MarkDeliveredCommandHandler : IRequestHandler<MarkDeliveredCommand,
         {
             shipment.Status = "delivered";
             shipment.DeliveredAt = DateTime.UtcNow;
+        }
+
+        // İade planı §2.6 / K6 (2026-09-10): kapıda ödemede TESLİM = TAHSİLAT. Tahsilat satırı burada atılır
+        // (kargo entegrasyonunun "teslim edildi" olayı da bu komuttan geçer → tek nokta); PaymentStatus paid olur.
+        // Kargo firması mutabakat farkı Finance'te ayrı iş. Kural (IadeOdemeKurali) bu satıra bakar (R9).
+        if (ECSPros.Shared.Contracts.IadeOdemeKurali.KapidaOdeme(order.PaymentMethod))
+        {
+            var yontemId = await _odemeYontemi.GetIdByCodeAsync(IPaymentMethodResolver.CoreCodeFor(order.PaymentMethod), cancellationToken) ?? Guid.Empty;
+            await Tahsilat.KaydetAsync(_context, order, yontemId, order.GrandTotal, Tahsilat.KaynakTeslimdeKapidaOdeme,
+                request.UpdatedBy, cancellationToken);
         }
 
         await _context.SaveChangesAsync(cancellationToken);

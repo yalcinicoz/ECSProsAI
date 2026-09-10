@@ -26,8 +26,12 @@ public record ReturnListDto(
     string RefundStatus,
     decimal RefundAmount,
     DateTime CreatedAt,
-    string? CargoReturnCode = null) // E8: kargo iade kodu
+    string? CargoReturnCode = null, // E8: kargo iade kodu
+    string? RefundNotApplicableReason = null)   // İade planı (2026-09-10)
 {
+    /// <summary>Vitrin iade tipi etiketi (İadelerim: teslimatsız iade satırı "Teslim Edilemedi").</summary>
+    public string ReturnTypeLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.IadeTipi, ReturnType);
+    public bool RefundApplicable => RefundStatus != "not_applicable";
     // M4 (2026-09-09, mobil): "İadelerim" listesinin vitrin etiketi.
     public string StatusLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.IadeDurumu, Status);
     public string StatusColor => DurumEtiketleri.Renk(DurumEtiketleri.Vitrin.IadeDurumu, Status);

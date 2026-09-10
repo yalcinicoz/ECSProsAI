@@ -8,10 +8,12 @@ namespace ECSPros.Order.Application.Queries.GetReturnDetail;
 public class GetReturnDetailQueryHandler : IRequestHandler<GetReturnDetailQuery, Result<ReturnDetailDto>>
 {
     private readonly IOrderDbContext _context;
+    private readonly ECSPros.Shared.Contracts.Channels.IChannelCapabilityResolver _kanal;
 
-    public GetReturnDetailQueryHandler(IOrderDbContext context)
+    public GetReturnDetailQueryHandler(IOrderDbContext context, ECSPros.Shared.Contracts.Channels.IChannelCapabilityResolver kanal)
     {
         _context = context;
+        _kanal = kanal;
     }
 
     public async Task<Result<ReturnDetailDto>> Handle(GetReturnDetailQuery request, CancellationToken cancellationToken)
@@ -25,6 +27,19 @@ public class GetReturnDetailQueryHandler : IRequestHandler<GetReturnDetailQuery,
 
         if (@return is null)
             return Result.Failure<ReturnDetailDto>("İade talebi bulunamadı.");
+
+        // İade planı §2.8: panel tutar alanı üst sınırla sınırlı — kural her seferinde ödeme satırlarından hesaplar.
+        decimal ustSinir = 0m;
+        if (@return.RefundStatus != Domain.Entities.ReturnConstants.RefundNotApplicable
+            && @return.RefundStatus != Domain.Entities.ReturnConstants.RefundCompleted)
+        {
+            var order = await _context.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.Id == @return.OrderId, cancellationToken);
+            if (order is not null)
+            {
+                var sonuc = await Services.IadeOdemeDegerlendirme.DegerlendirAsync(_context, _kanal, order, @return.Id, cancellationToken);
+                ustSinir = sonuc.Uygun ? sonuc.UstSinir : 0m;
+            }
+        }
 
         var dto = new ReturnDetailDto(
             @return.Id,
@@ -54,7 +69,8 @@ public class GetReturnDetailQueryHandler : IRequestHandler<GetReturnDetailQuery,
                 i.TotalRefundAmount,
                 i.Status,
                 i.InspectionResult,
-                i.InspectionNotes)).ToList(),
+                i.InspectionNotes,
+                i.StockAlreadyIn)).ToList(),
             @return.Refunds.Select(r => new ReturnRefundDto(
                 r.Id,
                 r.RefundMethod,
@@ -62,7 +78,9 @@ public class GetReturnDetailQueryHandler : IRequestHandler<GetReturnDetailQuery,
                 r.Status,
                 r.ProcessedAt)).ToList(),
             @return.CargoReturnCode,
-            @return.ImageUrls);
+            @return.ImageUrls,
+            @return.RefundNotApplicableReason,
+            ustSinir);
 
         return Result.Success(dto);
     }
