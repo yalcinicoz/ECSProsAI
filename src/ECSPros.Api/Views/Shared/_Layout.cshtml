@@ -82,7 +82,7 @@
     <meta property="og:locale" content="tr_TR" />
     <meta property="og:site_name" content="@markaAdi" />
     <meta property="og:type" content="@openGraphType" />
-    <meta property="og:title" content="@sayfaBasligi" />
+    <meta property="og:title" content="@(ViewData["OgTitle"]?.ToString() ?? sayfaBasligi)" />
     <meta property="og:description" content="@metaDescription" />
     <meta property="og:url" content="@canonicalUrl" />
     <meta property="og:image" content="@openGraphImageUrl" />

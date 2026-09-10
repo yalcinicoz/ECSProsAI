@@ -363,24 +363,30 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         // TumKokler: bos kategoriler menuden gizlense de dogrudan URL ile gelen
         // ziyaretci 404 degil "henuz urun yuklenmedi" sayfasi gormeli.
         var kategori = KategoriBul(nav.TumKokler, slug);
-        if (kategori is null)
+        // 2026-09-10: kategori SEO alanları (panel SEO sekmesi) — nav ağacında bulunsa da
+        // meta başlık/açıklama/OG için slug kaydı okunur (tek indeksli sorgu, sayfa başına bir kez).
+        ECSPros.Storefront.Application.Queries.GetChannelCategoryBySlug.ChannelCategorySlugDto? seo = null;
         {
-            // Nav ağacında yok — menüye bağlı olmayan yayınlı kategori olabilir. Doğrudan
-            // slug'dan çöz (2026-07-30 düzeltmesi: yayınlı her kategori URL'iyle açılmalı;
-            // önceden yalnız menüdeki kategoriler açılıyordu, diğerleri 404 veriyordu).
             var platformNav = await storeContext.GetPlatformAsync(ct);
             if (platformNav is not null)
             {
                 var slugKategori = await mediator.Send(
                     new ECSPros.Storefront.Application.Queries.GetChannelCategoryBySlug
                         .GetChannelCategoryBySlugQuery(platformNav.Id, slug), ct);
-                if (slugKategori.IsSuccess && slugKategori.Value is { } sk)
-                {
-                    var ad = sk.NameI18n.TryGetValue("tr", out var trAd) ? trAd
-                        : sk.NameI18n.Values.FirstOrDefault() ?? sk.Slug;
-                    kategori = new NavKategori(sk.Id, ad, sk.Slug,
-                        sk.DisplayImageUrl, sk.BadgeLabel, [], UrunVar: true);
-                }
+                if (slugKategori.IsSuccess) seo = slugKategori.Value;
+            }
+        }
+        if (kategori is null)
+        {
+            // Nav ağacında yok — menüye bağlı olmayan yayınlı kategori olabilir. Doğrudan
+            // slug'dan çöz (2026-07-30 düzeltmesi: yayınlı her kategori URL'iyle açılmalı;
+            // önceden yalnız menüdeki kategoriler açılıyordu, diğerleri 404 veriyordu).
+            if (seo is { } sk)
+            {
+                var ad = sk.NameI18n.TryGetValue("tr", out var trAd) ? trAd
+                    : sk.NameI18n.Values.FirstOrDefault() ?? sk.Slug;
+                kategori = new NavKategori(sk.Id, ad, sk.Slug,
+                    sk.DisplayImageUrl, sk.BadgeLabel, [], UrunVar: true);
             }
             if (kategori is null)
                 return await UrunSlugDeneVeyaNotFound(slug, ct);
@@ -443,7 +449,34 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
                         ? "Seçtiğiniz filtrelerle eşleşen ürün bulunamadı."
                         : "Bu kategoriye henüz ürün yüklenmedi.");
 
-        return ListeGoster(vm);
+        var sonuc = ListeGoster(vm);
+        KategoriSeoYaz(seo, kategori);
+        return sonuc;
+    }
+
+    /// <summary>
+    /// Kategori sayfası SEO başlıkları (2026-09-10, panel Kanal Kategorileri › SEO sekmesi):
+    /// meta başlık boşsa kategori adı, meta açıklama boşsa site varsayılanı (_Layout),
+    /// OG görseli boşsa kategori vitrin görseli, o da yoksa site logosu; OG başlığı boşsa
+    /// sayfa başlığı. Yalnız ilk sayfada ve filtresiz/aramasız değil — her görünümde aynı
+    /// başlık (canonical zaten yolu taşır). Dil: SSR Türkçe; "tr" yoksa ilk dolu değer.
+    /// </summary>
+    private void KategoriSeoYaz(
+        ECSPros.Storefront.Application.Queries.GetChannelCategoryBySlug.ChannelCategorySlugDto? seo,
+        NavKategori kategori)
+    {
+        static string? Metin(Dictionary<string, string>? d)
+        {
+            if (d is null) return null;
+            var v = d.TryGetValue("tr", out var tr) ? tr : d.Values.FirstOrDefault();
+            return string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+        }
+        // Görünüm (UrunListesi/Index) Title'ı vm.Baslik ile yeniden yazar; meta başlık için ayrı anahtar.
+        if (Metin(seo?.MetaTitleI18n) is { } baslik) ViewData["SeoTitle"] = baslik;
+        if (Metin(seo?.MetaDescriptionI18n) is { } aciklama) ViewData["MetaDescription"] = aciklama;
+        var ogGorsel = string.IsNullOrWhiteSpace(seo?.OgImageUrl) ? kategori.GorselUrl : seo!.OgImageUrl;
+        if (!string.IsNullOrWhiteSpace(ogGorsel)) ViewData["OpenGraphImage"] = ogGorsel;
+        if (Metin(seo?.OgTitleI18n) is { } ogBaslik) ViewData["OgTitle"] = ogBaslik;
     }
 
     private async Task<IActionResult> GenelListeAsync(string? arama, ListeFiltre filtre, int sayfa, CancellationToken ct)

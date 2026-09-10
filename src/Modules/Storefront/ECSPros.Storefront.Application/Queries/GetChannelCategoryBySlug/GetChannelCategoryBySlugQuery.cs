@@ -11,12 +11,18 @@ namespace ECSPros.Storefront.Application.Queries.GetChannelCategoryBySlug;
 public record GetChannelCategoryBySlugQuery(Guid FirmPlatformId, string Slug)
     : IRequest<Result<ChannelCategorySlugDto>>;
 
+// SEO alanları (2026-09-10, panel SEO sekmesiyle birlikte): kategori sayfası <title>/meta
+// description/og:* değerlerini buradan alır; boşsa sayfa kategori adı + site varsayılanına düşer.
 public record ChannelCategorySlugDto(
     Guid Id,
     Dictionary<string, string> NameI18n,
     string Slug,
     string? DisplayImageUrl,
-    string? BadgeLabel);
+    string? BadgeLabel,
+    Dictionary<string, string>? MetaTitleI18n = null,
+    Dictionary<string, string>? MetaDescriptionI18n = null,
+    string? OgImageUrl = null,
+    Dictionary<string, string>? OgTitleI18n = null);
 
 public class GetChannelCategoryBySlugQueryHandler(IStorefrontDbContext db)
     : IRequestHandler<GetChannelCategoryBySlugQuery, Result<ChannelCategorySlugDto>>
@@ -30,7 +36,8 @@ public class GetChannelCategoryBySlugQueryHandler(IStorefrontDbContext db)
                 && c.Slug == request.Slug
                 && c.Status == "published")
             .Select(c => new ChannelCategorySlugDto(
-                c.Id, c.NameI18n, c.Slug, c.DisplayImageUrl, c.BadgeLabel))
+                c.Id, c.NameI18n, c.Slug, c.DisplayImageUrl, c.BadgeLabel,
+                c.MetaTitleI18n, c.MetaDescriptionI18n, c.OgImageUrl, c.OgTitleI18n))
             .FirstOrDefaultAsync(ct);
 
         return kat is null

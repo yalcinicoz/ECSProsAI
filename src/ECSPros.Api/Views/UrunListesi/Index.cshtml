@@ -1,6 +1,8 @@
 @{
     // B7: başlık controller'dan gelir (kategori adı / arama terimi / "Tüm Ürünler")
-    ViewData["Title"] = (ViewData["MsUrunListesi"] as ECSPros.Api.Models.Store.UrunListesiVm)?.Baslik ?? "Ürün Listesi";
+    @* 2026-09-10: kategori SEO meta başlığı (panel SEO sekmesi) varsa <title> odur; sayfa H1'i vm.Baslik kalır. *@
+    ViewData["Title"] = ViewData["SeoTitle"]?.ToString()
+        ?? (ViewData["MsUrunListesi"] as ECSPros.Api.Models.Store.UrunListesiVm)?.Baslik ?? "Ürün Listesi";
     ViewData["MsMobilAltBar"] = true;
 }
 

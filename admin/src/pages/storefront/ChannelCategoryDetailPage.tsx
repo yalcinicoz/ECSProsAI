@@ -98,6 +98,13 @@ const LISTING_MODES = [
 ]
 
 const TABS = ['Genel', 'Gruplar', 'Ürünler', 'SEO'] as const
+
+/** Boş/boşluk değerleri atılmış i18n sözlüğü; hiç değer kalmazsa null. */
+function doluI18n(d: Record<string, string>): Record<string, string> | null {
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(d)) if (v && v.trim()) out[k] = v.trim()
+  return Object.keys(out).length ? out : null
+}
 type Tab = typeof TABS[number]
 
 function getName(i18n: Record<string, string>, fallback = ''): string {
@@ -134,7 +141,13 @@ export function ChannelCategoryDetailPage() {
     displayImageUrl: string
     badgeLabel: string
     googleCategoryId: string
+    // SEO sekmesi (2026-09-10): dil bazlı meta + OG; Genel ve SEO sekmeleri AYNI kaydı yazar.
+    metaTitleI18n: Record<string, string>
+    metaDescriptionI18n: Record<string, string>
+    ogTitleI18n: Record<string, string>
+    ogImageUrl: string
   } | null>(null)
+  const [seoLang, setSeoLang] = useState<string | null>(null)
 
   const [formInited, setFormInited] = useState(false)
   if (cat && !formInited) {
@@ -150,6 +163,10 @@ export function ChannelCategoryDetailPage() {
       displayImageUrl: cat.displayImageUrl ?? '',
       badgeLabel:     cat.badgeLabel ?? '',
       googleCategoryId: cat.googleCategoryId ?? '',
+      metaTitleI18n:  { ...(cat.metaTitleI18n ?? {}) },
+      metaDescriptionI18n: { ...(cat.metaDescriptionI18n ?? {}) },
+      ogTitleI18n:    { ...(cat.ogTitleI18n ?? {}) },
+      ogImageUrl:     cat.ogImageUrl ?? '',
     })
   }
 
@@ -168,10 +185,11 @@ export function ChannelCategoryDetailPage() {
         displayImageUrl:  form.displayImageUrl || null,
         badgeLabel:       form.badgeLabel || null,
         googleCategoryId: form.googleCategoryId || null,
-        metaTitleI18n:    cat?.metaTitleI18n ?? null,
-        metaDescriptionI18n: cat?.metaDescriptionI18n ?? null,
-        ogImageUrl:       cat?.ogImageUrl ?? null,
-        ogTitleI18n:      cat?.ogTitleI18n ?? null,
+        // Boş dil değerleri atılır; hiç değer kalmazsa null (sunucu "yok" sayar, site varsayılana düşer).
+        metaTitleI18n:    doluI18n(form.metaTitleI18n),
+        metaDescriptionI18n: doluI18n(form.metaDescriptionI18n),
+        ogImageUrl:       form.ogImageUrl.trim() || null,
+        ogTitleI18n:      doluI18n(form.ogTitleI18n),
       })
     },
     onSuccess: async () => {
@@ -767,11 +785,163 @@ export function ChannelCategoryDetailPage() {
       )}
 
       {/* ── SEO Tab ───────────────────────────────────────────────────────── */}
-      {activeTab === 'SEO' && (
-        <div className="card space-y-4">
-          <p className="text-sm" style={{ color: 'var(--text-s)' }}>SEO alanları yakında eklenecek.</p>
-        </div>
-      )}
+      {activeTab === 'SEO' && (() => {
+        const aktifDil = seoLang ?? sourceLang
+        const katAd = form.nameI18n[aktifDil] || form.nameI18n[sourceLang] || form.nameI18n['tr'] || ''
+        const onizBaslik = form.metaTitleI18n[aktifDil] || katAd
+        const onizAciklama = form.metaDescriptionI18n[aktifDil] || ''
+        const onizOgBaslik = form.ogTitleI18n[aktifDil] || onizBaslik
+        const onizOgGorsel = form.ogImageUrl || form.displayImageUrl
+        const setI18n = (alan: 'metaTitleI18n' | 'metaDescriptionI18n' | 'ogTitleI18n', deger: string) =>
+          setForm(f => f && ({ ...f, [alan]: { ...f[alan], [aktifDil]: deger } }))
+        return (
+          <div className="vc flex detail-cols gap-4">
+            {/* SOL — form */}
+            <div className="flex-1 space-y-4 min-w-0">
+              <div className="card space-y-2">
+                <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Sayfa Adresi</h2>
+                <div className="flex items-center gap-2 rounded-xl overflow-hidden"
+                  style={{ border: '1px solid var(--border)' }}>
+                  <span className="px-3 py-2 text-xs shrink-0"
+                    style={{ background: 'var(--surface2)', color: 'var(--text-s)', borderRight: '1px solid var(--border)' }}>/</span>
+                  <span className="flex-1 text-sm px-2 py-2" style={{ color: 'var(--text)' }}>{form.slug || '—'}</span>
+                </div>
+                <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+                  Slug "Genel" sekmesinden değiştirilir; kategori sitede kök adreste açılır.
+                </p>
+              </div>
+
+              {/* Meta alanları — dil sekmeli (ürün SEO sekmesiyle aynı kalıp) */}
+              <div className="card overflow-hidden p-0">
+                <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Meta Alanları</h2>
+                  <div className="flex gap-0.5">
+                    {languages.map(l => (
+                      <button key={l.code} onClick={() => setSeoLang(l.code)}
+                        className={cn('px-2.5 py-0.5 rounded-lg text-xs font-medium transition-all',
+                          aktifDil === l.code ? 'text-[var(--brand)]' : 'text-[var(--text-s)]')}
+                        style={aktifDil === l.code
+                          ? { background: 'var(--brand-bg)', border: '1px solid var(--brand-b)' }
+                          : { border: '1px solid transparent' }}>
+                        {l.code.toUpperCase()}
+                        {(form.metaTitleI18n[l.code] || form.metaDescriptionI18n[l.code] || form.ogTitleI18n[l.code]) && (
+                          <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-current opacity-60" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="flbl">Meta Başlık</label>
+                      <span className="text-xs" style={{ color: (form.metaTitleI18n[aktifDil] ?? '').length > 60 ? '#dc2626' : 'var(--text-s)' }}>
+                        {(form.metaTitleI18n[aktifDil] ?? '').length}/60
+                      </span>
+                    </div>
+                    <input className="inp" value={form.metaTitleI18n[aktifDil] ?? ''} placeholder={katAd}
+                      onChange={e => setI18n('metaTitleI18n', e.target.value)} />
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Boş bırakılırsa kategori adı kullanılır.</p>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="flbl">Meta Açıklama</label>
+                      <span className="text-xs" style={{ color: (form.metaDescriptionI18n[aktifDil] ?? '').length > 160 ? '#dc2626' : 'var(--text-s)' }}>
+                        {(form.metaDescriptionI18n[aktifDil] ?? '').length}/160
+                      </span>
+                    </div>
+                    <textarea className="ta" rows={3} value={form.metaDescriptionI18n[aktifDil] ?? ''}
+                      placeholder="Arama sonucunda görünecek 1-2 cümlelik açıklama"
+                      onChange={e => setI18n('metaDescriptionI18n', e.target.value)} />
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Boş bırakılırsa sitenin genel açıklaması kullanılır.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sosyal paylaşım (Open Graph) */}
+              <div className="card space-y-4">
+                <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Sosyal Paylaşım (Open Graph)</h2>
+                <div>
+                  <label className="flbl">Paylaşım Başlığı ({aktifDil.toUpperCase()})</label>
+                  <input className="inp" value={form.ogTitleI18n[aktifDil] ?? ''} placeholder={onizBaslik}
+                    onChange={e => setI18n('ogTitleI18n', e.target.value)} />
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Boş bırakılırsa meta başlık kullanılır.</p>
+                </div>
+                <div>
+                  <label className="flbl">Paylaşım Görseli URL</label>
+                  <input className="inp" value={form.ogImageUrl} placeholder="https://…"
+                    onChange={e => setForm(f => f && ({ ...f, ogImageUrl: e.target.value }))} />
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+                    Boş bırakılırsa kategori görseli, o da yoksa site logosu kullanılır. Önerilen 1200×630.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
+                  <Save size={14} /> Kaydet
+                </Button>
+              </div>
+            </div>
+
+            {/* SAĞ — önizlemeler */}
+            <div className="detail-right w-full md:w-80 flex-shrink-0 space-y-4">
+              <div className="card overflow-hidden p-0">
+                <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <h3 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Google Önizleme</h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>{aktifDil.toUpperCase()} dili</p>
+                </div>
+                <div className="p-4">
+                  <div className="rounded-xl p-3 space-y-1" style={{ background: '#fff', border: '1px solid #dadce0' }}>
+                    <p className="text-xs truncate" style={{ color: '#006621', fontFamily: 'sans-serif' }}>
+                      siteniz.com/{form.slug}
+                    </p>
+                    <p className="leading-snug font-normal"
+                      style={{ color: '#1a0dab', fontFamily: 'sans-serif', fontSize: 18 }}>
+                      {onizBaslik.slice(0, 60) || 'Kategori Adı'}
+                    </p>
+                    <p className="text-xs leading-relaxed line-clamp-2"
+                      style={{ color: '#545454', fontFamily: 'sans-serif', fontSize: 13 }}>
+                      {onizAciklama.slice(0, 160) || 'Meta açıklama girilmemişse sitenin genel açıklaması görünür.'}
+                    </p>
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span style={{ color: 'var(--text-s)' }}>Başlık uzunluğu</span>
+                      <span style={{ color: onizBaslik.length > 60 ? '#dc2626' : '#16a34a' }}>{onizBaslik.length}/60</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span style={{ color: 'var(--text-s)' }}>Açıklama uzunluğu</span>
+                      <span style={{ color: onizAciklama.length > 160 ? '#dc2626' : '#16a34a' }}>{onizAciklama.length}/160</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card overflow-hidden p-0">
+                <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <h3 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Paylaşım Kartı</h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>WhatsApp / Facebook / X</p>
+                </div>
+                <div className="p-4">
+                  <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                    <div className="flex items-center justify-center" style={{ background: 'var(--surface2)', aspectRatio: '1.91 / 1' }}>
+                      {onizOgGorsel
+                        ? <img src={onizOgGorsel} alt="" className="w-full h-full object-cover" />
+                        : <ImageIcon size={28} style={{ color: 'var(--text-s)' }} />}
+                    </div>
+                    <div className="p-3" style={{ background: 'var(--surface)' }}>
+                      <p className="text-xs uppercase truncate" style={{ color: 'var(--text-s)' }}>siteniz.com</p>
+                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{onizOgBaslik || 'Kategori Adı'}</p>
+                      <p className="text-xs line-clamp-2" style={{ color: 'var(--text-s)' }}>{onizAciklama || 'Meta açıklama'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Add Product Modal */}
       <Modal
