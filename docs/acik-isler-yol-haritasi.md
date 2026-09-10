@@ -524,8 +524,9 @@ Koli Duvarı + Masa İzleme (barkod bazlı iz sürme için gerekirse 15.4f ile b
 2. Ticari etki sırası önerim: **F1 (satış kanalı F4)** → **F3 (kargo KG1)** → **F2 (tedarik cutover, 0.6 netleşince)**
    → **F4 (Trendyol canlı)** → **F7 (go-live PART B)** → F5/F6 paralel fırsat buldukça → F8/F9 araya serpiştirilir.
 3. Her faz kapanışında bu dokümanda işaretle + PROGRESS panosunu güncelle (K18 kapanış raporu kuralı geçerli).
-4. **FAZ 15 panel eksikleri:** 15.2 (küçük hazır işler) → 15.3 (raf ekranları; 15.1a yönlendirme tablosu artık küçük/düşük öncelik — eski URL'ler zaten çalışıyor, 2026-09-10),
-   depo go-live'ına göre) → 15.4 fırsat buldukça; 15.5 önce eski kod okunmadan açılmaz.
+4. **FAZ 15 panel eksikleri:** 15.2 (küçük hazır işler) → 15.3 (raf ekranları, depo go-live'ına göre) → 15.4 fırsat
+   buldukça; 15.5 önce eski kod okunmadan açılmaz. 15.1a yönlendirme tablosu küçük/düşük öncelik (eski URL'ler zaten
+   çalışıyor, 2026-09-10 doğrulandı).
 5. **FAZ 16 AI raporlama:** 16.0 kararlar kapanmadan kod yazılmaz; sonra R1 → R2 (referans hesap = üretilen sorgu kapısı) → R3 → R4 → R5.
 6. Çoklu sunucu çalışmasında sıra: **11.1 → 11.2 → 11.3 → 11.4/11.7 → 11.5 → 11.6 → 11.8 →
    11.9/11.T → 12.1-12.4 → ikinci fiziksel sunucu geldiğinde 12.5-12.T**.
