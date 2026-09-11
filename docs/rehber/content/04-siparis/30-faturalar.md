@@ -47,7 +47,8 @@ Muhasebe/operasyon personeli kullanır.
 | PAZARYERİ | Faturayı pazaryeri kestiyse pazaryeri adı ve belge numarası; değilse "—". |
 | DURUM | `Oluşturuldu` (yeşil) / `İptal` (kırmızı). |
 | ALICI | Alıcı adı — varsayılan gizli, Kolonlar menüsünden açılır. |
-| (son sütun, sabit) | **Görüntüle** ve **URL** düğmeleri; yatay kaydırmada sağda sabit kalır. |
+| PAZARYERİ (devam) | Sıralanabilir; başlık filtresi pazaryeri adına göre süzer. |
+| (son sütun) | Belge ikonu (**Görüntüle**) ve zincir ikonu (**URL**); masaüstünde yatay kaydırmada sağda sabit kalır, mobilde sabit değildir. |
 
 Arama kutusu fatura no, alıcı, vergi no ve dış belge numarasında arar; her sütun başlığında filtre vardır. Belirli bir siparişin
 faturaları sipariş detayındaki **Faturalar** kartında da listelenir. Liste boşken
@@ -56,8 +57,8 @@ faturaları sipariş detayındaki **Faturalar** kartında da listelenir. Liste b
 ## Butonlar ve aksiyonlar
 | Buton/Aksiyon | Nerede | Ne olur | Ön koşul / yetki |
 |---|---|---|---|
-| Görüntüle | Satırın sağındaki sabit sütun | Entegratör PDF'i kayıtlıysa faturanın PDF'ini yeni sekmede açar (site sunucusu üzerinden, adres istemciye inmez). PDF henüz yoksa fatura yazdırma sayfası açılır (tarayıcıdan PDF olarak kaydedilebilir). | `orders.invoices.view` |
-| URL | Satırın sağındaki sabit sütun | Küçük pencere: **entegratörün ürettiği fatura adresi** + **Kopyala** (pazaryeri vb. yerlere verilen adres budur). Entegratör henüz adres üretmediyse bilgi mesajı görünür. | — |
+| Görüntüle (belge ikonu) | Satırın sağındaki sütun | Entegratör PDF'i kayıtlıysa faturanın PDF'ini yeni sekmede açar (site sunucusu üzerinden, adres istemciye inmez). PDF henüz yoksa fatura yazdırma sayfası açılır (tarayıcıdan PDF olarak kaydedilebilir). | `orders.invoices.view` |
+| URL (zincir ikonu) | Satırın sağındaki sütun | Küçük pencere: **entegratörün ürettiği fatura adresi** + **Kopyala** (pazaryeri vb. yerlere verilen adres budur). Entegratör henüz adres üretmediyse bilgi mesajı görünür. | — |
 | Sipariş no | Liste | Siparişin detay sayfasına gider. | — |
 | İptal Et ⚠️ | Sipariş detayı → Faturalar kartı (kırmızı) | Onay sorulur; fatura `İptal` olur. Geri alınamaz; numara yeniden kullanılmaz. | Durum `Oluşturuldu` |
 | Fatura Serileri | Liste başlığı | "Fatura Serileri" penceresi: mevcut seriler (ad · e-Arşiv/e-Fatura/İhracat kodları · `Pasif` rozeti) + YENİ SERİ formu. | — |

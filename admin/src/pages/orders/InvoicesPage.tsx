@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
+import { FileText, Link2 } from 'lucide-react'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -277,7 +278,7 @@ export function InvoicesPage() {
           <div style={{ color: 'var(--text)' }}>{ERP_STATUS[inv.erpStatus ?? ''] ?? inv.erpStatus}{inv.erpReference ? ` · ${inv.erpReference}` : ''}</div>
           {inv.erpSentAt && <div style={xs}>{fmtDt(inv.erpSentAt)}</div>}
         </div>) },
-    { key: 'marketplace', header: 'PAZARYERİ', priority: 3,
+    { key: 'marketplace', header: 'PAZARYERİ', priority: 3, sortable: true, filter: { type: 'text', label: 'Pazaryeri', ops: ['contains', 'startswith'] },
       cell: inv => inv.numberSource === 'marketplace'
         ? <div className="text-xs leading-tight"><div style={{ color: 'var(--text)' }}>{inv.externalSource || 'Pazaryeri'} kesti</div>{inv.externalDocumentId && <div style={xs}>{inv.externalDocumentId}</div>}</div>
         : <span className="text-xs" style={xs}>—</span> },
@@ -287,8 +288,10 @@ export function InvoicesPage() {
     { key: 'actions', header: '', priority: 1, align: 'right', exportable: false, lockVisible: true, frozenRight: true, stopRowClick: true,
       cell: inv => (
         <div className="flex items-center justify-end gap-1 whitespace-nowrap">
-          <Button size="sm" variant="secondary" onClick={() => void pdfAc(inv, setPdfErr)}>Görüntüle</Button>
-          <Button size="sm" variant="ghost" onClick={() => setUrlInv(inv)}>URL</Button>
+          <button type="button" title="Faturayı görüntüle (PDF)" aria-label="Faturayı görüntüle" className="p-1.5 rounded hover:bg-[var(--surface2)]"
+            style={{ color: 'var(--brand)' }} onClick={() => void pdfAc(inv, setPdfErr)}><FileText size={16} /></button>
+          <button type="button" title="Entegratör fatura adresi" aria-label="Entegratör fatura adresi" className="p-1.5 rounded hover:bg-[var(--surface2)]"
+            style={{ color: inv.integratorInvoiceUrl ? 'var(--brand)' : 'var(--text-s)' }} onClick={() => setUrlInv(inv)}><Link2 size={16} /></button>
         </div>) },
   ]
 
