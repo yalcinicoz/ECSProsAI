@@ -64,6 +64,7 @@ export function trDate(ymdStr: string): string {
 /** Aktif filtre çipi metni: "Durum: Bekleyen, Onaylı" */
 export function filterChipText(field: GridFilterField, f: GridFilterValue): string {
   const v = f.value
+  if (field.chipText) return field.chipText(v)
   switch (field.type) {
     case 'enum': {
       const labels = v.split(',').map(x => field.options?.find(o => o.value === x.trim())?.label ?? x)

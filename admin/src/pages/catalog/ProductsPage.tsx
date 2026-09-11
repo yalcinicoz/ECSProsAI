@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Badge } from '@/components/ui/Badge'
 import { errText } from '@/components/ui/DataTable.utils'
 import { DataGrid, FilterAccordion, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
@@ -67,6 +68,84 @@ const IMAGE_STATE_BADGE: Record<string, { label: string; variant: 'success' | 'w
   full: { label: 'Var', variant: 'success' }, partial: { label: 'Kısmi', variant: 'warning' }, none: { label: 'Yok', variant: 'danger' },
 }
 
+// ── Özellik filtresi (eski /urun/urun-yonetim "Özellikler / Değerler / Seçilen Özellikler", 2026-09-11) ─────────────
+// Grid filtresi 'attrs' = "tipId:degerId,degerId;tipId2:degerId" — aynı özellikte VEYA, özellikler arasında VE (sunucu ProductGrid).
+interface AttrValue { id: string; nameI18n: Record<string, string>; isActive: boolean; sortOrder: number }
+interface AttrType { id: string; code: string; nameI18n: Record<string, string>; isActive: boolean; values: AttrValue[] }
+const attrsParse = (v: string): Record<string, string[]> => {
+  const out: Record<string, string[]> = {}
+  for (const g of (v || '').split(';')) { const [t, vals] = g.split(':'); if (t && vals) out[t] = vals.split(',').filter(Boolean) }
+  return out
+}
+const attrsStringify = (m: Record<string, string[]>) => Object.entries(m).filter(([, vs]) => vs.length).map(([t, vs]) => `${t}:${vs.join(',')}`).join(';')
+
+function AttributeFilter({ types, value, onChange }: { types: AttrType[]; value: string; onChange: (v: string) => void }) {
+  const [typeId, setTypeId] = useState<string | null>(null)
+  const [picked, setPicked] = useState<string[]>([])
+  const [q, setQ] = useState('')
+  const secim = useMemo(() => attrsParse(value), [value])
+  const tip = types.find(t => t.id === typeId)
+  const degerler = (tip?.values ?? []).filter(v => v.isActive).sort((a, b) => a.sortOrder - b.sortOrder)
+  const ekle = () => {
+    if (!typeId || picked.length === 0) return
+    const n = { ...secim, [typeId]: Array.from(new Set([...(secim[typeId] ?? []), ...picked])) }
+    onChange(attrsStringify(n)); setPicked([])
+  }
+  const sil = (t: string, v: string) => { const n = { ...secim, [t]: (secim[t] ?? []).filter(x => x !== v) }; onChange(attrsStringify(n)) }
+  const satirlar = Object.entries(secim).flatMap(([t, vs]) => vs.map(v => {
+    const tt = types.find(x => x.id === t); const vv = tt?.values.find(x => x.id === v)
+    return { t, v, tipAd: tt ? getName(tt) : t, degerAd: vv ? getName({ nameI18n: vv.nameI18n, code: v }) : v }
+  })).filter(r => !q || `${r.tipAd} ${r.degerAd}`.toLocaleLowerCase('tr').includes(q.toLocaleLowerCase('tr')))
+  return (
+    <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+      <div className="space-y-2">
+        <div><span className="flbl">Özellikler</span>
+          <SearchableSelect value={typeId} onChange={v => { setTypeId(v); setPicked([]) }} placeholder="Özellik seçin" clearable portal
+            options={types.filter(t => t.isActive && t.values.length > 0).map(t => ({ value: t.id, label: getName(t) }))} /></div>
+        <div>
+          <div className="flex items-center justify-between"><span className="flbl">Değerler</span>
+            <span className="flex gap-2 text-xs">
+              <button type="button" className="underline" style={{ color: 'var(--brand)' }} disabled={!tip} onClick={() => setPicked(degerler.map(v => v.id))}>Tümünü seç</button>
+              <button type="button" className="underline" style={{ color: 'var(--text-s)' }} onClick={() => setPicked([])}>Tümünü kaldır</button>
+            </span></div>
+          <select multiple className="inp h-36 text-sm" value={picked} disabled={!tip}
+            onChange={e => setPicked(Array.from(e.target.selectedOptions).map(o => o.value))}>
+            {!tip && <option value="">Önce özellik seçin</option>}
+            {degerler.map(v => <option key={v.id} value={v.id}>{getName({ nameI18n: v.nameI18n, code: v.id })}</option>)}
+          </select>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-xs" style={{ color: 'var(--text-s)' }}>{picked.length ? `${picked.length} değer seçili` : 'Ctrl/⌘ ile çoklu seçim'}</span>
+            <Button size="sm" variant="secondary" disabled={!typeId || picked.length === 0} onClick={ekle}>Ekle</Button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div className="flex items-center justify-between mb-1"><span className="flbl">Seçilen Özellikler</span>
+          <input className="inp text-xs py-1 w-32" placeholder="Ara…" value={q} onChange={e => setQ(e.target.value)} /></div>
+        <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+          <table className="w-full text-sm">
+            <thead><tr style={{ background: 'var(--surface2)' }}>
+              <th className="px-2 py-1.5 text-left text-xs font-semibold" style={{ color: 'var(--text-s)' }}>FİLTRE</th>
+              <th className="px-2 py-1.5 text-left text-xs font-semibold" style={{ color: 'var(--text-s)' }}>SEÇİLEN DEĞER</th>
+              <th className="px-2 py-1.5 w-10"></th>
+            </tr></thead>
+            <tbody>
+              {satirlar.map(r => (
+                <tr key={r.t + r.v} style={{ borderTop: '1px solid var(--border)' }}>
+                  <td className="px-2 py-1" style={{ color: 'var(--text-m)' }}>{r.tipAd}</td>
+                  <td className="px-2 py-1" style={{ color: 'var(--text)' }}>{r.degerAd}</td>
+                  <td className="px-2 py-1 text-right"><button type="button" aria-label="Sil" className="text-xs" style={{ color: '#b91c1c' }} onClick={() => sil(r.t, r.v)}>✕</button></td>
+                </tr>
+              ))}
+              {satirlar.length === 0 && <tr><td colSpan={3} className="px-2 py-3 text-center text-xs" style={{ color: 'var(--text-s)' }}>Seçilen özellik yok. Aynı özellikteki değerler VEYA, farklı özellikler VE ile birleşir.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function ProductsPage() {
@@ -125,6 +204,27 @@ export function ProductsPage() {
     { key: 'createdAt', label: 'Oluşturma tarihi', type: 'date' },
     { key: 'lastImageAt', label: 'Son görsel tarihi', type: 'date' },
   ], [groupOptions])
+
+
+  // Özellik filtresi: tipler + değerleri (tam liste ucu; FilterBuilder da aynı ucu kullanır)
+  const { data: attrTypes = [] } = useQuery<AttrType[]>({
+    queryKey: ['attribute-types', 'all-with-values'],
+    queryFn: async () => (await api.get('/catalog/attribute-types?activeOnly=true&includeCounts=false')).data.data,
+    staleTime: 5 * 60 * 1000,
+  })
+  const attrsValue = grid.state.filters.find(f => f.field === 'attrs')?.value ?? ''
+  const attrsChip = (v: string) => {
+    const m = attrsParse(v)
+    return 'Özellikler: ' + Object.entries(m).map(([t, vs]) => {
+      const tt = attrTypes.find(x => x.id === t)
+      const names = vs.map(id => { const vv = tt?.values.find(x => x.id === id); return vv ? getName({ nameI18n: vv.nameI18n, code: id }) : id.slice(0, 6) })
+      return `${tt ? getName(tt) : t.slice(0, 6)} = ${names.join(' / ')}`
+    }).join(' · ')
+  }
+
+
+  // Çip/mobil liste için özellik filtresi alanı (akordeonda özel bileşenle çizilir; FieldRow listesine GİRMEZ)
+  const attrsField: GridFilterField = useMemo(() => ({ key: 'attrs', label: 'Özellikler', type: 'text', chipText: attrsChip }), [attrTypes]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Görsel/stok istatistiklerinin tazeliği + "Şimdi yenile"
   const queryClient = useQueryClient()
@@ -203,7 +303,8 @@ export function ProductsPage() {
       </div>
 
       {/* 2026-09-11 (kullanıcı): filtre, eski panel /urun/urun-yonetim gibi listenin ÜSTÜNDE tam satır akordeon — başlangıçta kapalı */}
-      <FilterAccordion grid={grid} fields={advancedFields} storageKey="grid:products:adv" title="Filtrele" note={statsNote} />
+      <FilterAccordion grid={grid} fields={advancedFields} storageKey="grid:products:adv" title="Filtrele" note={statsNote}
+        extra={<AttributeFilter types={attrTypes} value={attrsValue} onChange={v => grid.setFilter({ field: 'attrs', op: 'eq', value: v })} />} />
 
       <DataGrid<ProductListItem>
         gridId="products"
@@ -211,7 +312,7 @@ export function ProductsPage() {
         grid={grid}
         columns={columns}
         extraFilters={extraFilters}
-        advancedFilters={{ fields: advancedFields, layout: 'external' }}
+        advancedFilters={{ fields: [...advancedFields, attrsField], layout: 'external' }}
         search={{ placeholder: 'Ürün adı, kod, tedarikçi ürün kodu…' }}
         rows={items}
         totalCount={totalCount}

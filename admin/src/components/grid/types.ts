@@ -18,6 +18,8 @@ export interface GridFilterDef {
   multiple?: boolean
   /** enum (tekli): uzun listelerde aranabilir seçici (SearchableSelect) — 2026-09-11 ürün grubu */
   searchable?: boolean
+  /** Aktif filtre çipinin metni (özel biçimli değerler için, örn. ürün özellik filtresi) */
+  chipText?: (value: string) => string
   /** Hızlı filtre çubuğunda görünsün (aksi halde Gelişmiş panelde) */
   quick?: boolean
   /** text için izin verilen operatörler (varsayılan contains|eq|startswith) */

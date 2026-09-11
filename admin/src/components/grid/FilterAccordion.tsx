@@ -11,8 +11,10 @@ import type { GridStateApi } from './useGridState'
  * Grid araç çubuğunun (arama/kolonlar/export) satırına GİRMEZ — o yüzden DataGrid içinden değil sayfadan yerleştirilir.
  * Alanlar aynı grid durumuna yazar; çip ve mobil listesi için sayfa aynı alanları DataGrid.advancedFilters (layout 'external') ile de verir.
  */
-export function FilterAccordion({ grid, fields, storageKey, title = 'Filtrele', note }: {
+export function FilterAccordion({ grid, fields, storageKey, title = 'Filtrele', note, extra }: {
   grid: GridStateApi; fields: GridFilterField[]; storageKey: string; title?: string; note?: ReactNode
+  /** Alan ızgarasının altında tam genişlik ek içerik (örn. ürün özellik filtresi) */
+  extra?: ReactNode
 }) {
   const [open, setOpen] = useState<boolean>(() => { try { return localStorage.getItem(storageKey) === '1' } catch { return false } })
   const toggle = () => setOpen(o => { const n = !o; try { localStorage.setItem(storageKey, n ? '1' : '0') } catch { /* yok say */ } return n })
@@ -32,6 +34,7 @@ export function FilterAccordion({ grid, fields, storageKey, title = 'Filtrele', 
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
             {fields.map(f => <FieldRow key={f.key} field={f} grid={grid} stacked />)}
           </div>
+          {extra && <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>{extra}</div>}
           <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
             <div className="text-xs" style={{ color: 'var(--text-s)' }}>{note}</div>
             <button type="button" onClick={() => grid.clearFilters({ keepSearch: true })} disabled={grid.state.filters.length === 0}

@@ -82,7 +82,25 @@ public static class ProductGrid
                 ? query.Where(p => p.Variants.Any(v => v.Barcode != null && v.Barcode.Contains(b)))
                 : query.Where(p => p.Variants.Any(v => v.Barcode == b));
         }
-        return Schema.ApplyFilters(query, grid, "barcode");
+        // 2026-09-11 ürün ÖZELLİK filtresi (eski /urun/urun-yonetim "Seçilen Özellikler"): değer biçimi
+        // "tipId:degerId,degerId;tipId2:degerId" — aynı özellik içinde VEYA, özellikler arasında VE (eski kuralla aynı).
+        // Eşleşme: ürün düzeyi özellik (product_attributes) YA DA herhangi bir varyantın özelliği (product_variant_attributes).
+        var attrs = grid?.Filters.FirstOrDefault(x => string.Equals(x.Field, "attrs", StringComparison.OrdinalIgnoreCase));
+        if (attrs is not null && !string.IsNullOrWhiteSpace(attrs.Value))
+        {
+            foreach (var grupMetni in attrs.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var parcalar = grupMetni.Split(':', 2);
+                if (parcalar.Length != 2 || !System.Guid.TryParse(parcalar[0], out var tipId)) throw new GridException("'attrs' filtresi 'tipId:degerId,degerId;…' biçiminde olmalıdır.");
+                var degerler = parcalar[1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(d => System.Guid.TryParse(d, out var g) ? g : (Guid?)null).Where(g => g.HasValue).Select(g => g!.Value).ToList();
+                if (degerler.Count == 0) continue;
+                query = query.Where(p =>
+                    p.Attributes.Any(a => a.AttributeTypeId == tipId && a.AttributeValueId != null && degerler.Contains(a.AttributeValueId.Value))
+                    || p.Variants.Any(v => v.VariantAttributes.Any(va => va.AttributeTypeId == tipId && degerler.Contains(va.AttributeValueId))));
+            }
+        }
+        return Schema.ApplyFilters(query, grid, "barcode", "attrs");
     }
 
     /// <summary>
