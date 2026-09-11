@@ -115,20 +115,16 @@ interface ProductGroup {
   attributes: ProductGroupAttribute[]
 }
 
+// Raf bazlı stok satırı (/inventory/stocks/admin-list) — depo/kısım/raf adlarıyla zenginleştirilmiş
 interface StockDto {
   id: string
   variantId: string
-  warehouseId: string
-  stockType: string
+  warehouseName: string
+  sectionName: string | null
+  binCode: string | null
   quantity: number
   reservedQuantity: number
   availableQuantity: number
-}
-
-interface Warehouse {
-  id: string
-  code: string
-  nameI18n: Record<string, string>
 }
 
 type ApiError = { response?: { data?: { error?: string } } }
@@ -1190,28 +1186,25 @@ export function ProductDetailPage() {
     },
   })
 
-  // ── Fetch warehouses + stocks (stok tab only) ──
-  const { data: warehouses = [] } = useQuery<Warehouse[]>({
-    queryKey: ['warehouses'],
-    enabled: activeTab === 'stok' || activeTab === 'varyantlar',
-    queryFn: async () => {
-      const { data } = await api.get('/inventory/warehouses')
-      return data.data ?? []
-    },
-    staleTime: 5 * 60 * 1000,
-  })
-
+  // ── Fetch stocks (stok + varyantlar tabs) ──
+  // Raf bazlı stok: admin-list ucu ürün koduyla aranır (depo/kısım/raf satırları), sayfalar tükenene
+  // kadar çekilir; arama "içerir" eşleşmesi olduğundan satırlar bu ürünün varyantlarına daraltılır.
   const { data: allStocks = [], isLoading: stocksLoading } = useQuery<StockDto[]>({
     queryKey: ['product-stocks', product?.id],
     enabled: (activeTab === 'stok' || activeTab === 'varyantlar') && !!product,
     queryFn: async () => {
       if (!product?.variants?.length) return []
-      const settled = await Promise.allSettled(
-        product.variants.map((v) =>
-          api.get(`/inventory/stocks?variantId=${v.id}`).then((r) => (r.data.data ?? []) as StockDto[])
-        )
-      )
-      return settled.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
+      const variantIds = new Set(product.variants.map((v) => v.id))
+      const rows: StockDto[] = []
+      for (let page = 1; page <= 20; page++) {
+        const { data } = await api.get('/inventory/stocks/admin-list', {
+          params: { search: product.code, page, pageSize: 250 },
+        })
+        const items = (data.data?.items ?? []) as StockDto[]
+        rows.push(...items.filter((r) => variantIds.has(r.variantId)))
+        if (items.length < 250) break
+      }
+      return rows
     },
   })
 
@@ -1524,12 +1517,6 @@ export function ProductDetailPage() {
     const g = groups.find((g) => g.id === product.productGroupId)
     return g ? getName(g) : '—'
   }, [product, groups])
-
-  const warehouseMap = useMemo(() => {
-    const m = new Map<string, string>()
-    warehouses.forEach((w) => m.set(w.id, getName(w)))
-    return m
-  }, [warehouses])
 
   const variantMap = useMemo(() => {
     const m = new Map<string, Variant>()
@@ -2708,12 +2695,12 @@ export function ProductDetailPage() {
             </div>
           </div>
 
-          {/* Depo Bazlı Stok */}
+          {/* Raf Bazlı Stok */}
           <div className="card overflow-hidden max-w-4xl">
             <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-              <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Depo Bazlı Stok</h2>
+              <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Raf Bazlı Stok</h2>
               <Link
-                to="/inventory/stocks"
+                to={`/inventory/stocks?search=${encodeURIComponent(product.code)}`}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
                 style={{ background: 'var(--brand-bg)', color: 'var(--brand)', border: '1px solid var(--brand-b)' }}
               >
@@ -2728,10 +2715,12 @@ export function ProductDetailPage() {
               </div>
             ) : (
               <div className="tbl-wrap">
-                <table className="w-full" style={{ minWidth: 400 }}>
+                <table className="w-full" style={{ minWidth: 560 }}>
                   <thead>
                     <tr style={{ background: 'var(--surface2)' }}>
                       <th className="px-4 py-3 text-left text-xs font-semibold" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>DEPO</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold mob-hide" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>KISIM</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>RAF</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>VARYANT</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>TOPLAM</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold mob-hide" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>REZERVE</th>
@@ -2741,11 +2730,18 @@ export function ProductDetailPage() {
                   <tbody>
                     {allStocks.map((s) => {
                       const variant = variantMap.get(s.variantId)
-                      const wName = warehouseMap.get(s.warehouseId) ?? s.warehouseId
                       return (
                         <tr key={s.id} className="trow">
                           <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-                            <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{wName}</span>
+                            <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{s.warehouseName}</span>
+                          </td>
+                          <td className="px-4 py-3 mob-hide" style={{ borderBottom: '1px solid var(--border)' }}>
+                            <span className="text-xs" style={{ color: 'var(--text-m)' }}>{s.sectionName ?? '—'}</span>
+                          </td>
+                          <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+                            {s.binCode
+                              ? <code className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>{s.binCode}</code>
+                              : <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span>}
                           </td>
                           <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
                             <span className="text-xs" style={{ color: 'var(--text-m)' }}>{variant?.sku ?? '—'}</span>
