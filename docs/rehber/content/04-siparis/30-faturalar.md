@@ -57,7 +57,7 @@ faturaları sipariş detayındaki **Faturalar** kartında da listelenir. Liste b
 | Buton/Aksiyon | Nerede | Ne olur | Ön koşul / yetki |
 |---|---|---|---|
 | Görüntüle | Satırın sağındaki sabit sütun | Entegratör PDF'i kayıtlıysa faturanın PDF'ini yeni sekmede açar (site sunucusu üzerinden, adres istemciye inmez). PDF henüz yoksa fatura yazdırma sayfası açılır (tarayıcıdan PDF olarak kaydedilebilir). | `orders.invoices.view` |
-| URL | Satırın sağındaki sabit sütun | Küçük pencere: entegratör PDF adresi, panel PDF adresi ve yazdırma sayfası adresi; her satırın yanında **Kopyala**. | — |
+| URL | Satırın sağındaki sabit sütun | Küçük pencere: **entegratörün ürettiği fatura adresi** + **Kopyala** (pazaryeri vb. yerlere verilen adres budur). Entegratör henüz adres üretmediyse bilgi mesajı görünür. | — |
 | Sipariş no | Liste | Siparişin detay sayfasına gider. | — |
 | İptal Et ⚠️ | Sipariş detayı → Faturalar kartı (kırmızı) | Onay sorulur; fatura `İptal` olur. Geri alınamaz; numara yeniden kullanılmaz. | Durum `Oluşturuldu` |
 | Fatura Serileri | Liste başlığı | "Fatura Serileri" penceresi: mevcut seriler (ad · e-Arşiv/e-Fatura/İhracat kodları · `Pasif` rozeti) + YENİ SERİ formu. | — |

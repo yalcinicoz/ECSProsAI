@@ -182,34 +182,28 @@ async function pdfAc(inv: InvoiceSummary, onErr: (m: string) => void) {
   }
 }
 
-// ── "URL göster" popup'ı: fatura adresleri + kopyala ────────────────────────
+// ── "URL" popup'ı: ENTEGRATÖRÜN ürettiği fatura adresi + kopyala (2026-09-11 kullanıcı kararı: bizim site
+// adresleri DEĞİL — her entegratör fatura için bir adres üretir, pazaryeri vb. yerlere bu adres verilir) ──────
 function UrlPopup({ inv, onClose }: { inv: InvoiceSummary; onClose: () => void }) {
-  const [kopyalandi, setKopyalandi] = useState('')
-  const origin = window.location.origin
-  const satirlar = [
-    inv.integratorInvoiceUrl ? { ad: 'Entegratör PDF adresi', url: inv.integratorInvoiceUrl } : null,
-    inv.hasIntegratorPdf ? { ad: 'Panel PDF (proxy, yetkili)', url: `${origin}/api/orders/invoices/${inv.id}/pdf` } : null,
-    inv.status !== 'cancelled' ? { ad: 'Yazdırma sayfası', url: `${origin}/yazdir/fatura/${inv.id}` } : null,
-  ].filter((x): x is { ad: string; url: string } => !!x)
-  const kopyala = async (url: string) => {
-    try { await navigator.clipboard.writeText(url); setKopyalandi(url); setTimeout(() => setKopyalandi(''), 1500) }
+  const [kopyalandi, setKopyalandi] = useState(false)
+  const url = inv.integratorInvoiceUrl ?? ''
+  const kopyala = async () => {
+    try { await navigator.clipboard.writeText(url); setKopyalandi(true); setTimeout(() => setKopyalandi(false), 1500) }
     catch { window.prompt('Kopyalamak için seçin:', url) }
   }
   return (
-    <Modal open onClose={onClose} title={`Fatura ${inv.invoiceNumber} — adresler`} size="md">
-      <div className="space-y-3">
-        {satirlar.map(r => (
-          <div key={r.url}>
-            <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-s)' }}>{r.ad}</div>
+    <Modal open onClose={onClose} title={`Fatura ${inv.invoiceNumber} — entegratör adresi`} size="md">
+      <div className="space-y-2">
+        {url ? (
+          <>
             <div className="flex items-center gap-2">
-              <input className="inp font-mono text-xs flex-1" readOnly value={r.url} onFocus={e => e.currentTarget.select()} />
-              <Button size="sm" variant="secondary" onClick={() => kopyala(r.url)}>{kopyalandi === r.url ? 'Kopyalandı ✓' : 'Kopyala'}</Button>
+              <input className="inp font-mono text-xs flex-1" readOnly value={url} onFocus={e => e.currentTarget.select()} />
+              <Button size="sm" variant="secondary" onClick={kopyala}>{kopyalandi ? 'Kopyalandı ✓' : 'Kopyala'}</Button>
             </div>
-          </div>
-        ))}
-        {satirlar.length === 0 && <p className="text-sm" style={{ color: 'var(--text-s)' }}>Bu fatura için adres yok.</p>}
-        {!inv.hasIntegratorPdf && inv.status !== 'cancelled' && (
-          <p className="text-xs" style={{ color: 'var(--text-s)' }}>Entegratör PDF'i henüz kayıtlı değil; "Görüntüle" yazdırma sayfasını açar.</p>
+            <p className="text-xs" style={{ color: 'var(--text-s)' }}>Entegratörün ürettiği fatura adresi; pazaryeri vb. yerlere bu adres verilir.</p>
+          </>
+        ) : (
+          <p className="text-sm" style={{ color: 'var(--text-s)' }}>Entegratör bu fatura için henüz adres üretmedi (gönderim yapılmamış ya da yanıt gelmemiş).</p>
         )}
       </div>
       <div className="flex justify-end mt-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
