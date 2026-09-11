@@ -1,0 +1,195 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Raf İşlemleri — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/kanal-kapsami/" class="">Kanal Kapsamı</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/personele-dagit/" class="">Personele Dağıt</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/koli-sorgu/" class="">Koli Sorgu</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><a href="/rehber/stok/raf-islemleri/" class="active">Raf İşlemleri</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a><div class="group">Tedarik</div><a href="/rehber/tedarik/satin-almalar/" class="">Satın Almalar</a><a href="/rehber/tedarik/mal-kabul/" class="">Mal Kabul</a><a href="/rehber/tedarik/etiket-sablonlari/" class="">Etiket Şablonları</a><a href="/rehber/tedarik/etiket-basimi/" class="">Etiket Basımı</a><a href="/rehber/tedarik/sayim-teslim/" class="">Sayım / Depoya Teslim</a><a href="/rehber/tedarik/tedarik-raporu/" class="">Tedarik Raporu</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Stok</span> › <b>Raf İşlemleri</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Stok</div><h1>Raf İşlemleri</h1>
+<p class="ozet">Tablet okutma ekranıyla göz (raf) içeriği görme, göze ürün yerleştirme, göz→göz taşıma, iadeden rafa alma, raf sayımı ve mağaza reyon taşıma; sayım raporları listesi.</p><p class="rota">Panel adresi: <code>/admin/inventory/shelf</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#kipler">Kipler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#raf-sayimlari-listesi-inventory-bin-counts">Raf Sayımları listesi (`/inventory/bin-counts`)</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Depodaki <strong>göz</strong> (raf birimi) işlemlerinin tek ekranı. Eski paneldeki &quot;Rafa Ürün Yerleştir&quot;, &quot;Raftan Rafa Transfer&quot;,
+&quot;İadeden Rafa&quot;, &quot;Raf Sayım&quot;, &quot;Raf Ürün Listesi&quot; ve &quot;Mağaza Depodan Reyona / Reyondan Çıkar&quot; sayfalarının karşılığıdır.
+Tek okutma kutusu vardır: okutulan barkod <strong>göz barkodu</strong> ise göz, <strong>ürün barkodu</strong> ise ürün olarak tanınır.
+Liste <code>/inventory/shelf</code>, sayım raporları <code>/inventory/bin-counts</code>.</p>
+<blockquote class="">
+<p><strong>Dikkat — Aynalama kipi:</strong> Eski sistemle stok senkronu açıkken (go-live öncesi) göz adetleri her 10 dakikada eski
+sistemden yeniden yazılır. Bu sürede ekranın üstünde sarı şerit görünür; <strong>yalnız görüntüleme ve sayım raporu</strong>
+çalışır, yazan işlemler (yerleştir, taşı, iadeden rafa, mağaza taşıma, sayım farkını uygula) sunucuda reddedilir
+(&quot;Stok otoritesi eski sistemde&quot;). Raf hareketleri o sürede eski panelden yapılır. Go-live&#39;da tek ayarla açılır.</p>
+</blockquote>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<ol>
+<li><strong>Kip sekmeleri</strong> — Raf İçeriği · Rafa Yerleştir · Raftan Rafa · İadeden Rafa · Raf Sayım · Mağaza Reyon; sağda &quot;Sayım raporları →&quot;.</li>
+<li><strong>Okutma kutusu</strong> — büyük, odak hep burada (el terminali). Sağ üstte <strong>Adet</strong> (Raf İçeriği dışında).</li>
+<li><strong>Bağlam kartları</strong> — göz içeriği, hedef göz, ürün ve bulunduğu gözler, sayım tablosu.</li>
+<li><strong>Bu oturum</strong> — yapılan işlemlerin/hataların günlüğü (sayfa yenilenince silinir).</li>
+</ol>
+<h2 id="kipler">Kipler<a class="anchor" href="#kipler" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Kip</th>
+<th>Adımlar</th>
+<th>Sunucu etkisi</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Raf İçeriği</td>
+<td>Göz okut → içindekiler (adet, rezerve). Ürün okut → hangi gözlerde.</td>
+<td>Yok (salt okunur).</td>
+</tr>
+<tr>
+<td>Rafa Yerleştir</td>
+<td>Hedef gözü okut → ürünleri okut (her okutma <strong>Adet</strong> kadar). Not zorunlu (nereden geldiği).</td>
+<td>Göze <code>adjustment(+)</code> hareketi. Mal kabul kolisi için <strong>Tedarik › Sayım/Teslim</strong> kullanılır.</td>
+</tr>
+<tr>
+<td>Raftan Rafa</td>
+<td>Kaynak gözü, sonra hedef gözü okut → ürün okut (<strong>Adet</strong> kadar) ya da <strong>Tümünü … gözüne taşı</strong>.</td>
+<td>Aynı depo içi <code>transfer</code>. Adetli taşıma yalnız serbest (rezerve olmayan) adetten; <strong>Tümünü taşı</strong> rezervasyonları da hedefe taşır. Depolar arası için Mağaza Reyon ya da Stok Hareketleri.</td>
+</tr>
+<tr>
+<td>İadeden Rafa</td>
+<td>Ürünü okut → iade/defo (satışa kapalı) kısmındaki gözü bulunur → hedef gözü okut.</td>
+<td><code>return_to_shelf</code> hareketi. Kaynak göz satışa açık kısımdaysa reddedilir (&quot;Raftan rafa kullanın&quot;).</td>
+</tr>
+<tr>
+<td>Raf Sayım</td>
+<td>Gözü okut → sayım açılır (açık sayım varsa ona devam) → ürünleri okut → <strong>Bitir</strong> → fark tablosu → <strong>Farkı Uygula</strong>.</td>
+<td>Bitir: sayım kaydı (rapor). Uygula: fark kadar <code>adjustment</code>; ayrı yetki <code>inventory.count.apply</code>. Beklenen adetler sayım bitene kadar gizlidir.</td>
+</tr>
+<tr>
+<td>Mağaza Reyon</td>
+<td>Kaynak ve hedef depoyu seç → ürünü okut.</td>
+<td>Depolar arası anlık taşıma (<code>store_move</code>) + tamamlanmış transfer kaydı. Rezerve adet taşınmaz.</td>
+</tr>
+</tbody></table>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kip sekmesi</td>
+<td>Üst şerit</td>
+<td>Kipi değiştirir; bağlam ve oturum günlüğü sıfırlanır.</td>
+<td><code>inventory.view</code></td>
+</tr>
+<tr>
+<td>Tümünü … gözüne taşı</td>
+<td>Kaynak göz kartı (Raftan Rafa)</td>
+<td>Kaynak gözün tüm satırları rezervasyonlarıyla hedefe geçer.</td>
+<td>Hedef göz okutulmuş; otorite panelde; <code>inventory.manage</code></td>
+</tr>
+<tr>
+<td>Bitir</td>
+<td>Sayım kartı</td>
+<td>Sayımı bitirir, fark tablosu açılır.</td>
+<td>Sayım açık</td>
+</tr>
+<tr>
+<td>İptal</td>
+<td>Sayım kartı / rapor penceresi</td>
+<td>Sayım iptal edilir (stok değişmez).</td>
+<td>Sayım açık ya da bitmiş</td>
+</tr>
+<tr>
+<td>Farkı Uygula</td>
+<td>Sayım kartı / rapor penceresi</td>
+<td>Fark kadar stok düzeltmesi yazılır, sayım &quot;Uygulandı&quot; olur.</td>
+<td>Sayım bitmiş; <code>inventory.count.apply</code>; otorite panelde</td>
+</tr>
+<tr>
+<td>Sayım raporları →</td>
+<td>Üst şerit</td>
+<td>Raf Sayımları listesine gider.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<h2 id="raf-sayimlari-listesi-inventory-bin-counts">Raf Sayımları listesi (<code>/inventory/bin-counts</code>)<a class="anchor" href="#raf-sayimlari-listesi-inventory-bin-counts" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GÖZ</td>
+<td>Göz kodu; altında depo. Filtre: göz kodu / göz barkodu.</td>
+</tr>
+<tr>
+<td>DURUM</td>
+<td>Sayılıyor · Bitti (uygulanmadı) · Uygulandı · İptal.</td>
+</tr>
+<tr>
+<td>BEKLENEN / SAYILAN / FARK</td>
+<td>Sistem adedi (açık sayımda gizli), okutulan adet, fark (yeşil 0 / kırmızı).</td>
+</tr>
+<tr>
+<td>BAŞLANGIÇ</td>
+<td>Sayımın açıldığı an; filtre: başlangıç / bitiş tarihi.</td>
+</tr>
+</tbody></table>
+<p>Satıra tıklayınca sayım penceresi: satır bazlı beklenen/sayılan/fark, <strong>Sayımı İptal Et</strong>, <strong>Farkı Uygula</strong> (yetkili). Excel&#39;e aktarma vardır.</p>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<ul>
+<li>Göz barkodları <strong>Depolar › Depo Detay</strong>&#39;da tanımlanır, <strong>Etiket Basımı</strong>&#39;ndan basılır. Pasif göz/kısım/depoya yazılmaz.</li>
+<li>Rezerve (siparişe ayrılmış) adet: adetli taşımada kaynakta kalır; &quot;Tümünü taşı&quot; ile satırla birlikte hedefe geçer; depo değiştiremez.</li>
+<li>Sayım farkı uygulanırken sayılan adet rezerve adedin altına düşüremez; o ürünler listelenir, hiçbir satır uygulanmaz.</li>
+<li>Boşalan satır (0 adet, 0 rezerve) silinir; hareketler Stok Hareketleri&#39;nde <code>shelf</code> / <code>bin_count</code> referansıyla görünür.</li>
+<li>Sayım açıkken <strong>Adet</strong> kutusuna negatif değer yazıp okutarak yanlış okutma geri alınır.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>Gelen ürünü rafa koyma (serbest)</strong></p>
+<ol>
+<li>Rafa Yerleştir → not yazın (örn. &quot;stüdyodan döndü&quot;) → gözü okutun → ürünleri okutun.</li>
+</ol>
+<p><strong>Raf sayımı</strong></p>
+<ol>
+<li>Raf Sayım → gözü okutun. 2. Gözdeki her ürünü okutun (aynı üründen birden fazla varsa her birini). 3. <strong>Bitir</strong>.</li>
+<li>Depo sorumlusu fark tablosunu inceler → <strong>Farkı Uygula</strong> (ya da Raf Sayımları listesinden).</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> &quot;Farkı Uygula&quot; geri alınamaz; fark yanlışsa yeni sayım açın.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> &quot;&#39;…&#39; ne göz ne ürün barkodu&quot; hatası: göz barkodu tanımsız ya da ürün barkodu katalogda yok.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/stok/depolar/">Depolar</a></li>
+<li><a href="/rehber/stok/stok-takibi/">Stok Takibi</a></li>
+<li><a href="/rehber/stok/stok-hareketleri/">Stok Hareketleri</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/stok/stok-hareketleri/">← Stok Hareketleri (Transferler)</a><a class="sonraki" href="/rehber/pazarlama/kampanyalar/">Kampanyalar →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>
