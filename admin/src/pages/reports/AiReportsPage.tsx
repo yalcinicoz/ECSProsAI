@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { isAxiosError } from 'axios'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { BarChart3, Play, ShieldCheck } from 'lucide-react'
+import { BarChart3, Download, FolderOpen, Play, ShieldCheck, Sparkles } from 'lucide-react'
 import api from '@/api/client'
 import { useAuthStore } from '@/store/auth'
 import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
@@ -10,6 +10,7 @@ import { ORDER_STATUS_MAP, PAYMENT_STATUS_MAP, PAYMENT_METHOD_MAP } from '@/page
 import { ReportChart } from './ReportChart'
 import { SavedReports } from './SavedReports'
 import { validSavedPlan } from './savedReportValidation'
+import './AiReportsPage.css'
 
 type Field = { id: string; label: string; kind: string; description: string; dataType?: string | null }
 type FirmOption = { id: string; code: string; nameI18n: Record<string, string> }
@@ -174,13 +175,15 @@ function ReportEditor({ userId, initialSubject }: { userId?: string; initialSubj
   }))
   const rows: Row[] = result?.rows.map((values, index) => ({ id: String(index), values })) ?? []
 
-  return <div className="p-4 md:p-6 space-y-5">
-    <header className="rounded-2xl border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+  return <div className="ai-reports p-4 md:p-6">
+    <header className="report-header" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
       <div className="flex items-center gap-3"><BarChart3 size={28} /><h1 className="text-xl font-bold">AI Raporlama</h1></div>
       <p className="mt-2 text-sm" style={{ color: 'var(--text-s)' }}>{catalog.data?.naturalLanguageEnabled ? 'İsteğinizi yazın, taslağı kontrol edin ve raporu çalıştırın.' : 'Rapor hazırlığı · Doğal dil ile AI yorumlama henüz bağlı değil.'}</p>
       <p className="mt-3 text-sm flex items-center gap-2"><ShieldCheck size={16} />Mevcut veri ve kanal yetkileriniz geçerlidir. Bu ekran veri değiştirmez.</p>
     </header>
     {catalog.isError && <div role="alert">{errText(catalog.error)}</div>}
+    <details className="report-library">
+    <summary><FolderOpen size={18} /><span>Kayıtlı raporlar ve paylaşım</span><span className="report-summary-hint">Aç / kaydet / paylaş</span></summary>
     <SavedReports userId={userId} recipe={recipe} canSave={!awaitingAiProposal && planAllowed && !!catalog.data && !catalog.isError}
       busy={run.isPending || interpret.isPending} onLoad={candidate => {
         if (!validSavedPlan(candidate)) { setSavedError('Kayıtlı rapor biçimi geçersiz; yeni bir taslak hazırlayın.'); return }
@@ -192,15 +195,20 @@ function ReportEditor({ userId, initialSubject }: { userId?: string; initialSubj
         setSavedError(''); setSubject(source); setProposal(plan); setPrompt(''); setHistory([]); setConsent(false)
         interpret.reset(); run.reset()
       }} />
+    </details>
     {savedError && <p role="alert">{savedError}</p>}
     {catalog.isPending && <p role="status">Rapor alanları yükleniyor…</p>}
     {catalog.data && !catalog.data.enabled && <div role="status" className="rounded-xl border p-4">Hesaplama henüz etkin değil. Aşağıdan rapor düzenini inceleyebilirsiniz; sonuç üretilmez.</div>}
-    <section className="rounded-2xl border p-5 space-y-3" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }} aria-label="Rapor isteği">
+    <section className="report-compose rounded-2xl border p-5 space-y-3" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }} aria-label="Rapor isteği">
+      <div className="report-section-title"><span className="report-step">1</span><div><h2>Raporunuzu hazırlayın</h2><p>Kaynağı seçin ve görmek istediğiniz bilgileri yazın.</p></div></div>
+      <div className="report-selectors">
+      <div>
       <label htmlFor="ai-report-subject" className="block text-sm">Rapor kaynağı</label>
       <select id="ai-report-subject" className="sel w-full" value={subject} disabled={interpret.isPending || run.isPending}
         onChange={e => { setSubject(e.target.value); setPrompt(''); setHistory([]); setProposal(null); setConsent(false); interpret.reset(); run.reset() }}>
         {(catalog.data?.subjects ?? ['stock']).map(s => <option key={s} value={s}>{s === 'productCards' ? 'Ürün kartları ve hareket varlığı' : s === 'staffActivities' ? 'Personel işlem kayıtları' : s === 'customers' ? 'Müşteriler — detay ve özet' : s === 'returns' ? 'İadeler — detay ve özet' : s === 'orders' ? 'Siparişler — detay ve özet' : s === 'stockMovements' ? 'Stok hareketleri — detay ve özet' : 'Güncel stok — detay ve özet'}</option>)}
       </select>
+      </div><div>
       <label htmlFor="ai-report-firm" className="block text-sm">Raporlama için kullanılacak AI hesabı</label>
       <select id="ai-report-firm" className="sel w-full" value={firmId}
         disabled={firms.isPending || firms.isError || firms.data?.length === 1 || interpret.isPending || run.isPending}
@@ -208,6 +216,7 @@ function ReportEditor({ userId, initialSubject }: { userId?: string; initialSubj
         <option value="">{firms.isPending ? 'Firmalar yükleniyor…' : 'Firma seçin'}</option>
         {firms.data?.map(f => <option key={f.id} value={f.id}>{f.nameI18n.tr || f.code} ({f.code})</option>)}
       </select>
+      </div></div>
       <p className="text-xs" style={{ color: 'var(--text-s)' }}>AI hesabını yönetici belirler. Bu hesap hizmet ücretini karşılar; görebileceğiniz veriler kendi rapor ve veri yetkilerinizle sınırlıdır.</p>
       {firms.isError && <p role="alert">Firma listesi alınamadı. <button type="button" className="btn" onClick={() => void firms.refetch()}>Tekrar dene</button></p>}
       {firms.isSuccess && firms.data.length === 0 && <p role="status">Kullanılabilir AI hesabı yok. Raporlama hesabı yapılandırmasını yöneticiyle kontrol edin.</p>}
@@ -235,17 +244,18 @@ function ReportEditor({ userId, initialSubject }: { userId?: string; initialSubj
               onClick={() => { setPrompt(answer); setConsent(false); setProposal(null); run.reset() }}>{answer}</button>)}
       </div>}
       <p className="text-xs" style={{ color: 'var(--text-s)' }}>Müşteri adı, adres, telefon, kimlik bilgisi veya anahtar yazmayın. Otomatik kontrol tüm kişisel bilgileri tespit edemez.</p>
-      <p className="text-xs" style={{ color: 'var(--text-s)' }}>Kullanılabilir alanlar: {[...new Set(availableFields.map(f => f.label))].join(', ')}. {subject === 'productCards' ? 'Stok satırı olmayan kartlar da dahildir. Normal dönem hareket tarihidir; ilk N ay modunda dönem kart açılışlarını seçer.' : subject === 'staffActivities' ? 'Yalnız yetkili işlem kayıtlarıdır; süre, satış cirosu veya performans puanı değildir.' : subject === 'customers' ? 'Dönem müşteri açılışına değil sipariş/iade işlemine uygulanır. Sayılar yalnız yetkili kanallardaki kayıtları kapsar.' : subject === 'returns' ? 'İade kayıt tarihi esas alınır. Kayıtlı tutar, ödenmiş geri ödeme anlamına gelmez.' : subject === 'stockMovements' ? 'Tarih aralığı zorunludur. Kayıtlı hareket adedi net stok değişimi veya stok bakiyesi değildir.' : subject === 'orders' ? 'Tarih aralığı zorunludur. Para birimleri ayrı tutulur; tutar net satış veya tahsilat değildir.' : 'Özellikler güncel tanımlardan alınır. Stok türü belirtilmezse fiziksel/sanal ayrı gösterilir.'}</p>
+      <details className="report-fields"><summary>Kullanılabilir rapor alanları</summary><p className="text-xs">{[...new Set(availableFields.map(f => f.label))].join(', ')}. {subject === 'productCards' ? 'Stok satırı olmayan kartlar da dahildir. Normal dönem hareket tarihidir; ilk N ay modunda dönem kart açılışlarını seçer.' : subject === 'staffActivities' ? 'Yalnız yetkili işlem kayıtlarıdır; süre, satış cirosu veya performans puanı değildir.' : subject === 'customers' ? 'Dönem müşteri açılışına değil sipariş/iade işlemine uygulanır. Sayılar yalnız yetkili kanallardaki kayıtları kapsar.' : subject === 'returns' ? 'İade kayıt tarihi esas alınır. Kayıtlı tutar, ödenmiş geri ödeme anlamına gelmez.' : subject === 'stockMovements' ? 'Tarih aralığı zorunludur. Kayıtlı hareket adedi net stok değişimi veya stok bakiyesi değildir.' : subject === 'orders' ? 'Tarih aralığı zorunludur. Para birimleri ayrı tutulur; tutar net satış veya tahsilat değildir.' : 'Özellikler güncel tanımlardan alınır. Stok türü belirtilmezse fiziksel/sanal ayrı gösterilir.'}</p></details>
       <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={consent} disabled={interpret.isPending}
         onChange={e => setConsent(e.target.checked)} />Bu rapor konuşmasındaki mesajlarımın ve izinli rapor alanlarının OpenAI'a gönderileceğini onaylıyorum. Rapor sonuçları gönderilmez.</label>
       {history.length >= 8 && <p role="status">Konuşma sınırına ulaştınız. Seçimleriniz korunuyor; devam etmek için yeni rapor başlatın.</p>}
       <button type="button" className="btn btn-primary" disabled={!catalog.data?.naturalLanguageEnabled || catalog.isError || !firmAvailable || !consent || !prompt.trim() || interpret.isPending || run.isPending || history.length >= 8}
-        onClick={() => { setProposal(null); run.reset(); interpret.mutate(prompt) }}>{interpret.isPending ? 'Yanıt hazırlanıyor…' : history.length ? 'Yanıtı gönder' : 'Taslak hazırla'}</button>
+        onClick={() => { setProposal(null); run.reset(); interpret.mutate(prompt) }}><Sparkles size={17} aria-hidden="true" />{interpret.isPending ? 'Yanıt hazırlanıyor…' : history.length ? 'Yanıtı gönder' : 'Taslak hazırla'}</button>
       {interpret.isError && <p role="alert">{errText(interpret.error)}</p>}
       {interpret.data && <p role="status">{interpret.data.message}</p>}
     </section>
     <form onSubmit={e => { e.preventDefault(); if (!catalog.data?.enabled || catalog.isError || run.isPending || interpret.isPending || !planAllowed || awaitingAiProposal) return; grid.mutate(params => { if (submitted?.recipe !== recipe) Array.from(params.keys()).forEach(key => { if (['search', 'sort', 'dir'].includes(key) || key.startsWith('f.') || key.startsWith('fq.')) params.delete(key) }) }); run.mutate(recipe) }}
-      className="rounded-2xl border p-5 space-y-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+      className="report-review rounded-2xl border p-5 space-y-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+      <div className="report-section-title"><span className="report-step">2</span><div><h2>Kapsamı kontrol edin</h2><p>Seçimlerinizi inceleyin, ardından sonuçları getirin.</p></div></div>
       <h2 className="font-semibold">{proposal ? 'AI taslağının kapsamını kontrol edin' : subject !== 'stock' ? 'Rapor taslağı bekleniyor' : 'Elle rapor hazırlama'}</h2>
       {awaitingAiProposal && <div role="status" className="rounded-xl border p-4 text-sm">
         AI taslağı henüz hazır değil. İsteğinizi veya netleştirme yanıtınızı yukarıdan gönderin. Tarih ve kapsam doğrulanmadan rapor çalıştırılmaz.
@@ -305,11 +315,14 @@ function ReportEditor({ userId, initialSubject }: { userId?: string; initialSubj
         <Play size={16} />{run.isPending ? 'Hesaplanıyor…' : 'Raporu çalıştır'}
       </button>
     </form>
-    {submitted?.recipe === recipe && !awaitingAiProposal && planAllowed && <section aria-label="Rapor sonucu" className="space-y-3">
+    {submitted?.recipe === recipe && !awaitingAiProposal && planAllowed && <section aria-label="Rapor sonucu" className="report-results space-y-3">
+      <div className="report-results-toolbar">
+      <div className="report-section-title"><span className="report-step">3</span><div><h2>Rapor sonuçları</h2><p>Tablodan filtreleyin, sıralayın veya dışa aktarın.</p></div></div>
+      {canExport && <button type="button" className="btn report-export" disabled={!result || run.isPending || exportReport.isPending || interpret.isPending}
+        onClick={() => exportReport.mutate()}><Download size={18} aria-hidden="true" />{exportReport.isPending ? 'Excel hazırlanıyor…' : 'Filtrelenmiş raporu Excel indir'}</button>}
+      </div>
       <p className="text-sm">Tablo filtreleri rapor kapsamının tamamında uygulanır. Arama, sıralama ve sayfa değişikliği AI çağrısı yapmaz.</p>
       {canExport && <div className="space-y-2">
-        <button type="button" className="btn" disabled={!result || run.isPending || exportReport.isPending || interpret.isPending}
-          onClick={() => exportReport.mutate()}>{exportReport.isPending ? 'Excel hazırlanıyor…' : 'Filtrelenmiş raporu Excel indir'}</button>
         <p className="text-xs">En fazla 5.000 filtrelenmiş sonuç, tüm sayfalar dahil. Satır veya metin sınırı aşılırsa kısmi dosya oluşturulmaz. Rapor indirme anında yeniden hesaplanır; tarih hücreleri Türkiye saatidir.</p>
         {exportReport.isError && <p role="alert">{errText(exportReport.error)}</p>}
       </div>}
