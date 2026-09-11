@@ -287,31 +287,44 @@ function MultiSelect({ field, value, onChange, stacked }: { field: GridFilterFie
 }
 
 function DateField({ field, cur, onChange, stacked }: { field: GridFilterField; cur?: GridFilterValue; onChange: (v: Partial<GridFilterValue> & { value: string }) => void; stacked?: boolean }) {
-  const quick = cur ? (cur.quick ?? 'custom') : ''
+  // 2026-09-11 düzeltmesi: seçim kutusunun değeri yalnız UYGULANMIŞ filtreden türetiliyordu — "Özel aralık" henüz iki tarih
+  // girilmeden filtre oluşmadığı için kutu "Tümü"ye geri dönüyor ve tarih seçiciler hiç görünmüyordu (ürünler "Son görsel tarihi",
+  // siparişler TARİH başlığı — tek ortak bileşen). Artık mod yerel durumda tutulur; dışarıdan (çip/temizle/URL) gelen değişiklik senkronlanır.
   const curVal = cur?.value ?? ''
-  const [a, b] = curVal.split(',')
-  const [box, setBox] = useState<{ v: string; a: string; b: string }>({ v: curVal, a: a ?? '', b: b ?? '' })
-  if (box.v !== curVal) setBox({ v: curVal, a: a ?? '', b: b ?? '' })
-  const custom = box.v === curVal ? box : { v: curVal, a: a ?? '', b: b ?? '' }
-  const setCustom = (x: { a: string; b: string }) => setBox({ v: curVal, ...x })
+  const curQuick = cur ? (cur.quick ?? 'custom') : ''
+  const [pa, pb] = curVal.split(',')
+  const [st, setSt] = useState<{ v: string; q: string; mode: string; a: string; b: string }>({ v: curVal, q: curQuick, mode: curQuick, a: pa ?? '', b: pb ?? '' })
+  // Uygulanmış filtre değiştiyse (başka yerden) yerel durumu ona çek
+  if (st.v !== curVal || st.q !== curQuick) setSt({ v: curVal, q: curQuick, mode: curQuick, a: pa ?? '', b: pb ?? '' })
+  const mode = (st.v === curVal && st.q === curQuick) ? st.mode : curQuick
+  const a = (st.v === curVal && st.q === curQuick) ? st.a : (pa ?? '')
+  const b = (st.v === curVal && st.q === curQuick) ? st.b : (pb ?? '')
   const pick = (token: string) => {
-    if (!token) return onChange({ value: '' })
-    if (token === 'custom') { if (custom.a && custom.b) onChange({ op: 'between', value: `${custom.a},${custom.b}`, quick: 'custom' }); return }
+    if (!token) { setSt({ v: curVal, q: curQuick, mode: '', a: '', b: '' }); return onChange({ value: '' }) }
+    if (token === 'custom') {
+      // Özel aralık: seçiciler hemen görünsün; iki tarih girilince uygulanır (o ana kadar eski filtre kalır)
+      setSt({ v: curVal, q: curQuick, mode: 'custom', a, b })
+      if (a && b) onChange({ op: 'between', value: `${a},${b}`, quick: 'custom' })
+      return
+    }
     const range = quickDateRange(token); if (range) onChange({ op: 'between', value: range, quick: token })
   }
-  const applyCustom = (na: string, nb: string) => { setCustom({ a: na, b: nb }); if (na && nb) onChange({ op: 'between', value: `${na},${nb}`, quick: 'custom' }) }
-  const showCustom = quick === 'custom' || (cur && !cur.quick)
+  const applyCustom = (na: string, nb: string) => {
+    setSt({ v: curVal, q: curQuick, mode: 'custom', a: na, b: nb })
+    if (na && nb) onChange({ op: 'between', value: `${na},${nb}`, quick: 'custom' })
+  }
+  const showCustom = mode === 'custom'
   return (
     <div className={cn('flex items-center gap-1 flex-wrap', stacked && 'w-full')}>
-      <select className="inp text-sm py-1.5 px-2 h-auto w-auto" value={quick} aria-label={field.label} onChange={e => pick(e.target.value)}>
+      <select className="inp text-sm py-1.5 px-2 h-auto w-auto" value={mode} aria-label={field.label} onChange={e => pick(e.target.value)}>
         <option value="">{stacked ? 'Tümü' : `${field.label}: Tümü`}</option>
         {DATE_QUICK.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
-      {(showCustom || (!cur && false)) && (
+      {showCustom && (
         <>
-          <input type="date" className="inp text-sm py-1.5 px-2 h-auto w-auto" value={custom.a} aria-label={`${field.label} başlangıç`} onChange={e => applyCustom(e.target.value, custom.b)} />
+          <input type="date" className="inp text-sm py-1.5 px-2 h-auto w-auto" value={a} aria-label={`${field.label} başlangıç`} onChange={e => applyCustom(e.target.value, b)} />
           <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span>
-          <input type="date" className="inp text-sm py-1.5 px-2 h-auto w-auto" value={custom.b} aria-label={`${field.label} bitiş`} onChange={e => applyCustom(custom.a, e.target.value)} />
+          <input type="date" className="inp text-sm py-1.5 px-2 h-auto w-auto" value={b} aria-label={`${field.label} bitiş`} onChange={e => applyCustom(a, e.target.value)} />
         </>
       )}
     </div>
