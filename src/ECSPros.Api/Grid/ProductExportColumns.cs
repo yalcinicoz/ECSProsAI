@@ -21,7 +21,7 @@ public static class ProductExportColumns
         new("supplierProductCode", "Tedarikçi Ürün Kodu", r => r.SupplierProductCode),
         new("variantCount", "Varyant Sayısı", r => r.VariantCount),
         new("imageState", "Görsel Durumu", r => ProductGrid.ImageStateLabel(r.ImageState)),
-        new("imageCount", "Görsel Sayısı", r => r.ImageCount),
+        new("videoState", "Video Durumu", r => r.HasVideo ? "Var" : "Yok"),
         new("stock", "Stok (fiziksel)", r => r.StockQuantity),
         new("stockAvailable", "Satılabilir Stok", r => r.StockAvailable),
         new("slug", "Slug", r => r.Slug),

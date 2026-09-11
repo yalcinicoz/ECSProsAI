@@ -17,6 +17,8 @@ public class ProductStats
     public int ColorsWithImage { get; set; }
     public int ImageCount { get; set; }
     public DateTime? LastImageAt { get; set; }
+    /// <summary>Aktif video sayısı (product_videos Status=Active) — "Video Durumu" filtresi (2026-09-11).</summary>
+    public int VideoCount { get; set; }
     public int StockQuantity { get; set; }              // fiziksel toplam (inv_stocks.Quantity)
     public int StockAvailable { get; set; }             // kullanılabilir toplam (Quantity − Reserved)
     public DateTime RefreshedAt { get; set; }

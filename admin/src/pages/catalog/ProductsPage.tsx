@@ -24,6 +24,7 @@ interface ProductListItem {
   // 2026-09-11 kapsamlı filtre kolonları (mv_product_stats, 5 dk tazelik)
   imageState?: 'none' | 'partial' | 'full' | string
   imageCount?: number
+  hasVideo?: boolean
   stockQuantity?: number
   stockAvailable?: number
 }
@@ -51,11 +52,16 @@ const SOURCE_TYPE_OPTIONS = [
   { value: 'seller', label: 'Satıcı' },
   { value: 'supply', label: 'Dış tedarik' },
 ]
-// Görsel durumu RENK bazlı (grubun birincil ekseni): Var = tüm renklerde, Kısmi = bazı renklerde, Yok = hiç görsel yok
+// Resim durumu RENK (varyant) bazlı: Yok = hiçbir rengin görseli yok, Var = tüm renklerde var, Kısmi = bazı renklerde var
 const IMAGE_STATE_OPTIONS = [
-  { value: 'full', label: 'Var' },
-  { value: 'partial', label: 'Kısmi (bazı renklerinde var)' },
   { value: 'none', label: 'Yok' },
+  { value: 'full', label: 'Var' },
+  { value: 'partial', label: 'Kısmi' },
+]
+// Video durumu: modelde en az 1 aktif video → Var
+const VIDEO_STATE_OPTIONS = [
+  { value: 'var', label: 'Var' },
+  { value: 'yok', label: 'Yok' },
 ]
 const IMAGE_STATE_BADGE: Record<string, { label: string; variant: 'success' | 'warning' | 'neutral' | 'danger' }> = {
   full: { label: 'Var', variant: 'success' }, partial: { label: 'Kısmi', variant: 'warning' }, none: { label: 'Yok', variant: 'danger' },
@@ -107,15 +113,15 @@ export function ProductsPage() {
     { key: 'name', label: 'Ürün adı', type: 'text' },
     { key: 'supplierProductCode', label: 'Tedarikçi ürün kodu', type: 'text' },
     { key: 'barcode', label: 'Varyant barkodu', type: 'text', ops: ['eq', 'contains'] },
-    { key: 'productGroupId', label: 'Ürün grubu', type: 'enum', options: groupOptions },
+    { key: 'productGroupId', label: 'Ürün Grubu', type: 'enum', options: groupOptions, searchable: true },
     { key: 'sourceType', label: 'Kaynak', type: 'enum', multiple: true, options: SOURCE_TYPE_OPTIONS },
     { key: 'isSaleOpen', label: 'Satışta', type: 'boolean' },
-    { key: 'imageState', label: 'Görsel durumu', type: 'enum', options: IMAGE_STATE_OPTIONS },
+    { key: 'imageState', label: 'Resim Durumu', type: 'enum', options: IMAGE_STATE_OPTIONS },
+    { key: 'videoState', label: 'Video Durumu', type: 'enum', options: VIDEO_STATE_OPTIONS },
     { key: 'stock', label: 'Stok adedi (fiziksel)', type: 'number' },
     { key: 'stockAvailable', label: 'Satılabilir stok', type: 'number' },
     { key: 'basePrice', label: 'Liste fiyatı', type: 'number' },
     { key: 'variantCount', label: 'Varyant sayısı', type: 'number' },
-    { key: 'imageCount', label: 'Görsel sayısı', type: 'number' },
     { key: 'createdAt', label: 'Oluşturma tarihi', type: 'date' },
     { key: 'lastImageAt', label: 'Son görsel tarihi', type: 'date' },
   ], [groupOptions])
@@ -155,8 +161,8 @@ export function ProductsPage() {
       ) },
     { key: 'group', header: 'GRUP', sortable: true, filter: { type: 'enum', label: 'Grup', field: 'productGroupId', options: groupOptions }, filters: [{ field: 'sourceType', label: 'Kaynak', type: 'enum', multiple: true, options: SOURCE_TYPE_OPTIONS }], priority: 2, cell: (item) => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{groupMap.get(item.productGroupId) ?? '—'}</span> },
     { key: 'variantCount', header: 'VARYANT', priority: 3, align: 'center', sortable: true, filter: { type: 'number', label: 'Varyant sayısı' }, cell: (item) => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{item.variantCount}</span> },
-    { key: 'imageState', header: 'GÖRSEL', priority: 2, align: 'center', sortable: true, filter: { type: 'enum', label: 'Görsel durumu', options: IMAGE_STATE_OPTIONS }, filters: [{ field: 'imageCount', label: 'Görsel sayısı', type: 'number' }, { field: 'lastImageAt', label: 'Son görsel tarihi', type: 'date' }],
-      cell: (item) => { const b = IMAGE_STATE_BADGE[item.imageState ?? 'none'] ?? IMAGE_STATE_BADGE.none; return <span className="inline-flex items-center gap-1"><Badge variant={b.variant}>{b.label}</Badge>{(item.imageCount ?? 0) > 0 && <span className="text-xs" style={{ color: 'var(--text-s)' }}>{item.imageCount}</span>}</span> } },
+    { key: 'imageState', header: 'RESİM', priority: 2, align: 'center', sortable: true, filter: { type: 'enum', label: 'Resim Durumu', options: IMAGE_STATE_OPTIONS }, filters: [{ field: 'videoState', label: 'Video Durumu', type: 'enum', options: VIDEO_STATE_OPTIONS }, { field: 'lastImageAt', label: 'Son görsel tarihi', type: 'date' }],
+      cell: (item) => { const b = IMAGE_STATE_BADGE[item.imageState ?? 'none'] ?? IMAGE_STATE_BADGE.none; return <span className="inline-flex items-center gap-1"><Badge variant={b.variant}>{b.label}</Badge>{item.hasVideo && <span className="text-xs" title="Video var" style={{ color: 'var(--text-s)' }}>▶</span>}</span> } },
     { key: 'stock', header: 'STOK', priority: 2, align: 'right', sortable: true, filter: { type: 'number', label: 'Stok adedi (fiziksel)' }, filters: [{ field: 'stockAvailable', label: 'Satılabilir stok', type: 'number' }],
       cell: (item) => <span className="text-sm tabular-nums" style={{ color: (item.stockQuantity ?? 0) > 0 ? 'var(--text)' : 'var(--text-s)' }} title={`Satılabilir: ${item.stockAvailable ?? 0}`}>{item.stockQuantity ?? 0}</span> },
     { key: 'isSaleOpen', header: 'DURUM', priority: 1, align: 'center', sortable: true, lockVisible: true, filter: { type: 'boolean', label: 'Satışta' },

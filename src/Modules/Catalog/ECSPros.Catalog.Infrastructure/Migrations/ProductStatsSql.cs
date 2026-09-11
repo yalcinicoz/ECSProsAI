@@ -31,6 +31,10 @@ img AS (
     SELECT i."ProductId", COUNT(*)::int AS image_count, MAX(i."CreatedAt") AS last_image_at
     FROM catalog.product_images i WHERE NOT i."IsDeleted" GROUP BY 1
 ),
+vid AS (
+    SELECT v."ProductId", COUNT(*)::int AS video_count
+    FROM catalog.product_videos v WHERE NOT v."IsDeleted" AND v."Status" = 'Active' GROUP BY 1
+),
 stk AS (
     SELECT v."ProductId",
            COALESCE(SUM(s."Quantity"), 0)::int AS qty,
@@ -52,12 +56,14 @@ SELECT p."Id" AS "ProductId",
        COALESCE(col.colors_with_image, 0) AS "ColorsWithImage",
        COALESCE(img.image_count, 0) AS "ImageCount",
        img.last_image_at AS "LastImageAt",
+       COALESCE(vid.video_count, 0) AS "VideoCount",
        COALESCE(stk.qty, 0) AS "StockQuantity",
        COALESCE(stk.avail, 0) AS "StockAvailable",
        now() AS "RefreshedAt"
 FROM catalog.products p
 LEFT JOIN col ON col."ProductId" = p."Id"
 LEFT JOIN img ON img."ProductId" = p."Id"
+LEFT JOIN vid ON vid."ProductId" = p."Id"
 LEFT JOIN stk ON stk."ProductId" = p."Id"
 WHERE NOT p."IsDeleted"
 WITH DATA;

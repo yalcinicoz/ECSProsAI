@@ -28,7 +28,7 @@ bu ekranı kullanır. Listedeki her satır bir **ürün**dür; ürünün satıla
 | Ürün | Ürün adı (Türkçe ad; yoksa ilk dildeki ad) ve altında ürün kodu. Solda ürün simgesi. |
 | Grup | Ürünün bağlı olduğu ürün grubu (örn. T-Shirt, Elbise). Grup bulunamazsa `—`. |
 | Varyant | Ürünün varyant sayısı. |
-| Görsel | Görsel durumu rozeti — `Var` (tüm renklerde görsel var), `Kısmi` (bazı renklerinde var), `Yok`; yanında görsel sayısı. Renk = ürün grubunun birincil ekseni. |
+| Resim | Resim durumu rozeti — `Yok` (hiçbir rengin görseli yok), `Var` (tüm renklerde var), `Kısmi` (bazı renklerinde var); yanında ▶ işareti varsa modelde video var. Renk = ürün grubunun birincil ekseni. |
 | Stok | Fiziksel stok toplamı (tüm depolar, tüm varyantlar); üzerine gelince satılabilir stok görünür. |
 | Durum | `Satışta` (yeşil) ya da `Satış Kapalı` (gri) rozeti — ürünün genel satış anahtarı. |
 | › | Satırın sağındaki ok; satırın tıklanabilir olduğunu gösterir. |
@@ -37,7 +37,7 @@ bu ekranı kullanır. Listedeki her satır bir **ürün**dür; ürünün satıla
 |---|---|
 | `Tümü` / `Satışta` | `Satışta` seçilince yalnızca satışa açık ürünler listelenir; `Tümü` satışa kapalı ürünleri de gösterir. Seçim değişince sayfa 1'e döner. |
 | Arama kutusu ("Ürün adı, kod…") | Ürün kodunda ve Türkçe ürün adında geçen metni arar (büyük/küçük harf duyarsız). Yazmayı bıraktıktan kısa bir süre sonra otomatik süzer; sayfa 1'e döner. |
-| **Filtrele kartı** (listenin üstünde, başlığına tıklayınca genişler; açık/kapalı durumu hatırlanır) | Kapsamlı filtre paneli. Alanlar: Ürün kodu, Ürün adı, Tedarikçi ürün kodu, Varyant barkodu (tam eşleşme ya da içerir), Ürün grubu, Kaynak, Satışta, **Görsel durumu** (Var / Kısmi / Yok), **Stok adedi** (fiziksel; `≥`, `≤`, `aralık` ile en az / en çok), Satılabilir stok, Liste fiyatı, Varyant sayısı, Görsel sayısı, Oluşturma tarihi, Son görsel tarihi. Seçilen filtreler çip olarak görünür; "Tümünü temizle" hepsini kaldırır. |
+| **Filtrele kartı** (listenin üstünde, başlığına tıklayınca genişler; açık/kapalı durumu hatırlanır) | Kapsamlı filtre paneli. Alanlar: Ürün kodu, Ürün adı, Tedarikçi ürün kodu, Varyant barkodu (tam eşleşme ya da içerir), Ürün Grubu (yazarak aranabilir), Kaynak, Satışta, **Resim Durumu** (Yok / Var / Kısmi — renk bazlı), **Video Durumu** (Var / Yok — modelde en az bir aktif video), **Stok adedi** (fiziksel; `≥`, `≤`, `aralık` ile en az / en çok), Satılabilir stok, Liste fiyatı, Varyant sayısı, Oluşturma tarihi, Son görsel tarihi. Seçilen filtreler çip olarak görünür; "Tümünü temizle" hepsini kaldırır. |
 | Sütun başlığı filtreleri | Her sütun başlığındaki huni ikonu o alana özgü filtre açar (Görsel ve Stok kolonlarında da). |
 
 - **Sıralama:** Liste ürün koduna göre sıralıdır; sütun başlıklarına tıklayarak sıralama değiştirilemez.

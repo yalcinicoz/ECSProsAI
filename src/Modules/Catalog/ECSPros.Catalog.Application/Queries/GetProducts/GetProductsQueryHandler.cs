@@ -37,7 +37,8 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, Result<
                 x.Stats != null ? x.Stats.ImageState : "none",
                 x.Stats != null ? x.Stats.ImageCount : 0,
                 x.Stats != null ? x.Stats.StockQuantity : 0,
-                x.Stats != null ? x.Stats.StockAvailable : 0))
+                x.Stats != null ? x.Stats.StockAvailable : 0,
+                x.Stats != null && x.Stats.VideoCount > 0))
             .ToListAsync(cancellationToken);
 
         return Result.Success(new PagedResult<ProductListDto>(items, totalCount, request.Page, request.PageSize));

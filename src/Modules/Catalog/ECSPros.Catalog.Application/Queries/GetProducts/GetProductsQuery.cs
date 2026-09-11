@@ -25,7 +25,8 @@ public record ProductListDto(
     string ImageState = "none",
     int ImageCount = 0,
     int StockQuantity = 0,
-    int StockAvailable = 0);
+    int StockAvailable = 0,
+    bool HasVideo = false);
 
 public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize)
 {

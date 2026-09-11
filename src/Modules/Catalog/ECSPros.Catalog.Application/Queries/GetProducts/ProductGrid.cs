@@ -16,6 +16,7 @@ public static class ProductGrid
 {
     public static readonly string[] SourceTypes = { "own", "seller", "supply" };
     public static readonly string[] ImageStates = { "none", "partial", "full" };
+    public static readonly string[] VideoStates = { "var", "yok" };   // panel seçicisi Var/Yok (2026-09-11)
 
     public static readonly GridSchema<Product> Schema = new GridSchema<Product>()
         .Text("code", p => p.Code)
@@ -34,11 +35,13 @@ public static class ProductGrid
         .Enum("imageState", p => p.Stats != null ? p.Stats.ImageState : "none", ImageStates)
         .Number("imageCount", p => p.Stats != null ? p.Stats.ImageCount : 0)
         .Date("lastImageAt", p => p.Stats != null ? p.Stats.LastImageAt : null)
+        .Enum("videoState", p => p.Stats != null && p.Stats.VideoCount > 0 ? "var" : "yok", VideoStates)
         .Number("stock", p => p.Stats != null ? p.Stats.StockQuantity : 0)
         .Number("stockAvailable", p => p.Stats != null ? p.Stats.StockAvailable : 0)
         .Sort("imageState", p => p.Stats != null ? p.Stats.ImageState : "none")
         .Sort("imageCount", p => p.Stats != null ? p.Stats.ImageCount : 0)
         .Sort("lastImageAt", p => p.Stats != null ? p.Stats.LastImageAt : null)
+        .Sort("videoState", p => p.Stats != null && p.Stats.VideoCount > 0 ? "var" : "yok")
         .Sort("stock", p => p.Stats != null ? p.Stats.StockQuantity : 0)
         .Sort("stockAvailable", p => p.Stats != null ? p.Stats.StockAvailable : 0)
         .Sort("group", p => GridJson.Text(p.ProductGroup.NameI18n, "tr"))
@@ -110,7 +113,7 @@ public record ProductExportRow(
     string Code, Dictionary<string, string> NameI18n, string GroupCode, Dictionary<string, string> GroupNameI18n,
     bool IsSaleOpen, decimal BasePrice, decimal? BaseCost, int TaxRate, string SourceType, string? SupplierProductCode,
     int VariantCount, string? Slug, DateTime CreatedAt,
-    string ImageState = "none", int ImageCount = 0, int StockQuantity = 0, int StockAvailable = 0);
+    string ImageState = "none", int ImageCount = 0, int StockQuantity = 0, int StockAvailable = 0, bool HasVideo = false);
 
 public record ExportProductsQuery(ProductListFilters Filters, GridRequest Grid, int MaxRows, string? LegacySort = null)
     : IRequest<Result<GridExportSource<ProductExportRow>>>;
@@ -128,7 +131,7 @@ public class ExportProductsQueryHandler(ICatalogDbContext db) : IRequestHandler<
             x.IsSaleOpen, x.BasePrice, x.BaseCost, x.TaxRate, x.SourceType, x.SupplierProductCode,
             x.Variants.Count, x.Slug, x.CreatedAt,
             x.Stats != null ? x.Stats.ImageState : "none", x.Stats != null ? x.Stats.ImageCount : 0,
-            x.Stats != null ? x.Stats.StockQuantity : 0, x.Stats != null ? x.Stats.StockAvailable : 0));
+            x.Stats != null ? x.Stats.StockQuantity : 0, x.Stats != null ? x.Stats.StockAvailable : 0, x.Stats != null && x.Stats.VideoCount > 0));
         return Result.Success(new GridExportSource<ProductExportRow>(count, rows));
     }
 }

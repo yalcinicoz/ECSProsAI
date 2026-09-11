@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import type { GridStateApi } from './useGridState'
 import type { GridBreakpoint, GridFilterValue } from './types'
 import { DATE_QUICK, NUMBER_OPS, TEXT_OPS, filterChipText, quickDateRange, type GridFilterField } from './filterUtils'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 // FilterBar (plan §2.3, E6/E11): global arama (400 ms debounce, Enter anında) + hızlı filtreler + "Gelişmiş" paneli +
 // aktif filtre çipleri (tek tek kaldır) + "Tümünü temizle". Mobilde "Filtreler (n)" düğmesi + bottom sheet; çip satırı kapalıyken de görünür.
@@ -229,6 +230,9 @@ export function FieldRow({ field, grid, stacked }: { field: GridFilterField; gri
         </select>)
     case 'enum':
       if (field.multiple) return wrap(<MultiSelect field={field} value={cur?.value ?? ''} onChange={v => set({ op: 'in', value: v })} stacked={stacked} />)
+      if (field.searchable) return wrap(
+        <SearchableSelect value={cur?.value ?? null} options={field.options ?? []} placeholder="Tümü" clearable portal
+          onChange={v => set({ op: 'eq', value: v ?? '' })} className={stacked ? 'w-full' : 'min-w-[200px]'} />)
       return wrap(
         <select className="inp text-sm py-1.5 px-2 h-auto w-auto" value={cur?.value ?? ''} aria-label={field.label}
           onChange={e => set({ op: 'eq', value: e.target.value })}>
