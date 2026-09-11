@@ -8,7 +8,7 @@ namespace ECSPros.Promotion.Application.Commands.CreateCampaign;
 public record CreateCampaignCommand(
     Guid FirmPlatformId,
     Guid CampaignTypeId,
-    string Code,
+    string? Code,                     // boş → sunucu üretir (KMP-yyyyMMdd-XXXX); panel formunda kod alanı yok (2026-09-11)
     Dictionary<string, string> NameI18n,
     Dictionary<string, string>? DescriptionI18n,
     string? BadgeLabel,

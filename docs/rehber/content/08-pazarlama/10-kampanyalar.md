@@ -45,19 +45,22 @@ gösterir; kampanyanın kanalı detay sayfasındaki **Platform** alanında gör�
 |---|---|---|---|
 | + Yeni Kampanya | Liste sağ üst | Boş detay sayfası ("Yeni Kampanya") açılır. | Panele giriş yeterli. |
 | Satır tıklama | Tablo | Kampanyanın detay sayfası açılır (`/promotion/campaigns/{id}`). | — |
-| Kaydet | Detay sağ üst | Üç sekmedeki bilgiler birlikte kaydedilir; başarılıysa listeye dönülür. Hata varsa sayfanın üstünde kırmızı mesaj çıkar (ör. "'X' kampanya kodu zaten mevcut.", "Platform seçilmedi.", "'Eşik değeri' alanı zorunlu."). | Platform, Kampanya Tipi, Kod ve Ad dolu olmalı; tipin zorunlu parametreleri dolu olmalı. |
+| Kaydet | Detay sağ üst | Üç sekmedeki bilgiler birlikte kaydedilir; başarılıysa listeye dönülür. Hata varsa sayfanın üstünde kırmızı mesaj çıkar (ör. "Kampanya adı zorunludur.", "Platform seçilmedi.", "'Eşik değeri' alanı zorunlu.") ve düğme yeniden "Kaydet" olur. | Platform, Kampanya Tipi ve Ad dolu olmalı (ad boşken kayıt engellenir); tipin zorunlu parametreleri dolu olmalı. |
+| Sil | Detay sağ üst (yalnız kayıtlı kampanyada) | Onay sorulur ve kampanya silinir (listeden kalkar, sitede çalışmaz). Kampanya **yayındaysa** (Aktif + tarih aralığında) onay penceresi ayrıca "SİTEDE YAYINDA" uyarısı verir. Hiçbir siparişte kullanılmamış kampanya silinebilir; kullanılmışsa "Bu kampanya siparişlerde kullanılmış; silinemez." mesajı çıkar — pasife alın. | `promotion.manage` yetkisi. |
+| ⓘ bilgi ikonu | Her alan etiketinin sağında | Tıklanınca alanın açıklaması küçük bir balonda görünür; dışarı tıklayınca kapanır. | — |
 | Kopyala | Detay sağ üst (yalnız kayıtlı kampanyada) | Yeni kampanya kodu sorulur (öneri: `KOD-KOPYA`); kampanyanın ayarları, parametreleri, kapsamı ve manuel ürün listesi kopyalanır, kopya **Pasif** olarak açılır ve detayına gidilir. | Yeni kod benzersiz olmalı. |
 | Ekle | Ürün Kapsamı → Manuel Ürünler | Kutuya yazılan ürün kodlarını (virgül/boşluk/noktalı virgülle ayrılmış) listeye ekler; bulunamayan kodlar kırmızı uyarıyla listelenir. | Doldurma tipi Manuel veya Karma. |
 | Dosyadan Yükle | Ürün Kapsamı → Manuel Ürünler | `.txt`/`.csv` (kodlar virgül, boşluk ya da satır sonuyla ayrılmış) veya `.xlsx` (kodlar ilk sütunda) dosyasından ürün kodlarını ekler. | Doldurma tipi Manuel veya Karma. |
 | Kaldır | Manuel ürün satırı | Ürünü kapsam listesinden çıkarır (Kaydet'e kadar kalıcı değildir). | — |
 | Bant Rengi çipleri | Genel sekmesi | Sitedeki kampanya bandının/rozetinin arka plan rengini seçer. | — |
 
-> **Dikkat:** Kampanya silme butonu yoktur. Kampanyayı kaldırmak için Genel sekmesinde **Aktif** kutusunu
-> kaldırıp kaydedin ya da bitiş tarihi verin.
+> **Dikkat:** Siparişlerde kullanılmış kampanya silinemez; kaldırmak için Genel sekmesinde **Aktif** kutusunu
+> kaldırıp kaydedin ya da bitiş tarihi verin. Ekleme, düzenleme ve silme işlemleri eski/yeni değerleriyle
+> Ayarlar › Denetim Logları'na yazılır (varlık tipi `Campaign`).
 
 ## Detay sayfası
 ![Kampanya detayı — Genel sekmesi](img/promotion-campaigns-detay.webp)
-*(1) Başlık: "Yeni Kampanya" ya da "Kampanya: KOD" + seçili tipin adı · (2) Kopyala / Kaydet · (3) Sekmeler · (4) Form kartı*
+*(1) Başlık: "Yeni Kampanya" ya da "Kampanya: KOD" + seçili tipin adı · (2) Kopyala / Sil / Kaydet · (3) Sekmeler · (4) Form kartı*
 
 Sekmeler: **Genel**, **Parametreler**, **Ürün Kapsamı**. Ürün Kapsamı sekmesi yalnız seçilen tip ürün seçimi
 gerektiriyorsa görünür (ör. Kargo Kampanyası ve Resimli Yorum Kampanyası'nda görünmez).
@@ -67,8 +70,7 @@ gerektiriyorsa görünür (ör. Kargo Kampanyası ve Resimli Yorum Kampanyası'n
 |---|---|---|
 | Platform | Evet | Kampanyanın geçerli olduğu kanal. Liste "Kanal adı (Firma adı)" biçimindedir; bir kampanya tek kanala aittir. |
 | Kampanya Tipi | Evet | Tip listesi Kampanya Tipleri ekranından gelir. Tip değiştirilince Parametreler sıfırlanır. |
-| Kod | Evet | Benzersiz kampanya kodu (ör. `YAZ25`). Yalnız yeni kampanyada yazılabilir; kayıt sonrası kilitlenir. |
-| Ad | Evet | Kampanyanın görünen adı (ör. "Yaz İndirimi %25"). Sitede bant metni olarak da kullanılır. |
+| Ad | Evet | Kampanyanın görünen adı (ör. "Yaz İndirimi %25"). Sitede bant metni olarak da kullanılır. Boş bırakılırsa kayıt engellenir. Kampanya **kodu** formda yoktur; sistem `KMP-YYYYAAGG-XXXX` biçiminde otomatik verir ve başlıkta gösterir. |
 | Açıklama | Hayır | Serbest açıklama. |
 | Etiket/Rozet | Hayır | Sitede kartta görünecek kısa etiket (ör. "Süper Fırsat"). |
 | Öncelik | Hayır | Tam sayı; büyük değer önceliklidir. Varsayılan 0. |
@@ -119,8 +121,15 @@ Kapsam kaydedildiğinde filtreye uyan ürünler kampanyaya bağlanır; kapsam d�
   bazında gerçekten ödenen fiyattan hesaplanır. "En ucuz olan indirimli" ayarı yalnız toplam indirim tutarını
   belirler, dağıtımı değiştirmez.
 - **Kopya pasif başlar:** Kopyala ile üretilen kampanya `Pasif` açılır; kontrol edip Aktif işaretleyin.
-- **Kod değişmez:** kampanya kodu kayıt sonrası kilitlidir; yanlış kodla kaydedildiyse Kopyala ile yeni kod verip
-  eskisini pasife alın.
+- **Kod otomatik ve değişmez:** kampanya kodu kayıtta sistem tarafından üretilir (`KMP-YYYYAAGG-XXXX`), sonradan
+  değiştirilemez. Kopyala'da yeni kod sorulur.
+- **Silme kuralı:** yalnız hiçbir siparişte kullanılmamış kampanya silinebilir (kullanım izi sipariş notundaki kampanya
+  satırı ve sipariş hediyeleridir). Yayındaki kampanyayı silmeden önce panel ayrıca uyarır. Kullanılmış kampanya için
+  Aktif kutusunu kaldırın.
+- **Denetim kaydı:** kampanya ekleme/düzenleme/silme, eski ve yeni değerlerin tamamıyla (ad, tarih, parametreler,
+  kapsam, manuel ürün listesi) Ayarlar › Denetim Logları'na yazılır.
+- **Parametre varsayılanları:** tip seçilince şemadaki varsayılan değerler (ör. Kargo İndirimi = Ücretsiz) forma
+  yazılır; koşula bağlı alanlar (ör. "İndirim değeri") varsayılan seçime göre gizlenir/gösterilir.
 - **Kupon ile ilişki:** kampanyalar kuponlardan bağımsızdır; sepette ikisi de varsa ikisi de kendi kuralına göre
   hesaplanır ve ayrı satırlarda gösterilir.
 

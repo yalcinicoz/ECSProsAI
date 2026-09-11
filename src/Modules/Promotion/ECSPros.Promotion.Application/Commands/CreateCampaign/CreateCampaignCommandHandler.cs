@@ -17,8 +17,14 @@ public class CreateCampaignCommandHandler(
 {
     public async Task<Result<Guid>> Handle(CreateCampaignCommand request, CancellationToken ct)
     {
-        if (await context.Campaigns.AnyAsync(c => c.Code == request.Code, ct))
-            return Result.Failure<Guid>($"'{request.Code}' kampanya kodu zaten mevcut.");
+        if (!CampaignRules.AdGecerli(request.NameI18n))
+            return Result.Failure<Guid>("Kampanya adı zorunludur.");
+
+        var code = request.Code?.Trim();
+        if (string.IsNullOrEmpty(code))
+            code = await CampaignRules.KodUretAsync(context, ct);
+        else if (await context.Campaigns.AnyAsync(c => c.Code == code, ct))
+            return Result.Failure<Guid>($"'{code}' kampanya kodu zaten mevcut.");
 
         var type = await context.CampaignTypes.FirstOrDefaultAsync(t => t.Id == request.CampaignTypeId, ct);
         if (type is null) return Result.Failure<Guid>("Kampanya tipi bulunamadı.");
@@ -35,7 +41,7 @@ public class CreateCampaignCommandHandler(
         {
             FirmPlatformId = request.FirmPlatformId,
             CampaignTypeId = request.CampaignTypeId,
-            Code = request.Code,
+            Code = code,
             NameI18n = request.NameI18n,
             DescriptionI18n = request.DescriptionI18n,
             BadgeLabel = request.BadgeLabel,

@@ -20,6 +20,8 @@ public class UpdateCampaignCommandHandler(
             .Include(c => c.CampaignType)
             .FirstOrDefaultAsync(c => c.Id == request.Id, ct);
         if (campaign is null) return Result.Failure<bool>("Kampanya bulunamadı.");
+        if (!CreateCampaign.CampaignRules.AdGecerli(request.NameI18n))
+            return Result.Failure<bool>("Kampanya adı zorunludur.");
 
         var hata = CampaignSettingsValidator.Validate(campaign.CampaignType?.SettingsSchema, request.Settings);
         if (hata is not null) return Result.Failure<bool>(hata);

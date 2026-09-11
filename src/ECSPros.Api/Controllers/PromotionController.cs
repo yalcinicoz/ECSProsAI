@@ -28,10 +28,28 @@ namespace ECSPros.Api.Controllers;
 public class PromotionController : ControllerBase
 {
     private readonly IMediator _mediator;
+    // Kampanya ekleme/düzenleme/silme denetim kaydı (2026-09-11 kullanıcı isteği): iam.audit_logs'a
+    // EntityType=Campaign, Action=Created/Updated/Deleted, eski+yeni değer = tam detay DTO'su
+    // (ad, tarih, ayarlar, kapsam, manuel ürün listesi). Yazıcı vitrin için yazılmıştı, genel amaçlıdır.
+    private readonly ECSPros.Api.Services.Store.IVitrinAuditLogger _audit;
 
-    public PromotionController(IMediator mediator)
+    public PromotionController(IMediator mediator, ECSPros.Api.Services.Store.IVitrinAuditLogger audit)
     {
         _mediator = mediator;
+        _audit = audit;
+    }
+
+    private async Task<CampaignDetailDto?> KampanyaAnlikAsync(Guid id, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new GetCampaignDetailQuery(id), ct);
+        return r.IsSuccess ? r.Value : null;
+    }
+
+    private Task KampanyaLogAsync(string action, Guid id, CampaignDetailDto? eski, CampaignDetailDto? yeni, CancellationToken ct)
+    {
+        var d = yeni ?? eski;
+        var baslik = d is null ? null : $"{(d.NameI18n.TryGetValue("tr", out var ad) ? ad : d.Code)} [{d.Code}]";
+        return _audit.LogAsync(HttpContext, action, "Campaign", id, eski, yeni, d?.FirmPlatformId ?? Guid.Empty, baslik, ct);
     }
 
     /// <summary>Kampanyaları listeler.</summary>
@@ -108,6 +126,7 @@ public class PromotionController : ControllerBase
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
 
+        await KampanyaLogAsync("Created", result.Value, null, await KampanyaAnlikAsync(result.Value, ct), ct);
         return Created($"/api/promotion/campaigns", new { success = true, data = new { id = result.Value } });
     }
 
@@ -119,6 +138,7 @@ public class PromotionController : ControllerBase
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId))
             return Unauthorized();
 
+        var eski = await KampanyaAnlikAsync(id, ct);
         var result = await _mediator.Send(new UpdateCampaignCommand(
             id,
             request.NameI18n,
@@ -139,6 +159,21 @@ public class PromotionController : ControllerBase
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
 
+        await KampanyaLogAsync("Updated", id, eski, await KampanyaAnlikAsync(id, ct), ct);
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Kampanyayı siler (soft delete). Yalnız hiçbir siparişte kullanılmamış kampanya silinebilir;
+    /// yayındaki kampanya için uyarı panelde verilir. Silme denetim kaydına eski değerlerle yazılır.</summary>
+    [HttpDelete("campaigns/{id:guid}")]
+    [RequirePermission(Permissions.PromotionManage)]
+    public async Task<IActionResult> DeleteCampaign(Guid id, CancellationToken ct)
+    {
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
+        var eski = await KampanyaAnlikAsync(id, ct);
+        var result = await _mediator.Send(new ECSPros.Api.Handlers.DeleteCampaignCommand(id, userId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await KampanyaLogAsync("Deleted", id, eski, null, ct);
         return Ok(new { success = true });
     }
 
@@ -151,6 +186,7 @@ public class PromotionController : ControllerBase
         var result = await _mediator.Send(new CopyCampaignCommand(
             id, request.NewCode, request.TargetFirmPlatformId, userId == Guid.Empty ? null : userId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await KampanyaLogAsync("Created", result.Value, null, await KampanyaAnlikAsync(result.Value, ct), ct);
         return Ok(new { success = true, data = new { id = result.Value } });
     }
 
@@ -346,7 +382,7 @@ public class PromotionController : ControllerBase
 public record CreateCampaignRequest(
     Guid FirmPlatformId,
     Guid CampaignTypeId,
-    string Code,
+    string? Code,
     Dictionary<string, string> NameI18n,
     Dictionary<string, string>? DescriptionI18n,
     string? BadgeLabel,
