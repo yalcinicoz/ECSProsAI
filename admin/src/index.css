@@ -143,6 +143,13 @@ thead .grid-frozen { background: var(--surface2); z-index: 4; }
 .grid-scroll-wrap[data-scroll="middle"] .grid-frozen-last, .grid-scroll-wrap[data-scroll="end"] .grid-frozen-last {
   box-shadow: 4px 0 6px -2px rgba(0,0,0,.12);
 }
+/* sağda sabit aksiyon kolonu (GridColumn.frozenRight) */
+.grid-frozen-right { position: sticky; right: 0; z-index: 2; background: var(--surface); }
+thead .grid-frozen-right { background: var(--surface2); z-index: 4; }
+.grid-row:hover .grid-frozen-right { background: var(--surface2); }
+.grid-scroll-wrap[data-scroll="middle"] .grid-frozen-right, .grid-scroll-wrap[data-scroll="start"] .grid-frozen-right {
+  box-shadow: -4px 0 6px -2px rgba(0,0,0,.12);
+}
 /* ghost yatay scrollbar (viewport altına sabit; tek örnek, aktif grid için) [E2/E3/E8] */
 .grid-ghost-scroll {
   position: fixed; z-index: 45; height: 14px; overflow-x: auto; overflow-y: hidden;

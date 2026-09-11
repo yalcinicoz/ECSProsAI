@@ -8,17 +8,18 @@
 <p class="ozet">Kesilen faturaların listelendiği, entegratör PDF adresinin kaydedildiği, faturanın iptal edildiği ve fatura serilerinin tanımlandığı ekran.</p><p class="rota">Panel adresi: <code>/admin/orders/invoices</code></p></header>
 <div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#form-alanlari">Form alanları</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
 <p>Faturalar sayfası, siparişlerden kesilen faturaların kaydıdır. Fatura <strong>sipariş detayındaki &quot;+ Fatura Oluştur&quot;</strong> ile kesilir; bu
-sayfada ise faturalar listelenir, bir faturaya tıklanarak entegratörden (e-Arşiv/e-Fatura sağlayıcısı) alınan PDF adresi kaydedilir
-ya da fatura iptal edilir. Fatura numarasının türetildiği <strong>fatura serileri</strong> de buradaki &quot;Fatura Serileri&quot; penceresinden tanımlanır.
+sayfada ise faturalar sipariş, alıcı, tutar kırılımı ve gönderim (entegratör / ERP / pazaryeri) bilgileriyle listelenir; her satırın
+sağındaki sabit <strong>Görüntüle</strong> düğmesi faturayı PDF olarak açar, <strong>URL</strong> düğmesi fatura adreslerini kopyalanabilir küçük bir pencerede
+gösterir. Fatura iptali sipariş detayındaki Faturalar kartından yapılır. Fatura numarasının türetildiği <strong>fatura serileri</strong> de buradaki &quot;Fatura Serileri&quot; penceresinden tanımlanır.
 Muhasebe/operasyon personeli kullanır.</p>
 <h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
 <p><figure class="ekran"><a href="/rehber/img/orders-invoices.webp" class="buyut" data-alt="Faturalar listesi — durum sekmeleri, fatura tablosu, sağ üstte Fatura Serileri butonu"><img src="/rehber/img/orders-invoices.webp" alt="Faturalar listesi — durum sekmeleri, fatura tablosu, sağ üstte Fatura Serileri butonu" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Faturalar listesi — durum sekmeleri, fatura tablosu, sağ üstte Fatura Serileri butonu</figcaption></figure></p>
 <ol>
 <li><strong>Başlık</strong> — &quot;Faturalar&quot; + kayıt sayısı; sağda <strong>Fatura Serileri</strong> butonu.</li>
 <li><strong>Durum sekmeleri</strong> — Oluşturulan / İptal Edilen / Tümü.</li>
-<li><strong>Fatura tablosu</strong> — satıra tıklayınca fatura penceresi açılır.</li>
+<li><strong>Fatura tablosu</strong> — satır tıklanmaz; sağdaki sabit <strong>Görüntüle / URL</strong> düğmeleri kullanılır.</li>
 <li><strong>Sayfalama</strong> — 20 kayıt/sayfa.</li>
-<li><strong>Pencereler</strong> — &quot;Fatura {no}&quot; detay penceresi ve &quot;Fatura Serileri&quot; penceresi.</li>
+<li><strong>Pencereler</strong> — &quot;Fatura {no} — adresler&quot; (URL) penceresi ve &quot;Fatura Serileri&quot; penceresi.</li>
 </ol>
 <h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
 <table>
@@ -50,38 +51,79 @@ Muhasebe/operasyon personeli kullanır.</p>
 </thead>
 <tbody><tr>
 <td>FATURA NO</td>
-<td>Seriden türetilen numara: seri kodu + yıl + 9 haneli sıra (ör. <code>MSH2026000000001</code>).</td>
+<td>Seriden türetilen numara: seri kodu + yıl + 9 haneli sıra (ör. <code>MSH2026000000001</code>); dış kaynaklı numarada kaynak rozeti (ERP / Pazaryeri / Entegratör).</td>
 </tr>
 <tr>
-<td>TİP</td>
+<td>SİPARİŞ NO</td>
+<td>Faturanın siparişi; tıklanınca sipariş detayı açılır.</td>
+</tr>
+<tr>
+<td>FATURA TARİHİ</td>
+<td>Faturanın tarihi.</td>
+</tr>
+<tr>
+<td>OLUŞTURMA</td>
+<td>Kaydın panelde oluşturulduğu tarih-saat.</td>
+</tr>
+<tr>
+<td>ETTN</td>
+<td>Entegratörün verdiği evrensel tekil tanımlama numarası (henüz gönderilmediyse &quot;—&quot;).</td>
+</tr>
+<tr>
+<td>VKN / TCKN</td>
+<td>Alıcının vergi kimlik ya da TC kimlik numarası.</td>
+</tr>
+<tr>
+<td>FATURA TİPİ</td>
 <td>e-Arşiv / e-Fatura / İhracat.</td>
 </tr>
 <tr>
-<td>ALICI</td>
-<td>Faturadaki alıcı adı.</td>
+<td>PARA BİRİMİ</td>
+<td>Siparişin fatura para birimi (varsayılan TRY).</td>
 </tr>
 <tr>
-<td>TUTAR</td>
-<td>Fatura toplamı (₺).</td>
+<td>TOPLAM TUTAR</td>
+<td>Mal/hizmet toplamı (indirim ve vergi öncesi).</td>
 </tr>
 <tr>
-<td>PDF</td>
-<td>Entegratör PDF adresi kayıtlıysa &quot;✓&quot;, değilse &quot;—&quot;.</td>
+<td>ÖDENECEK</td>
+<td>Vergiler dahil genel toplam.</td>
+</tr>
+<tr>
+<td>VERGİ MATRAHI</td>
+<td>Toplam tutar − indirim.</td>
+</tr>
+<tr>
+<td>VERGİ TOPLAMI</td>
+<td>Hesaplanan KDV toplamı.</td>
+</tr>
+<tr>
+<td>ENTEGRATÖR</td>
+<td>Entegratör gönderim durumu + gönderim tarihi; PDF kayıtlıysa &quot;PDF ✓&quot;.</td>
+</tr>
+<tr>
+<td>ERP</td>
+<td>ERP gönderim durumu (Gönderim yok / Bekliyor / Gönderildi / ERP kesti) + tarih + ERP referansı.</td>
+</tr>
+<tr>
+<td>PAZARYERİ</td>
+<td>Faturayı pazaryeri kestiyse pazaryeri adı ve belge numarası; değilse &quot;—&quot;.</td>
 </tr>
 <tr>
 <td>DURUM</td>
 <td><code>Oluşturuldu</code> (yeşil) / <code>İptal</code> (kırmızı).</td>
 </tr>
 <tr>
-<td>TARİH</td>
-<td>Fatura tarihi.</td>
+<td>ALICI</td>
+<td>Alıcı adı — varsayılan gizli, Kolonlar menüsünden açılır.</td>
 </tr>
 <tr>
-<td>(son sütun)</td>
-<td>&quot;Detay →&quot; — satır tıklanabilir.</td>
+<td>(son sütun, sabit)</td>
+<td><strong>Görüntüle</strong> ve <strong>URL</strong> düğmeleri; yatay kaydırmada sağda sabit kalır.</td>
 </tr>
 </tbody></table>
-<p>Arama kutusu yoktur; belirli bir siparişin faturaları sipariş detayındaki <strong>Faturalar</strong> kartında listelenir. Liste boşken
+<p>Arama kutusu fatura no, alıcı, vergi no ve dış belge numarasında arar; her sütun başlığında filtre vardır. Belirli bir siparişin
+faturaları sipariş detayındaki <strong>Faturalar</strong> kartında da listelenir. Liste boşken
 &quot;Fatura bulunamadı. Fatura, sipariş detayındaki &quot;Fatura Oluştur&quot; ile kesilir.&quot; mesajı görünür.</p>
 <h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
 <table>
@@ -94,40 +136,28 @@ Muhasebe/operasyon personeli kullanır.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td>Satır tıklama</td>
-<td>Liste</td>
-<td>&quot;Fatura {no}&quot; penceresi: durum rozeti, tip · tarih, Alıcı, Tutar, &quot;Sipariş: görüntüle&quot; bağlantısı, Entegratör PDF durumu, PDF adresi alanı.</td>
+<td>Görüntüle</td>
+<td>Satırın sağındaki sabit sütun</td>
+<td>Entegratör PDF&#39;i kayıtlıysa faturanın PDF&#39;ini yeni sekmede açar (site sunucusu üzerinden, adres istemciye inmez). PDF henüz yoksa fatura yazdırma sayfası açılır (tarayıcıdan PDF olarak kaydedilebilir).</td>
+<td><code>orders.invoices.view</code></td>
+</tr>
+<tr>
+<td>URL</td>
+<td>Satırın sağındaki sabit sütun</td>
+<td>Küçük pencere: entegratör PDF adresi, panel PDF adresi ve yazdırma sayfası adresi; her satırın yanında <strong>Kopyala</strong>.</td>
 <td>—</td>
 </tr>
 <tr>
-<td>Sipariş: görüntüle</td>
-<td>Fatura penceresi</td>
+<td>Sipariş no</td>
+<td>Liste</td>
 <td>Siparişin detay sayfasına gider.</td>
 <td>—</td>
 </tr>
 <tr>
-<td>Yazdır</td>
-<td>Fatura penceresi (sağ alt)</td>
-<td>Fatura yazdırma sayfasını yeni sekmede açar (yeniden yazdırma).</td>
-<td>Fatura iptal edilmemiş</td>
-</tr>
-<tr>
-<td>PDF Adresini Kaydet</td>
-<td>Fatura penceresi</td>
-<td>Girilen https adresini faturaya kaydeder; müşteri sitede &quot;Faturayı Görüntüle&quot; butonunu görür. <strong>Boş kaydetmek mevcut adresi siler.</strong></td>
-<td>—</td>
-</tr>
-<tr>
-<td>Faturayı İptal Et ⚠️</td>
-<td>Fatura penceresi (sol alt, kırmızı)</td>
-<td>Fatura <code>İptal</code> olur. Geri alınamaz; numara yeniden kullanılmaz.</td>
+<td>İptal Et ⚠️</td>
+<td>Sipariş detayı → Faturalar kartı (kırmızı)</td>
+<td>Onay sorulur; fatura <code>İptal</code> olur. Geri alınamaz; numara yeniden kullanılmaz.</td>
 <td>Durum <code>Oluşturuldu</code></td>
-</tr>
-<tr>
-<td>Kapat</td>
-<td>Fatura penceresi</td>
-<td>Pencereyi kapatır.</td>
-<td>—</td>
 </tr>
 <tr>
 <td>Fatura Serileri</td>
@@ -143,21 +173,9 @@ Muhasebe/operasyon personeli kullanır.</p>
 </tr>
 </tbody></table>
 <h2 id="form-alanlari">Form alanları<a class="anchor" href="#form-alanlari" aria-hidden="true">#</a></h2>
-<h3 id="entegrator-pdf-adresi-fatura-penceresi">Entegratör PDF Adresi (fatura penceresi)<a class="anchor" href="#entegrator-pdf-adresi-fatura-penceresi" aria-hidden="true">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Alan</th>
-<th>Zorunlu</th>
-<th>Açıklama</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Entegratör PDF Adresi (https)</td>
-<td>Hayır</td>
-<td>Ör. <code>https://.../earchive/....pdf</code>. Adres müşteriye doğrudan verilmez; site sunucusu üzerinden görüntülenir.</td>
-</tr>
-</tbody></table>
+<h3 id="entegrator-pdf-adresi">Entegratör PDF adresi<a class="anchor" href="#entegrator-pdf-adresi" aria-hidden="true">#</a></h3>
+<p>Panelde elle adres giriş alanı kalmadı (2026-09-11); adres entegratör gönderimiyle (FE3/FE4) ya da sipariş detayındaki
+&quot;Dış fatura kaydet&quot; akışıyla oluşur. Müşteriye doğrudan verilmez; site sunucusu üzerinden görüntülenir.</p>
 <h3 id="yeni-seri-fatura-serileri-penceresi">Yeni seri (Fatura Serileri penceresi)<a class="anchor" href="#yeni-seri-fatura-serileri-penceresi" aria-hidden="true">#</a></h3>
 <table>
 <thead>
@@ -226,7 +244,7 @@ bilinçli bir istisnadır (paket birleştirme — bkz. Sipariş Detayı).</li>
 <ol>
 <li>Siparişi açın → Faturalar kartında <strong>+ Fatura Oluştur</strong>.</li>
 <li>Seri, tip, tarih ve alıcı bilgilerini kontrol edin → <strong>Fatura Oluştur</strong>.</li>
-<li>Entegratörden PDF adresi alınınca <strong>Faturalar</strong> sayfasında faturaya tıklayın, adresi yapıştırın → <strong>PDF Adresini Kaydet</strong>.</li>
+<li>Faturayı görmek için <strong>Faturalar</strong> sayfasında satırın sağındaki <strong>Görüntüle</strong>&#39;ye basın; adresi paylaşmak için <strong>URL → Kopyala</strong>.</li>
 </ol>
 <p><strong>Yeni fatura serisi tanımlama</strong></p>
 <ol>

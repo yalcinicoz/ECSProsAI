@@ -26,4 +26,21 @@ public record InvoiceListDto(
     DateTime CreatedAt,
     bool HasIntegratorPdf = false, // H1 additive: entegratör PDF'i var mı (URL sızmaz)
     string NumberSource = "internal", // FE1: internal | erp | marketplace | integrator
-    string? ExternalSource = null);
+    string? ExternalSource = null,
+    // 2026-09-11 admin fatura listesi (kullanıcı isteği): sipariş no, ETTN, VKN/TCKN, para birimi, tutar kırılımı,
+    // entegratör/ERP/pazaryeri gönderim bilgileri. Admin ucu yetkili (orders.invoices.view); entegratör PDF adresi
+    // "URL göster" düğmesi için döner — mağaza (üye) DTO'ları bu kaydı KULLANMAZ, müşteriye sızmaz.
+    string OrderNumber = "",
+    Guid? Ettn = null,
+    string? RecipientTaxNumber = null,
+    string CurrencyCode = "TRY",
+    decimal Subtotal = 0,
+    decimal TotalDiscount = 0,
+    decimal TotalTax = 0,
+    DateTime? IntegratorSentAt = null,
+    string ErpStatus = "",
+    DateTime? ErpSentAt = null,
+    string? ErpReference = null,
+    string? ExternalDocumentId = null,
+    string? SendMethod = null,
+    string? IntegratorInvoiceUrl = null);

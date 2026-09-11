@@ -400,6 +400,30 @@ public class OrderController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Admin "Görüntüle" (2026-09-11): entegratör e-arşiv PDF'ini proxy ile döner (URL istemciye inmez; allowlist FaturaPdfProxy'de).
+    /// Panel bearer'lı olduğundan istemci blob olarak alıp yeni sekmede açar. Kapsam dışı kanal → 404 (Y3 §C.2).</summary>
+    [HttpGet("invoices/{invoiceId:guid}/pdf")]
+    [RequirePermission(Permissions.OrdersInvoicesView)]
+    public async Task<IActionResult> GetInvoicePdf(Guid invoiceId, [FromQuery] bool indir,
+        [FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami,
+        [FromServices] ECSPros.Api.Services.Store.IFaturaPdfProxy faturaPdfProxy, CancellationToken ct)
+    {
+        var kaynak = await _mediator.Send(new ECSPros.Order.Application.Queries.GetInvoicePdfSource.GetInvoicePdfSourceQuery(invoiceId), ct);
+        if (kaynak.IsFailure) return NotFound(new { success = false, error = kaynak.Error });
+        var kanallar = await kanalKapsami.KanallarAsync(Permissions.OrdersInvoicesView, ct);
+        if (kanallar is not null && !kanallar.Contains(kaynak.Value!.FirmPlatformId))
+            return NotFound(new { success = false, error = "Fatura bulunamadı." });
+
+        var sonuc = await faturaPdfProxy.GetirAsync(kaynak.Value!.Url, ct);
+        if (!sonuc.Basarili)
+            return StatusCode(sonuc.HataKodu, new { success = false, error = sonuc.HataMesaji });
+
+        Response.Headers.CacheControl = "no-store";
+        Response.Headers.Pragma = "no-cache";
+        Response.Headers.ContentDisposition = indir ? "attachment; filename=\"fatura.pdf\"" : "inline; filename=\"fatura.pdf\"";
+        return File(sonuc.Pdf!, "application/pdf", enableRangeProcessing: true);
+    }
+
     /// <summary>Faturaları Excel'e aktarır (DataGrid F4): gövde search/sort/dir/filters/columns + named: status, orderId.</summary>
     [HttpPost("invoices/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]

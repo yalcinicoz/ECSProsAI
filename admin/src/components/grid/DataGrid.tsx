@@ -281,7 +281,7 @@ export function DataGrid<T>({
             aria-sort={sorted ? (state.dir === 'desc' ? 'descending' : 'ascending') : undefined}
             className={cn('px-4 py-3 text-xs font-semibold text-left whitespace-nowrap select-none', c.className,
               c.align === 'right' && 'text-right', c.align === 'center' && 'text-center',
-              isFrozen && 'grid-frozen', isFrozen && c.key === lastFrozenKey && 'grid-frozen-last',
+              isFrozen && 'grid-frozen', isFrozen && c.key === lastFrozenKey && 'grid-frozen-last', c.frozenRight && 'grid-frozen-right',
               c.sortable && 'cursor-pointer hover:text-[var(--text)]')}
             style={{ color: sorted ? 'var(--text)' : 'var(--text-s)', width: c.width, minWidth: c.minWidth, left }}
             onClick={c.sortable ? () => grid.toggleSort(c.key) : undefined}>
@@ -419,7 +419,7 @@ export function DataGrid<T>({
                       return (
                         <td key={c.key} data-stop-row-click={c.stopRowClick ? '' : undefined}
                           className={cn('px-4 py-3 text-sm', c.className, c.align === 'right' && 'text-right', c.align === 'center' && 'text-center',
-                            isFrozen && 'grid-frozen', isFrozen && c.key === lastFrozenKey && 'grid-frozen-last')}
+                            isFrozen && 'grid-frozen', isFrozen && c.key === lastFrozenKey && 'grid-frozen-last', c.frozenRight && 'grid-frozen-right')}
                           style={{ color: 'var(--text)', left }}>{c.cell(r)}</td>
                       )
                     })}

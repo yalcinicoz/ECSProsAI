@@ -8,17 +8,18 @@ summary: Kesilen faturaların listelendiği, entegratör PDF adresinin kaydedild
 
 ## Ne işe yarar
 Faturalar sayfası, siparişlerden kesilen faturaların kaydıdır. Fatura **sipariş detayındaki "+ Fatura Oluştur"** ile kesilir; bu
-sayfada ise faturalar listelenir, bir faturaya tıklanarak entegratörden (e-Arşiv/e-Fatura sağlayıcısı) alınan PDF adresi kaydedilir
-ya da fatura iptal edilir. Fatura numarasının türetildiği **fatura serileri** de buradaki "Fatura Serileri" penceresinden tanımlanır.
+sayfada ise faturalar sipariş, alıcı, tutar kırılımı ve gönderim (entegratör / ERP / pazaryeri) bilgileriyle listelenir; her satırın
+sağındaki sabit **Görüntüle** düğmesi faturayı PDF olarak açar, **URL** düğmesi fatura adreslerini kopyalanabilir küçük bir pencerede
+gösterir. Fatura iptali sipariş detayındaki Faturalar kartından yapılır. Fatura numarasının türetildiği **fatura serileri** de buradaki "Fatura Serileri" penceresinden tanımlanır.
 Muhasebe/operasyon personeli kullanır.
 
 ## Ekran yerleşimi
 ![Faturalar listesi — durum sekmeleri, fatura tablosu, sağ üstte Fatura Serileri butonu](img/orders-invoices.webp)
 1. **Başlık** — "Faturalar" + kayıt sayısı; sağda **Fatura Serileri** butonu.
 2. **Durum sekmeleri** — Oluşturulan / İptal Edilen / Tümü.
-3. **Fatura tablosu** — satıra tıklayınca fatura penceresi açılır.
+3. **Fatura tablosu** — satır tıklanmaz; sağdaki sabit **Görüntüle / URL** düğmeleri kullanılır.
 4. **Sayfalama** — 20 kayıt/sayfa.
-5. **Pencereler** — "Fatura {no}" detay penceresi ve "Fatura Serileri" penceresi.
+5. **Pencereler** — "Fatura {no} — adresler" (URL) penceresi ve "Fatura Serileri" penceresi.
 
 ## Liste ve filtreler
 | Sekme | Durum |
@@ -29,36 +30,44 @@ Muhasebe/operasyon personeli kullanır.
 
 | Sütun | Anlamı |
 |---|---|
-| FATURA NO | Seriden türetilen numara: seri kodu + yıl + 9 haneli sıra (ör. `MSH2026000000001`). |
-| TİP | e-Arşiv / e-Fatura / İhracat. |
-| ALICI | Faturadaki alıcı adı. |
-| TUTAR | Fatura toplamı (₺). |
-| PDF | Entegratör PDF adresi kayıtlıysa "✓", değilse "—". |
+| FATURA NO | Seriden türetilen numara: seri kodu + yıl + 9 haneli sıra (ör. `MSH2026000000001`); dış kaynaklı numarada kaynak rozeti (ERP / Pazaryeri / Entegratör). |
+| SİPARİŞ NO | Faturanın siparişi; tıklanınca sipariş detayı açılır. |
+| FATURA TARİHİ | Faturanın tarihi. |
+| OLUŞTURMA | Kaydın panelde oluşturulduğu tarih-saat. |
+| ETTN | Entegratörün verdiği evrensel tekil tanımlama numarası (henüz gönderilmediyse "—"). |
+| VKN / TCKN | Alıcının vergi kimlik ya da TC kimlik numarası. |
+| FATURA TİPİ | e-Arşiv / e-Fatura / İhracat. |
+| PARA BİRİMİ | Siparişin fatura para birimi (varsayılan TRY). |
+| TOPLAM TUTAR | Mal/hizmet toplamı (indirim ve vergi öncesi). |
+| ÖDENECEK | Vergiler dahil genel toplam. |
+| VERGİ MATRAHI | Toplam tutar − indirim. |
+| VERGİ TOPLAMI | Hesaplanan KDV toplamı. |
+| ENTEGRATÖR | Entegratör gönderim durumu + gönderim tarihi; PDF kayıtlıysa "PDF ✓". |
+| ERP | ERP gönderim durumu (Gönderim yok / Bekliyor / Gönderildi / ERP kesti) + tarih + ERP referansı. |
+| PAZARYERİ | Faturayı pazaryeri kestiyse pazaryeri adı ve belge numarası; değilse "—". |
 | DURUM | `Oluşturuldu` (yeşil) / `İptal` (kırmızı). |
-| TARİH | Fatura tarihi. |
-| (son sütun) | "Detay →" — satır tıklanabilir. |
+| ALICI | Alıcı adı — varsayılan gizli, Kolonlar menüsünden açılır. |
+| (son sütun, sabit) | **Görüntüle** ve **URL** düğmeleri; yatay kaydırmada sağda sabit kalır. |
 
-Arama kutusu yoktur; belirli bir siparişin faturaları sipariş detayındaki **Faturalar** kartında listelenir. Liste boşken
+Arama kutusu fatura no, alıcı, vergi no ve dış belge numarasında arar; her sütun başlığında filtre vardır. Belirli bir siparişin
+faturaları sipariş detayındaki **Faturalar** kartında da listelenir. Liste boşken
 "Fatura bulunamadı. Fatura, sipariş detayındaki "Fatura Oluştur" ile kesilir." mesajı görünür.
 
 ## Butonlar ve aksiyonlar
 | Buton/Aksiyon | Nerede | Ne olur | Ön koşul / yetki |
 |---|---|---|---|
-| Satır tıklama | Liste | "Fatura {no}" penceresi: durum rozeti, tip · tarih, Alıcı, Tutar, "Sipariş: görüntüle" bağlantısı, Entegratör PDF durumu, PDF adresi alanı. | — |
-| Sipariş: görüntüle | Fatura penceresi | Siparişin detay sayfasına gider. | — |
-| Yazdır | Fatura penceresi (sağ alt) | Fatura yazdırma sayfasını yeni sekmede açar (yeniden yazdırma). | Fatura iptal edilmemiş |
-| PDF Adresini Kaydet | Fatura penceresi | Girilen https adresini faturaya kaydeder; müşteri sitede "Faturayı Görüntüle" butonunu görür. **Boş kaydetmek mevcut adresi siler.** | — |
-| Faturayı İptal Et ⚠️ | Fatura penceresi (sol alt, kırmızı) | Fatura `İptal` olur. Geri alınamaz; numara yeniden kullanılmaz. | Durum `Oluşturuldu` |
-| Kapat | Fatura penceresi | Pencereyi kapatır. | — |
+| Görüntüle | Satırın sağındaki sabit sütun | Entegratör PDF'i kayıtlıysa faturanın PDF'ini yeni sekmede açar (site sunucusu üzerinden, adres istemciye inmez). PDF henüz yoksa fatura yazdırma sayfası açılır (tarayıcıdan PDF olarak kaydedilebilir). | `orders.invoices.view` |
+| URL | Satırın sağındaki sabit sütun | Küçük pencere: entegratör PDF adresi, panel PDF adresi ve yazdırma sayfası adresi; her satırın yanında **Kopyala**. | — |
+| Sipariş no | Liste | Siparişin detay sayfasına gider. | — |
+| İptal Et ⚠️ | Sipariş detayı → Faturalar kartı (kırmızı) | Onay sorulur; fatura `İptal` olur. Geri alınamaz; numara yeniden kullanılmaz. | Durum `Oluşturuldu` |
 | Fatura Serileri | Liste başlığı | "Fatura Serileri" penceresi: mevcut seriler (ad · e-Arşiv/e-Fatura/İhracat kodları · `Pasif` rozeti) + YENİ SERİ formu. | — |
 | + Seri Ekle | Fatura Serileri penceresi | Yeni seri oluşturur; form temizlenir, liste yenilenir. | Firma ve e-Arşiv Seri dolu |
 
 ## Form alanları
 
-### Entegratör PDF Adresi (fatura penceresi)
-| Alan | Zorunlu | Açıklama |
-|---|---|---|
-| Entegratör PDF Adresi (https) | Hayır | Ör. `https://.../earchive/....pdf`. Adres müşteriye doğrudan verilmez; site sunucusu üzerinden görüntülenir. |
+### Entegratör PDF adresi
+Panelde elle adres giriş alanı kalmadı (2026-09-11); adres entegratör gönderimiyle (FE3/FE4) ya da sipariş detayındaki
+"Dış fatura kaydet" akışıyla oluşur. Müşteriye doğrudan verilmez; site sunucusu üzerinden görüntülenir.
 
 ### Yeni seri (Fatura Serileri penceresi)
 | Alan | Zorunlu | Açıklama |
@@ -86,7 +95,7 @@ Arama kutusu yoktur; belirli bir siparişin faturaları sipariş detayındaki **
 **Fatura kesme (sipariş detayından)**
 1. Siparişi açın → Faturalar kartında **+ Fatura Oluştur**.
 2. Seri, tip, tarih ve alıcı bilgilerini kontrol edin → **Fatura Oluştur**.
-3. Entegratörden PDF adresi alınınca **Faturalar** sayfasında faturaya tıklayın, adresi yapıştırın → **PDF Adresini Kaydet**.
+3. Faturayı görmek için **Faturalar** sayfasında satırın sağındaki **Görüntüle**'ye basın; adresi paylaşmak için **URL → Kopyala**.
 
 **Yeni fatura serisi tanımlama**
 1. **Faturalar → Fatura Serileri**.

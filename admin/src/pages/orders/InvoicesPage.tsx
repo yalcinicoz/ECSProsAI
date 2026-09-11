@@ -10,6 +10,10 @@ import { DataGrid, useGridState, type GridColumn, type GridFilterField } from '@
 import { errText } from '@/components/ui/DataTable.utils'
 import { INVOICE_STATUS_MAP, INVOICE_TYPE_MAP, INVOICE_SOURCE_MAP } from './orderConstants'
 
+// 2026-09-11 (kullanıcı isteği): satır tıklama popup'ı KALDIRILDI; liste kolonları sipariş no / fatura tarihi / oluşturma /
+// ETTN / VKN-TCKN / tip / para birimi / toplam / ödenecek / vergi matrahı / vergi toplamı / entegratör-ERP-pazaryeri gönderimi;
+// en sağda sabit "Görüntüle" (PDF) + "URL" (kopyalanabilir küçük popup). Fatura iptali sipariş detayına taşındı.
+
 const TABS = [
   { key: 'created',   label: 'Oluşturulan' },
   { key: 'cancelled', label: 'İptal Edilen' },
@@ -117,6 +121,20 @@ export interface InvoiceSummary {
   hasIntegratorPdf?: boolean
   numberSource?: string
   externalSource?: string | null
+  orderNumber?: string
+  ettn?: string | null
+  recipientTaxNumber?: string | null
+  currencyCode?: string
+  subtotal?: number
+  totalDiscount?: number
+  totalTax?: number
+  integratorSentAt?: string | null
+  erpStatus?: string
+  erpSentAt?: string | null
+  erpReference?: string | null
+  externalDocumentId?: string | null
+  sendMethod?: string | null
+  integratorInvoiceUrl?: string | null
 }
 
 // FE0 (2026-09-06): seri tekil ve TİPLİ — bkz. docs/fatura-entegrasyon-plani.md §2.2
@@ -144,111 +162,58 @@ interface PagedResult<T> {
   pageSize: number
 }
 
-// ── Fatura detay modalı (liste verisinden; PDF URL girişi + iptal) ────────────
-function InvoiceModal({ invoice, onClose }: { invoice: InvoiceSummary; onClose: () => void }) {
-  const queryClient = useQueryClient()
-  const [pdfUrl, setPdfUrl] = useState('')
-  const [error, setError] = useState('')
+const ERP_STATUS: Record<string, string> = {
+  not_applicable: 'Gönderim yok', '': 'Gönderim yok', pending: 'Bekliyor', sent: 'Gönderildi', acknowledged: 'ERP kesti', error: 'Hata',
+}
+const fmtD = (iso: string | null | undefined) => iso ? new Date(iso).toLocaleDateString('tr-TR') : '—'
+const para = (n: number | undefined, cur?: string) =>
+  (n ?? 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + (cur === 'TRY' || !cur ? '₺' : cur)
 
-  function invalidate() {
-    queryClient.invalidateQueries({ queryKey: ['invoices'] })
-    queryClient.invalidateQueries({ queryKey: ['order-invoices', invoice.orderId] })
+// Panel bearer'lı: PDF'i blob olarak alıp yeni sekmede aç (window.open doğrudan token taşımaz).
+async function pdfAc(inv: InvoiceSummary, onErr: (m: string) => void) {
+  if (!inv.hasIntegratorPdf) { window.open(`/yazdir/fatura/${inv.id}`, '_blank'); return }
+  try {
+    const res = await api.get(`/orders/invoices/${inv.id}/pdf`, { responseType: 'blob' })
+    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+    window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch (e) {
+    onErr(errText(e))
   }
-  function onErr(e: unknown) {
-    const err = e as { response?: { data?: { error?: string } } }
-    setError(err.response?.data?.error ?? 'İşlem başarısız oldu.')
+}
+
+// ── "URL göster" popup'ı: fatura adresleri + kopyala ────────────────────────
+function UrlPopup({ inv, onClose }: { inv: InvoiceSummary; onClose: () => void }) {
+  const [kopyalandi, setKopyalandi] = useState('')
+  const origin = window.location.origin
+  const satirlar = [
+    inv.integratorInvoiceUrl ? { ad: 'Entegratör PDF adresi', url: inv.integratorInvoiceUrl } : null,
+    inv.hasIntegratorPdf ? { ad: 'Panel PDF (proxy, yetkili)', url: `${origin}/api/orders/invoices/${inv.id}/pdf` } : null,
+    inv.status !== 'cancelled' ? { ad: 'Yazdırma sayfası', url: `${origin}/yazdir/fatura/${inv.id}` } : null,
+  ].filter((x): x is { ad: string; url: string } => !!x)
+  const kopyala = async (url: string) => {
+    try { await navigator.clipboard.writeText(url); setKopyalandi(url); setTimeout(() => setKopyalandi(''), 1500) }
+    catch { window.prompt('Kopyalamak için seçin:', url) }
   }
-
-  const saveUrl = useMutation({
-    mutationFn: async () => {
-      await api.patch(`/orders/invoices/${invoice.id}/integrator-url`, { integratorInvoiceUrl: pdfUrl.trim() || null })
-    },
-    onSuccess: () => { invalidate(); onClose() },
-    onError: onErr,
-  })
-  const { data: dispatches } = useQuery<PagedResult<DispatchRow>>({
-    queryKey: ['invoice-dispatches', 'inv', invoice.id],
-    queryFn: async () => (await api.get(`/orders/invoice-dispatches?invoiceId=${invoice.id}&pageSize=20`)).data.data,
-  })
-  const [resendError, setResendError] = useState('')
-  const resend = useMutation({
-    mutationFn: async () => { await api.post(`/orders/invoices/${invoice.id}/resend`, {}) },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['invoice-dispatches'] }); queryClient.invalidateQueries({ queryKey: ['invoices'] }); setResendError('') },
-    onError: (e: unknown) => setResendError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Gönderilemedi.'),
-  })
-  const cancel = useMutation({
-    mutationFn: async () => { await api.post(`/orders/invoices/${invoice.id}/cancel`, {}) },
-    onSuccess: () => { invalidate(); onClose() },
-    onError: onErr,
-  })
-
-  const st = INVOICE_STATUS_MAP[invoice.status] ?? { label: invoice.status, variant: 'neutral' as const }
-
   return (
-    <Modal open onClose={onClose} title={`Fatura ${invoice.invoiceNumber}`}>
-      <div className="space-y-1 text-sm">
-        <div className="flex items-center gap-2 mb-2">
-          <Badge variant={st.variant}>{st.label}</Badge>
-          <span className="text-xs" style={{ color: 'var(--text-s)' }}>
-            {INVOICE_TYPE_MAP[invoice.invoiceType] ?? invoice.invoiceType} · {new Date(invoice.invoiceDate).toLocaleDateString('tr-TR')}
-          </span>
-        </div>
-        <p style={{ color: 'var(--text)' }}>Alıcı: {invoice.recipientName}</p>
-        <p style={{ color: 'var(--text)' }}>
-          Tutar: <b>{invoice.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</b>
-        </p>
-        <p style={{ color: 'var(--text-m)' }}>
-          Sipariş: <Link to={`/orders/${invoice.orderId}`} className="underline" style={{ color: 'var(--brand)' }} onClick={onClose}>görüntüle</Link>
-        </p>
-        <p className="text-xs" style={{ color: 'var(--text-s)' }}>
-          Entegratör PDF: {invoice.hasIntegratorPdf ? 'kayıtlı ✓ (müşteri "Faturayı Görüntüle" butonunu görür)' : 'kayıtlı değil'}
-        </p>
-      </div>
-
-      <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-        <div className="rounded-lg p-3 mb-3 text-xs" style={{ background: 'var(--surface2)', color: 'var(--text-m)' }}>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold" style={{ color: 'var(--text)' }}>Entegratör durumu:</span>
-            <Badge variant="neutral">{INTEGRATOR_STATUS[invoice.integratorStatus] ?? invoice.integratorStatus}</Badge>
-            {invoice.status !== 'cancelled' && (invoice.numberSource ?? 'internal') === 'internal' && !['sent', 'accepted', 'queued', 'pending', 'retrying'].includes(invoice.integratorStatus) && (
-              <Button size="sm" variant="ghost" onClick={() => resend.mutate()} loading={resend.isPending}>Entegratöre Gönder</Button>
-            )}
+    <Modal open onClose={onClose} title={`Fatura ${inv.invoiceNumber} — adresler`} size="md">
+      <div className="space-y-3">
+        {satirlar.map(r => (
+          <div key={r.url}>
+            <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-s)' }}>{r.ad}</div>
+            <div className="flex items-center gap-2">
+              <input className="inp font-mono text-xs flex-1" readOnly value={r.url} onFocus={e => e.currentTarget.select()} />
+              <Button size="sm" variant="secondary" onClick={() => kopyala(r.url)}>{kopyalandi === r.url ? 'Kopyalandı ✓' : 'Kopyala'}</Button>
+            </div>
           </div>
-          {(dispatches?.items ?? []).map(d => {
-            const st = DISPATCH_STATUS[d.status] ?? { label: d.status, variant: 'neutral' as const }
-            return (
-              <div key={d.id} className="flex flex-wrap items-center gap-2 py-1" style={{ borderTop: '1px solid var(--border)' }}>
-                <span>{fmtDt(d.createdAt)}</span>
-                <span>{DISPATCH_ACTION[d.action] ?? d.action}</span>
-                <Badge variant={st.variant}>{st.label}</Badge>
-                <span>{d.attempt}/{d.maxAttempts}</span>
-                {d.lastError && <span style={{ color: '#b91c1c' }}>{d.lastError}</span>}
-              </div>
-            )
-          })}
-          {(dispatches?.items ?? []).length === 0 && <div>Gönderim işi yok.</div>}
-          {resendError && <div style={{ color: '#ef4444' }}>{resendError}</div>}
-        </div>
-        <label className="flbl">Entegratör PDF Adresi (https)</label>
-        <input className="inp" value={pdfUrl} onChange={e => setPdfUrl(e.target.value)}
-          placeholder="https://.../earchive/....pdf" />
-        <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
-          Adres müşteriye inmez; site sunucusu üzerinden (proxy) görüntülenir. Boş kaydetmek mevcut adresi siler.
-        </p>
+        ))}
+        {satirlar.length === 0 && <p className="text-sm" style={{ color: 'var(--text-s)' }}>Bu fatura için adres yok.</p>}
+        {!inv.hasIntegratorPdf && inv.status !== 'cancelled' && (
+          <p className="text-xs" style={{ color: 'var(--text-s)' }}>Entegratör PDF'i henüz kayıtlı değil; "Görüntüle" yazdırma sayfasını açar.</p>
+        )}
       </div>
-      {error && <p className="text-sm mt-2 text-red-500">{error}</p>}
-      <div className="flex justify-between gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-        {invoice.status === 'created' ? (
-          <Button size="sm" variant="danger" onClick={() => cancel.mutate()} loading={cancel.isPending}>Faturayı İptal Et</Button>
-        ) : <span />}
-        <div className="flex gap-2">
-          {/* FAZ 15.2b (2026-09-10): yeniden yazdır — site /yazdir/fatura sayfası (paket faturasında yalnız paket kalemleri) */}
-          {invoice.status !== 'cancelled' && (
-            <Button size="sm" variant="ghost" onClick={() => window.open(`/yazdir/fatura/${invoice.id}`, '_blank')}>Yazdır</Button>
-          )}
-          <Button variant="secondary" onClick={onClose}>Kapat</Button>
-          <Button onClick={() => saveUrl.mutate()} loading={saveUrl.isPending}>PDF Adresini Kaydet</Button>
-        </div>
+      <div className="flex justify-end mt-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+        <Button variant="secondary" size="sm" onClick={onClose}>Kapat</Button>
       </div>
     </Modal>
   )
@@ -263,7 +228,8 @@ export function InvoicesPage() {
   const grid = useGridState('invoices', { defaultPageSize: 20, defaultSort: 'createdAt', defaultDir: 'desc' })
   const [sp] = useSearchParams()
   const tab = sp.get('tab') ?? 'created'          // created | cancelled | '' (all) | queue
-  const [selected, setSelected] = useState<InvoiceSummary | null>(null)
+  const [urlInv, setUrlInv] = useState<InvoiceSummary | null>(null)
+  const [pdfErr, setPdfErr] = useState('')
 
   const { data, isLoading, isFetching, error } = useQuery<PagedResult<InvoiceSummary>>({
     queryKey: ['invoices', tab, ...grid.queryKey],
@@ -276,23 +242,60 @@ export function InvoicesPage() {
   const invoices = data?.items ?? []
   const totalCount = data?.totalCount ?? 0
   const switchTab = (key: string) => grid.mutate(n => { if (key === 'created') n.delete('tab'); else n.set('tab', key) })
+  const xs = { color: 'var(--text-s)' } as const
 
   const columns: GridColumn<InvoiceSummary>[] = [
     { key: 'invoiceNumber', header: 'FATURA NO', filters: [{ field: 'externalDocumentId', label: 'Dış belge no', type: 'text' }, { field: 'numberSource', label: 'Numara kaynağı', type: 'enum', multiple: true, options: Object.entries(INVOICE_SOURCE_MAP).map(([value, label]) => ({ value, label })) }], frozen: true, lockVisible: true, sortable: true, minWidth: 150,
       cell: inv => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{inv.invoiceNumber}{inv.numberSource && inv.numberSource !== 'internal' && <Badge variant="neutral" className="ml-2">{INVOICE_SOURCE_MAP[inv.numberSource] ?? inv.numberSource}</Badge>}</code> },
-    { key: 'invoiceType', header: 'TİP', sortable: true, priority: 2, filter: { type: 'enum', multiple: true, label: 'Tip', options: Object.entries(INVOICE_TYPE_MAP).map(([value, label]) => ({ value, label })) }, cell: inv => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{INVOICE_TYPE_MAP[inv.invoiceType] ?? inv.invoiceType}</span> },
-    { key: 'recipient', header: 'ALICI', filters: [{ field: 'taxNumber', label: 'Vergi no / TCKN', type: 'text', ops: ['contains', 'startswith'] }], frozen: true, sortable: true, priority: 1, filter: { type: 'text', label: 'Alıcı' },
+    { key: 'orderNumber', header: 'SİPARİŞ NO', sortable: true, priority: 1, filter: { type: 'text', label: 'Sipariş no' }, stopRowClick: true,
+      cell: inv => <Link to={`/orders/${inv.orderId}`} className="text-xs font-mono underline" style={{ color: 'var(--brand)' }}>{inv.orderNumber || '—'}</Link> },
+    { key: 'invoiceDate', header: 'FATURA TARİHİ', sortable: true, priority: 1, filter: { type: 'date', label: 'Fatura tarihi', quick: true },
+      cell: inv => <span className="text-xs" style={xs}>{fmtD(inv.invoiceDate)}</span> },
+    { key: 'createdAt', header: 'OLUŞTURMA', sortable: true, priority: 3, filter: { type: 'date', label: 'Kayıt tarihi' },
+      cell: inv => <span className="text-xs" style={xs}>{fmtDt(inv.createdAt)}</span> },
+    { key: 'ettn', header: 'ETTN', priority: 3, minWidth: 200,
+      cell: inv => inv.ettn ? <code className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>{inv.ettn}</code> : <span className="text-xs" style={xs}>—</span> },
+    { key: 'taxNumber', header: 'VKN / TCKN', priority: 2, sortable: false, filter: { type: 'text', label: 'Vergi no / TCKN', ops: ['contains', 'startswith'] },
+      cell: inv => <span className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>{inv.recipientTaxNumber || '—'}</span> },
+    { key: 'recipient', header: 'ALICI', sortable: true, priority: 2, defaultVisible: false, filter: { type: 'text', label: 'Alıcı' },
       cell: inv => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{inv.recipientName}</span> },
-    { key: 'total', header: 'TUTAR', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Tutar' },
-      cell: inv => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{inv.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span> },
-    { key: 'hasPdf', header: 'PDF', sortable: true, filter: { type: 'boolean', label: 'Entegratör PDF' }, priority: 3, align: 'center', exportable: false, cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{inv.hasIntegratorPdf ? '✓' : '—'}</span> },
+    { key: 'invoiceType', header: 'FATURA TİPİ', sortable: true, priority: 2, filter: { type: 'enum', multiple: true, label: 'Tip', options: Object.entries(INVOICE_TYPE_MAP).map(([value, label]) => ({ value, label })) },
+      cell: inv => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{INVOICE_TYPE_MAP[inv.invoiceType] ?? inv.invoiceType}</span> },
+    { key: 'currency', header: 'PARA BİRİMİ', sortable: true, priority: 3, align: 'center', filter: { type: 'text', label: 'Para birimi' },
+      cell: inv => <span className="text-xs" style={xs}>{inv.currencyCode || 'TRY'}</span> },
+    { key: 'subtotal', header: 'TOPLAM TUTAR', sortable: true, align: 'right', priority: 2, filter: { type: 'number', label: 'Toplam tutar' },
+      cell: inv => <span className="text-sm tabular-nums" style={{ color: 'var(--text)' }}>{para(inv.subtotal, inv.currencyCode)}</span> },
+    { key: 'total', header: 'ÖDENECEK', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Ödenecek tutar' },
+      cell: inv => <span className="text-sm font-medium tabular-nums" style={{ color: 'var(--text)' }}>{para(inv.grandTotal, inv.currencyCode)}</span> },
+    { key: 'taxBase', header: 'VERGİ MATRAHI', sortable: true, align: 'right', priority: 3, filter: { type: 'number', label: 'Vergi matrahı' },
+      cell: inv => <span className="text-sm tabular-nums" style={{ color: 'var(--text-m)' }}>{para((inv.subtotal ?? 0) - (inv.totalDiscount ?? 0), inv.currencyCode)}</span> },
+    { key: 'totalTax', header: 'VERGİ TOPLAMI', sortable: true, align: 'right', priority: 3, filter: { type: 'number', label: 'Vergi toplamı' },
+      cell: inv => <span className="text-sm tabular-nums" style={{ color: 'var(--text-m)' }}>{para(inv.totalTax, inv.currencyCode)}</span> },
+    { key: 'integratorStatus', header: 'ENTEGRATÖR', sortable: true, priority: 2, filter: { type: 'enum', multiple: true, label: 'Entegratör durumu', options: Object.entries(INTEGRATOR_STATUS).map(([value, label]) => ({ value, label })) },
+      cell: inv => (
+        <div className="text-xs leading-tight">
+          <div style={{ color: 'var(--text)' }}>{INTEGRATOR_STATUS[inv.integratorStatus] ?? inv.integratorStatus}{inv.hasIntegratorPdf ? ' · PDF ✓' : ''}</div>
+          {inv.integratorSentAt && <div style={xs}>{fmtDt(inv.integratorSentAt)}</div>}
+        </div>) },
+    { key: 'erpStatus', header: 'ERP', sortable: true, priority: 3, filter: { type: 'enum', multiple: true, label: 'ERP durumu', options: Object.entries(ERP_STATUS).filter(([v]) => v !== '').map(([value, label]) => ({ value, label })) },
+      cell: inv => (
+        <div className="text-xs leading-tight">
+          <div style={{ color: 'var(--text)' }}>{ERP_STATUS[inv.erpStatus ?? ''] ?? inv.erpStatus}{inv.erpReference ? ` · ${inv.erpReference}` : ''}</div>
+          {inv.erpSentAt && <div style={xs}>{fmtDt(inv.erpSentAt)}</div>}
+        </div>) },
+    { key: 'marketplace', header: 'PAZARYERİ', priority: 3,
+      cell: inv => inv.numberSource === 'marketplace'
+        ? <div className="text-xs leading-tight"><div style={{ color: 'var(--text)' }}>{inv.externalSource || 'Pazaryeri'} kesti</div>{inv.externalDocumentId && <div style={xs}>{inv.externalDocumentId}</div>}</div>
+        : <span className="text-xs" style={xs}>—</span> },
     { key: 'status', header: 'DURUM', lockVisible: true, sortable: true, priority: 1,
       filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(INVOICE_STATUS_MAP).map(([value, v]) => ({ value, label: v.label })) },
       cell: inv => { const st = INVOICE_STATUS_MAP[inv.status] ?? { label: inv.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
-    { key: 'integratorStatus', header: 'ENTEGRATÖR', sortable: true, priority: 3, defaultVisible: false, filter: { type: 'enum', multiple: true, label: 'Entegratör durumu', options: Object.entries(INTEGRATOR_STATUS).map(([value, label]) => ({ value, label })) }, cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{INTEGRATOR_STATUS[inv.integratorStatus] ?? inv.integratorStatus}</span> },
-    { key: 'invoiceDate', header: 'TARİH', filters: [{ field: 'createdAt', label: 'Kayıt tarihi', type: 'date' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Fatura tarihi', quick: true },
-      cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(inv.invoiceDate).toLocaleDateString('tr-TR')}</span> },
-    { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
+    { key: 'actions', header: '', priority: 1, align: 'right', exportable: false, lockVisible: true, frozenRight: true, stopRowClick: true,
+      cell: inv => (
+        <div className="flex items-center justify-end gap-1 whitespace-nowrap">
+          <Button size="sm" variant="secondary" onClick={() => void pdfAc(inv, setPdfErr)}>Görüntüle</Button>
+          <Button size="sm" variant="ghost" onClick={() => setUrlInv(inv)}>URL</Button>
+        </div>) },
   ]
 
   return (
@@ -314,6 +317,8 @@ export function InvoicesPage() {
         })}
       </div>
 
+      {pdfErr && <div className="mb-3 px-3 py-2 rounded text-sm" style={{ background: 'var(--danger-bg,#fef2f2)', color: '#b91c1c' }}>{pdfErr}</div>}
+
       {tab === 'queue' ? <DispatchQueue /> : (
         <DataGrid<InvoiceSummary>
           gridId="invoices"
@@ -327,20 +332,19 @@ export function InvoicesPage() {
           loading={isLoading}
           fetching={isFetching}
           error={error ? errText(error) : null}
-          onRowClick={inv => setSelected(inv)}
           empty={'Fatura bulunamadı. Fatura, sipariş detayındaki "Fatura Oluştur" ile kesilir.'}
-          minWidth={860}
+          minWidth={1400}
           export={{ endpoint: '/orders/invoices/export', named: () => ({ status: tab && tab !== 'all' ? tab : undefined }), fallbackFileName: 'faturalar.xlsx' }}
-        compact={{
-          title: inv => inv.invoiceNumber,
-          subtitle: inv => `${inv.recipientName} · ${new Date(inv.invoiceDate).toLocaleDateString('tr-TR')}`,
-          right: inv => inv.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺',
-          badge: inv => { const st = INVOICE_STATUS_MAP[inv.status] ?? { label: inv.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> },
-        }}
+          compact={{
+            title: inv => inv.invoiceNumber,
+            subtitle: inv => `${inv.orderNumber ?? ''} · ${inv.recipientTaxNumber ?? inv.recipientName} · ${fmtD(inv.invoiceDate)}`,
+            right: inv => para(inv.grandTotal, inv.currencyCode),
+            badge: inv => { const st = INVOICE_STATUS_MAP[inv.status] ?? { label: inv.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> },
+          }}
         />
       )}
 
-      {selected && <InvoiceModal invoice={selected} onClose={() => setSelected(null)} />}
+      {urlInv && <UrlPopup inv={urlInv} onClose={() => setUrlInv(null)} />}
     </div>
   )
 }

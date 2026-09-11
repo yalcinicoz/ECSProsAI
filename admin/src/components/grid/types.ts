@@ -38,6 +38,8 @@ export interface GridColumn<T> {
   priority?: 1 | 2 | 3
   /** Masaüstünde sabit (sticky left) aday — bütçe kuralı (%35 hedef / %40 sınır) uygulanır */
   frozen?: boolean
+  /** Sağda sabit (sticky right) aksiyon kolonu — bütçe/kullanıcı tercihi dışında, her zaman görünür (2026-09-11 faturalar "Görüntüle") */
+  frozenRight?: boolean
   /** Varsayılan görünür (varsayılan true) */
   defaultVisible?: boolean
   /** Gizlenemez (kritik kolon) */

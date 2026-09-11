@@ -307,6 +307,11 @@ export function OrderDetailPage() {
     queryFn: async () => (await api.get(`/orders/invoices?orderId=${id}&pageSize=50`)).data.data.items,
     enabled: !!id,
   })
+  const faturaIptal = useMutation({
+    mutationFn: async (invoiceId: string) => { await api.post(`/orders/invoices/${invoiceId}/cancel`, {}) },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['order-invoices', id] }); queryClient.invalidateQueries({ queryKey: ['invoices'] }) },
+    onError: (e: unknown) => window.alert((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Fatura iptal edilemedi.'),
+  })
   const { data: invoiceSeries = [] } = useQuery<InvoiceSeries[]>({
     queryKey: ['invoice-series-active'],
     queryFn: async () => (await api.get('/orders/invoice-series')).data.data,
@@ -716,6 +721,12 @@ export function OrderDetailPage() {
                   {inv.status !== 'cancelled' && (
                     <button type="button" className="text-xs ml-auto underline" style={{ color: 'var(--brand)' }}
                       onClick={() => window.open(`/yazdir/fatura/${inv.id}`, '_blank')}>Yazdır</button>
+                  )}
+                  {/* 2026-09-11: fatura listesi popup'ı kaldırıldı — iptal artık yalnız buradan */}
+                  {inv.status === 'created' && (
+                    <button type="button" className="text-xs underline" style={{ color: '#b91c1c' }}
+                      disabled={faturaIptal.isPending}
+                      onClick={() => { if (window.confirm(`${inv.invoiceNumber} numaralı fatura iptal edilsin mi? Bu işlem geri alınamaz.`)) faturaIptal.mutate(inv.id) }}>İptal Et</button>
                   )}
                   <Link to="/orders/invoices" className={cn('text-xs underline', inv.status === 'cancelled' && 'ml-auto')} style={{ color: 'var(--brand)' }}>
                     Faturalarda aç →

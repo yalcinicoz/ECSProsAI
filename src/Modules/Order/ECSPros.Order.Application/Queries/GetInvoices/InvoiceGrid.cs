@@ -20,6 +20,13 @@ public static class InvoiceGrid
         .Text("recipient", i => i.RecipientName)
         .Text("taxNumber", i => i.RecipientTaxNumber)
         .Text("externalDocumentId", i => i.ExternalDocumentId)
+        .Text("orderNumber", i => i.Order.OrderNumber)
+        .Text("currency", i => i.Order.InvoiceCurrencyCode)
+        .Text("erpReference", i => i.ErpReference)
+        .Enum("erpStatus", i => i.ErpStatus)
+        .Number("subtotal", i => i.Subtotal)
+        .Number("taxBase", i => i.Subtotal - i.TotalDiscount)
+        .Number("totalTax", i => i.TotalTax)
         .Enum("status", i => i.Status, Statuses)
         .Enum("invoiceType", i => i.InvoiceType, Types)
         .Enum("numberSource", i => i.NumberSource, Sources)
@@ -30,6 +37,12 @@ public static class InvoiceGrid
         .Bool("hasPdf", i => i.IntegratorInvoiceUrl != null && i.IntegratorInvoiceUrl != "")
         .Guid("orderId", i => i.OrderId)
         .Sort("integratorStatus", i => i.IntegratorStatus)
+        .Sort("orderNumber", i => i.Order.OrderNumber)
+        .Sort("currency", i => i.Order.InvoiceCurrencyCode)
+        .Sort("erpStatus", i => i.ErpStatus)
+        .Sort("subtotal", i => i.Subtotal)
+        .Sort("taxBase", i => i.Subtotal - i.TotalDiscount)
+        .Sort("totalTax", i => i.TotalTax)
         .Sort("hasPdf", i => i.IntegratorInvoiceUrl != null && i.IntegratorInvoiceUrl != "")
         .Sort("invoiceNumber", i => i.InvoiceNumber)
         .Sort("recipient", i => i.RecipientName)
@@ -66,6 +79,7 @@ public static class InvoiceGrid
 
     public static string StatusLabel(string s) => s switch { "created" => "Oluşturuldu", "cancelled" => "İptal", _ => s };
     public static string TypeLabel(string s) => s switch { "e_archive" => "e-Arşiv", "e_invoice" => "e-Fatura", "export" => "İhracat", _ => s };
+    public static string ErpLabel(string s) => s switch { "not_applicable" or "" => "Gönderim yok", "pending" => "Bekliyor", "sent" => "Gönderildi", "acknowledged" => "ERP kesti", "error" => "Hata", _ => s };
     public static string SourceLabel(string s) => s switch { "internal" => "Bizim seri", "erp" => "ERP", "marketplace" => "Pazaryeri", "integrator" => "Entegratör", _ => s };
 }
 
@@ -75,7 +89,9 @@ public record InvoiceExportRow(
     string InvoiceNumber, string InvoiceType, string NumberSource, DateTime InvoiceDate, DateTime CreatedAt, string RecipientName,
     string? RecipientCompanyName, string? RecipientTaxNumber, string? RecipientTaxOffice, string RecipientAddress,
     decimal Subtotal, decimal TotalDiscount, decimal TotalTax, decimal GrandTotal, string Status, string IntegratorStatus,
-    string? ExternalDocumentId, string? ExternalSource, bool HasPdf, string OrderNumber);
+    string? ExternalDocumentId, string? ExternalSource, bool HasPdf, string OrderNumber,
+    Guid? Ettn = null, string CurrencyCode = "TRY", DateTime? IntegratorSentAt = null,
+    string ErpStatus = "", DateTime? ErpSentAt = null, string? ErpReference = null);
 
 public record ExportInvoicesQuery(InvoiceListFilters Filters, GridRequest Grid, int MaxRows) : IRequest<Result<GridExportSource<InvoiceExportRow>>>;
 
@@ -91,7 +107,8 @@ public class ExportInvoicesQueryHandler(IOrderDbContext db) : IRequestHandler<Ex
             i.InvoiceNumber, i.InvoiceType, i.NumberSource, i.InvoiceDate, i.CreatedAt, i.RecipientName,
             i.RecipientCompanyName, i.RecipientTaxNumber, i.RecipientTaxOffice, i.RecipientAddress,
             i.Subtotal, i.TotalDiscount, i.TotalTax, i.GrandTotal, i.Status, i.IntegratorStatus,
-            i.ExternalDocumentId, i.ExternalSource, i.IntegratorInvoiceUrl != null && i.IntegratorInvoiceUrl != "", i.Order.OrderNumber));
+            i.ExternalDocumentId, i.ExternalSource, i.IntegratorInvoiceUrl != null && i.IntegratorInvoiceUrl != "", i.Order.OrderNumber,
+            i.Ettn, i.Order.InvoiceCurrencyCode, i.IntegratorSentAt, i.ErpStatus, i.ErpSentAt, i.ErpReference));
         return Result.Success(new GridExportSource<InvoiceExportRow>(count, rows));
     }
 }
