@@ -51,6 +51,8 @@ export interface DataGridProps<T> {
   extraFilters?: GridFilterField[]
   /** Açılır/kapanır gelişmiş filtre paneli (FilterBar.advanced); alanlar çip ve mobil listesine de girer */
   advancedFilters?: boolean | { fields: GridFilterField[]; note?: ReactNode; layout?: 'button' | 'card' | 'external'; title?: string }
+  /** Aktif filtre çipleri yalnız filtre adını göstersin ('label'); varsayılan etiket + değer */
+  chipsMode?: 'full' | 'label'
   /** filtre satırının en solunda (örn. küçük seçici) */
   filterLeading?: ReactNode
   /** Excel export (plan §2.8): verilirse "Excel'e aktar ▾" düğmesi Kolonlar'ın solunda */
@@ -85,7 +87,7 @@ function defaultVisible<T>(c: GridColumn<T>, bp: GridBreakpoint) {
 
 export function DataGrid<T>({
   gridId, columns, rows, totalCount, grid, loading, fetching, error, onRowClick, rowKey, empty,
-  toolbarLeft, toolbarRight, toolbarBelow, frozen, pageSizes, minWidth, className, search, extraFilters, advancedFilters, filterLeading, export: exportCfg,
+  toolbarLeft, toolbarRight, toolbarBelow, frozen, pageSizes, minWidth, className, search, extraFilters, advancedFilters, chipsMode, filterLeading, export: exportCfg,
   views: viewsEnabled, compact, selection, expandedRow,
 }: DataGridProps<T>) {
   const bp = useBreakpoint()
@@ -313,7 +315,7 @@ export function DataGrid<T>({
           <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
             {viewsEnabled && <ViewsMenu views={viewsApi} />}
             {toolbarLeft}
-            {hasFilterBar && <FilterBar grid={grid} fields={filterFields} search={search} bp={bp} leading={filterLeading} headerFieldKeys={headerFieldKeys}
+            {hasFilterBar && <FilterBar grid={grid} fields={filterFields} search={search} bp={bp} leading={filterLeading} headerFieldKeys={headerFieldKeys} chipsMode={chipsMode}
               advanced={typeof advancedFilters === 'object' ? { fields: advancedFilters.fields, storageKey: `grid:${gridId}:adv`, note: advancedFilters.note, layout: advancedFilters.layout, title: advancedFilters.title } : advancedFilters} />}
           </div>
           <div className="flex items-center gap-2 ml-auto">

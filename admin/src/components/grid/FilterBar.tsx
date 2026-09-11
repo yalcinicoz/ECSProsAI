@@ -20,9 +20,11 @@ interface Props {
   headerFieldKeys?: Set<string>
   /** Açılır/kapanır "Gelişmiş filtre" paneli (2026-09-11, ürünler): alanlar formda dikey/ızgara dizilir; açık/kapalı durumu localStorage'da */
   advanced?: boolean | { fields: GridFilterField[]; storageKey: string; note?: ReactNode; layout?: 'button' | 'card' | 'external'; title?: string }
+  /** Aktif filtre çipleri: 'full' = etiket + değer (varsayılan), 'label' = yalnız filtrenin adı (2026-09-11 ürünler) */
+  chipsMode?: 'full' | 'label'
 }
 
-export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, advanced: advancedOption }: Props) {
+export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, advanced: advancedOption, chipsMode = 'full' }: Props) {
   const advanced = typeof advancedOption === 'object' ? advancedOption : undefined
   const popupAdvanced = advancedOption === true
   const panelTitle = popupAdvanced ? 'Gelişmiş Filtreler' : 'Diğer filtreler'
@@ -75,7 +77,7 @@ export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, 
   const activeCount = state.filters.length
 
   const chips = (
-    <ActiveChips grid={grid} fields={fields} />
+    <ActiveChips grid={grid} fields={fields} labelOnly={chipsMode === 'label'} />
   )
 
   if (bp === 'mobile') {
@@ -186,16 +188,21 @@ function SearchBox({ grid, placeholder, className }: { grid: GridStateApi; place
 }
 
 // ── aktif çipler ──
-function ActiveChips({ grid, fields }: { grid: GridStateApi; fields: GridFilterField[] }) {
+function ActiveChips({ grid, fields, labelOnly }: { grid: GridStateApi; fields: GridFilterField[]; labelOnly?: boolean }) {
   const { state } = grid
   if (!state.search && state.filters.length === 0) return null
   return (
     <div className="flex flex-wrap items-center gap-1.5" aria-label="Aktif filtreler">
-      {state.search && <Chip text={`Arama: "${state.search}"`} onRemove={() => grid.setSearch('')} />}
-      {state.filters.map(f => {
+      {state.search && <Chip text={labelOnly ? 'Arama' : `Arama: "${state.search}"`} onRemove={() => grid.setSearch('')} />}
+      {state.filters.flatMap(f => {
         const field = fields.find(x => x.key === f.field)
-        const text = field ? filterChipText(field, f) : `${f.field}: ${f.value}`
-        return <Chip key={f.field} text={text} onRemove={() => grid.removeFilter(f.field)} />
+        // Çoklu çip (örn. özellik başına): kaldırınca o parça değerden düşer, kalan yoksa filtre silinir
+        if (field?.chips) return field.chips(f.value).map(c => (
+          <Chip key={`${f.field}:${c.key}`} text={c.text}
+            onRemove={() => c.valueAfterRemove ? grid.setFilter({ field: f.field, op: f.op, value: c.valueAfterRemove, quick: f.quick }) : grid.removeFilter(f.field)} />
+        ))
+        const text = labelOnly ? (field?.label ?? f.field) : (field ? filterChipText(field, f) : `${f.field}: ${f.value}`)
+        return [<Chip key={f.field} text={text} onRemove={() => grid.removeFilter(f.field)} />]
       })}
       <button type="button" onClick={() => grid.clearFilters()} className="text-xs underline px-1" style={{ color: 'var(--text-s)' }}>Tümünü temizle</button>
     </div>
