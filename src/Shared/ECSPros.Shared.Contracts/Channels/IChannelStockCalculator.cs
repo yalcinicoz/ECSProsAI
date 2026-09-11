@@ -2,7 +2,7 @@ namespace ECSPros.Shared.Contracts.Channels;
 
 /// <summary>
 /// K17 kanal stok formülü (docs/satis-kanali-ortak-kurgu.md):
-///   netStock       = satışa açık kısımlardaki (WarehouseSection.IsSellableOnline, aktif depo) stok − rezerv
+///   netStock       = satışa açık kısımlardaki (WarehouseSection.IsSellableOnline; depo da IsSellableOnline + aktif) stok − rezerv
 ///   stockQuantity  = max(0, netStock − minStock + 1)          (minStock kanal yeteneği; site=1)
 /// Tek hesaplayıcı: kapsam kriteri (F1), Partner stok yanıtı (F4), pazaryeri stok gönderimi aynı çağrıyı kullanır.
 /// </summary>

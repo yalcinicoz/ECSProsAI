@@ -23,7 +23,7 @@ public static class StockOps
                 where s.VariantId == variantId && s.BinId != null
                 join sec in db.WarehouseSections on s.SectionId equals sec.Id
                 join w in db.Warehouses on s.WarehouseId equals w.Id
-                where sec.IsSellableOnline && w.IsActive
+                where sec.IsSellableOnline && w.IsSellableOnline && w.IsActive
                 select (int?)(s.Quantity - s.ReservedQuantity);
         return await q.SumAsync(ct) ?? 0;
     }
@@ -35,7 +35,7 @@ public static class StockOps
                           where s.BinId != null
                           join sec in db.WarehouseSections on s.SectionId equals sec.Id
                           join w in db.Warehouses on s.WarehouseId equals w.Id
-                          where sec.IsSellableOnline && w.IsActive
+                          where sec.IsSellableOnline && w.IsSellableOnline && w.IsActive
                           group (s.Quantity - s.ReservedQuantity) by s.VariantId into g
                           select new { VariantId = g.Key, Available = g.Sum() })
                          .ToListAsync(ct);
@@ -102,7 +102,7 @@ public static class StockOps
                           join sec in db.WarehouseSections on s.SectionId equals sec.Id
                           join b in db.WarehouseBins on s.BinId equals b.Id
                           join w in db.Warehouses on s.WarehouseId equals w.Id
-                          where sec.IsSellableOnline && w.IsActive
+                          where sec.IsSellableOnline && w.IsSellableOnline && w.IsActive
                           orderby w.ReservePriority, sec.PickingOrder, b.PickingOrder, b.Id
                           select s).ToListAsync(ct);
         int remaining = qty;

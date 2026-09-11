@@ -61,7 +61,7 @@ type FormState = {
 
 const emptyForm = (): FormState => ({
   code: '', nameI18n: {}, warehouseType: 'physical', address: '',
-  isSellableOnline: false, reservePriority: 0, sortOrder: 0, isActive: true,
+  isSellableOnline: true, reservePriority: 0, sortOrder: 0, isActive: true,
 })
 
 export function WarehousesPage() {
@@ -184,6 +184,7 @@ export function WarehousesPage() {
             checked={form.isSellableOnline}
             onChange={e => setForm(f => ({ ...f, isSellableOnline: e.target.checked }))} />
           <span className="text-sm" style={{ color: 'var(--text)' }}>Online satışa açık</span>
+          <span className="text-xs" style={{ color: 'var(--muted)' }}>(kapalıysa kısım ayarlarına bakılmaz, tüm depo siteden düşer)</span>
         </label>
         {isEdit && (
           <label className="flex items-center gap-2 cursor-pointer">

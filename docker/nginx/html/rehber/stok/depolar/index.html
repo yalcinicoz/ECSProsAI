@@ -7,7 +7,7 @@
 <main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Stok</span> › <b>Depolar</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Stok</div><h1>Depolar</h1>
 <p class="ozet">Depoların listelendiği ve oluşturulduğu; depo detayında Kısım ve Birim/Raf yapısının, internete satışa açıklığın yönetildiği ekran.</p><p class="rota">Panel adresi: <code>/admin/inventory/warehouses</code></p></header>
 <div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#form-alanlari">Form alanları</a><a href="#detay-sayfasi">Detay sayfası</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
-<p>Depolar ekranı, stokların tutulduğu fiziksel ve sanal depoları tanımlar. Stok <strong>Depo → Kısım → Birim (raf)</strong> yapısında tutulur: her depo kısımlara (kat, reyon, İade, Defo…), her kısım raflara bölünür; stok satırları raf başına izlenir. Sitede &quot;stokta&quot; sayılacak miktar <strong>kısım</strong> seviyesindeki &quot;İnternete satışa açık&quot; işaretiyle belirlenir. Depo sorumluları bu ekranda depo açar, kısım/raf tanımlar ve raf barkodlarını yönetir.</p>
+<p>Depolar ekranı, stokların tutulduğu fiziksel ve sanal depoları tanımlar. Stok <strong>Depo → Kısım → Birim (raf)</strong> yapısında tutulur: her depo kısımlara (kat, reyon, İade, Defo…), her kısım raflara bölünür; stok satırları raf başına izlenir. Sitede &quot;stokta&quot; sayılacak miktar <strong>kısım</strong> seviyesindeki &quot;İnternete satışa açık&quot; işaretiyle belirlenir; depo düzeyindeki &quot;Online satışa açık&quot; işareti üst kapıdır — depo kapalıysa kısım ayarlarına bakılmaz, deponun tamamı siteden düşer. Depo sorumluları bu ekranda depo açar, kısım/raf tanımlar ve raf barkodlarını yönetir.</p>
 <h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
 <p><figure class="ekran"><a href="/rehber/img/inventory-warehouses.webp" class="buyut" data-alt="Depolar listesi"><img src="/rehber/img/inventory-warehouses.webp" alt="Depolar listesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Depolar listesi</figcaption></figure></p>
 <ol>
@@ -37,7 +37,7 @@
 </tr>
 <tr>
 <td>ONLİNE</td>
-<td>Depo düzeyindeki &quot;Online satışa açık&quot; işareti (✓ / —). Asıl satışa açıklık kısım seviyesinde yönetilir (aşağıya bakın).</td>
+<td>Depo düzeyindeki &quot;Online satışa açık&quot; işareti (✓ / —). Kapalıysa deponun hiçbir kısmı sitede sayılmaz; açıksa karar kısım seviyesine kalır (aşağıya bakın).</td>
 </tr>
 <tr>
 <td>DURUM</td>
@@ -186,8 +186,8 @@
 </tr>
 <tr>
 <td>Online satışa açık</td>
-<td>Hayır</td>
-<td>Depo düzeyi işaret; listede ONLİNE sütunu. Site stok görünürlüğü kısım düzeyindeki işarete göre hesaplanır.</td>
+<td>Hayır (varsayılan açık)</td>
+<td>Depo düzeyi üst kapı; listede ONLİNE sütunu. Kapalıysa deponun tüm stoğu siteden ve rezervasyondan düşer (sayım, taşınma vb. için tek tık); açıksa site stok görünürlüğü kısım düzeyindeki işarete göre hesaplanır.</td>
 </tr>
 <tr>
 <td>Aktif</td>

@@ -4,8 +4,9 @@ namespace ECSPros.Inventory.Domain.Entities;
 
 /// <summary>
 /// Üçlü depo yapısında orta katman: Depo (fiziki) → <b>Kısım</b> (kat/ana bölme) → Birim/Raf.
-/// İnternet satışına açma/kapama KISIM seviyesinde yönetilir (<see cref="IsSellableOnline"/>) —
-/// depo tümden kapatılamaz. Eski sistemdeki <c>dfstorages</c> karşılığı; mağazalarda
+/// İnternet satışına açma/kapama KISIM seviyesinde yönetilir (<see cref="IsSellableOnline"/>);
+/// depo düzeyindeki <see cref="Warehouse.IsSellableOnline"/> üst kapı (2026-09-11): depo kapalıysa kısım
+/// ayarlarına bakılmaz, açılınca kısım ayarları geri geçerli olur. Eski sistemdeki <c>dfstorages</c> karşılığı; mağazalarda
 /// şimdilik tek kısım yeterli. (Onaylanan tasarım 2026-07-14.)
 /// </summary>
 public class WarehouseSection : BaseEntity

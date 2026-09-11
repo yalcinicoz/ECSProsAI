@@ -83,7 +83,7 @@ public sealed class FeedProductReader(
             FROM inventory.inv_stocks s
             JOIN inventory.inv_warehouse_sections sec ON sec."Id" = s."SectionId"
             JOIN inventory.inv_warehouses w ON w."Id" = s."WarehouseId"
-            WHERE s."BinId" IS NOT NULL AND sec."IsSellableOnline" AND w."IsActive"
+            WHERE s."BinId" IS NOT NULL AND sec."IsSellableOnline" AND w."IsSellableOnline" AND w."IsActive"
             GROUP BY s."VariantId"
             """).ToListAsync(ct);
         var gorseller = await dbf.SqlQuery<ImgRow>($"""

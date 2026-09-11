@@ -117,7 +117,7 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
                      where activeVariantIds.Contains(s.VariantId) && s.BinId != null
                      join sec in invDb.WarehouseSections on s.SectionId equals sec.Id
                      join w in invDb.Warehouses on s.WarehouseId equals w.Id
-                     where sec.IsSellableOnline && w.IsActive
+                     where sec.IsSellableOnline && w.IsSellableOnline && w.IsActive
                      group (s.Quantity - s.ReservedQuantity) by s.VariantId into g
                      select new { VariantId = g.Key, Total = g.Sum() })
                 .ToDictionaryAsync(x => x.VariantId, x => x.Total, ct)

@@ -7,7 +7,7 @@ summary: Depoların listelendiği ve oluşturulduğu; depo detayında Kısım ve
 ---
 
 ## Ne işe yarar
-Depolar ekranı, stokların tutulduğu fiziksel ve sanal depoları tanımlar. Stok **Depo → Kısım → Birim (raf)** yapısında tutulur: her depo kısımlara (kat, reyon, İade, Defo…), her kısım raflara bölünür; stok satırları raf başına izlenir. Sitede "stokta" sayılacak miktar **kısım** seviyesindeki "İnternete satışa açık" işaretiyle belirlenir. Depo sorumluları bu ekranda depo açar, kısım/raf tanımlar ve raf barkodlarını yönetir.
+Depolar ekranı, stokların tutulduğu fiziksel ve sanal depoları tanımlar. Stok **Depo → Kısım → Birim (raf)** yapısında tutulur: her depo kısımlara (kat, reyon, İade, Defo…), her kısım raflara bölünür; stok satırları raf başına izlenir. Sitede "stokta" sayılacak miktar **kısım** seviyesindeki "İnternete satışa açık" işaretiyle belirlenir; depo düzeyindeki "Online satışa açık" işareti üst kapıdır — depo kapalıysa kısım ayarlarına bakılmaz, deponun tamamı siteden düşer. Depo sorumluları bu ekranda depo açar, kısım/raf tanımlar ve raf barkodlarını yönetir.
 
 ## Ekran yerleşimi
 ![Depolar listesi](img/inventory-warehouses.webp)
@@ -21,7 +21,7 @@ Depolar ekranı, stokların tutulduğu fiziksel ve sanal depoları tanımlar. St
 | AD | Depo adı (kaynak dilde). |
 | KOD | Depo kodu. |
 | TİP | `Fiziksel` / `Sanal` / `Dropship` / `Konsinyasyon`. |
-| ONLİNE | Depo düzeyindeki "Online satışa açık" işareti (✓ / —). Asıl satışa açıklık kısım seviyesinde yönetilir (aşağıya bakın). |
+| ONLİNE | Depo düzeyindeki "Online satışa açık" işareti (✓ / —). Kapalıysa deponun hiçbir kısmı sitede sayılmaz; açıksa karar kısım seviyesine kalır (aşağıya bakın). |
 | DURUM | `Aktif` / `Pasif`. |
 | ADRES | Depo adresi (kısaltılmış; yoksa —). |
 | Düzenle › | Düzenleme penceresi (yetkiyle) ve detay oku. |
@@ -59,7 +59,7 @@ Yetkisiz kullanıcıda yazma butonları görünmez, liste ve detay salt okunur g
 | Adres | Hayır | Depo adresi. |
 | Sıra | Hayır (0) | Tam sayı. |
 | Rezervasyon Önceliği | Hayır (0) | Tam sayı; küçük değer önce. Sipariş rezervasyonu depo seçerken bu sırayı kullanır. |
-| Online satışa açık | Hayır | Depo düzeyi işaret; listede ONLİNE sütunu. Site stok görünürlüğü kısım düzeyindeki işarete göre hesaplanır. |
+| Online satışa açık | Hayır (varsayılan açık) | Depo düzeyi üst kapı; listede ONLİNE sütunu. Kapalıysa deponun tüm stoğu siteden ve rezervasyondan düşer (sayım, taşınma vb. için tek tık); açıksa site stok görünürlüğü kısım düzeyindeki işarete göre hesaplanır. |
 | Aktif | — | Yalnız düzenlemede. |
 | Ad (çok dilli) | Evet (kaynak dil) | TR/EN sekmeli alan; kaynak dil zorunlu, diğerleri boş kalabilir. |
 

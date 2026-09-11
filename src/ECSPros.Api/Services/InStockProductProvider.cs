@@ -23,7 +23,7 @@ public sealed class InStockProductProvider(NpgsqlDataSource dataSource, IMemoryC
         JOIN inventory.inv_warehouse_sections sec ON sec.""Id"" = s.""SectionId""
         JOIN inventory.inv_warehouses w ON w.""Id"" = s.""WarehouseId""
         JOIN catalog.product_variants v ON v.""Id"" = s.""VariantId""
-        WHERE s.""BinId"" IS NOT NULL AND sec.""IsSellableOnline"" AND w.""IsActive""
+        WHERE s.""BinId"" IS NOT NULL AND sec.""IsSellableOnline"" AND w.""IsSellableOnline"" AND w.""IsActive""
         GROUP BY v.""ProductId""
         HAVING SUM(s.""Quantity"" - s.""ReservedQuantity"") > 0";
 
@@ -33,7 +33,7 @@ public sealed class InStockProductProvider(NpgsqlDataSource dataSource, IMemoryC
         FROM inventory.inv_stocks s
         JOIN inventory.inv_warehouse_sections sec ON sec.""Id"" = s.""SectionId""
         JOIN inventory.inv_warehouses w ON w.""Id"" = s.""WarehouseId""
-        WHERE s.""BinId"" IS NOT NULL AND sec.""IsSellableOnline"" AND w.""IsActive""
+        WHERE s.""BinId"" IS NOT NULL AND sec.""IsSellableOnline"" AND w.""IsSellableOnline"" AND w.""IsActive""
         GROUP BY s.""VariantId""
         HAVING SUM(s.""Quantity"" - s.""ReservedQuantity"") > 0";
 
@@ -50,7 +50,7 @@ public sealed class InStockProductProvider(NpgsqlDataSource dataSource, IMemoryC
         FROM inventory.inv_stocks s
         JOIN inventory.inv_warehouse_sections sec ON sec.""Id"" = s.""SectionId""
         JOIN inventory.inv_warehouses w ON w.""Id"" = s.""WarehouseId""
-        WHERE s.""BinId"" IS NOT NULL AND sec.""IsSellableOnline"" AND w.""IsActive""
+        WHERE s.""BinId"" IS NOT NULL AND sec.""IsSellableOnline"" AND w.""IsSellableOnline"" AND w.""IsActive""
         GROUP BY s.""VariantId""
         HAVING SUM(s.""Quantity"" - s.""ReservedQuantity"") > 0";
 
@@ -61,7 +61,7 @@ public sealed class InStockProductProvider(NpgsqlDataSource dataSource, IMemoryC
             FROM inventory.inv_stocks s
             JOIN inventory.inv_warehouse_sections sec ON sec.""Id"" = s.""SectionId""
             JOIN inventory.inv_warehouses w ON w.""Id"" = s.""WarehouseId""
-            WHERE s.""BinId"" IS NOT NULL AND sec.""IsSellableOnline"" AND w.""IsActive""
+            WHERE s.""BinId"" IS NOT NULL AND sec.""IsSellableOnline"" AND w.""IsSellableOnline"" AND w.""IsActive""
             GROUP BY s.""VariantId""
             HAVING SUM(s.""Quantity"" - s.""ReservedQuantity"") >= @min
         ) x
