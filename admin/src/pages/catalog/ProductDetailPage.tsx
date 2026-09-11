@@ -3,6 +3,7 @@ import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/rea
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ChevronRight, Save, EyeOff, Trash2, CheckCircle, AlertCircle, Info, Settings2 } from 'lucide-react'
 import api from '@/api/client'
+import { DataGrid, useGridState, useLocalGrid, type GridColumn } from '@/components/grid'
 import { type Mannequin, mankenAd, mankenOzet } from './CatalogSettingsPage'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
@@ -1647,6 +1648,30 @@ export function ProductDetailPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id])
 
+  // Stok sekmesi yerel grid'i (useLocalGrid): depo/kısım/raf/varyant süzgeç + sayı sıralaması
+  const stockGrid = useGridState('product-stock', { defaultPageSize: 50, defaultSort: 'warehouse', defaultDir: 'asc' })
+  const stockYerel = useLocalGrid(allStocks, stockGrid, {
+    values: {
+      warehouse: s => s.warehouseName,
+      section: s => s.sectionName ?? '',
+      bin: s => s.binCode ?? '',
+      variant: s => variantMap.get(s.variantId)?.sku ?? '',
+      quantity: s => s.quantity,
+      reserved: s => s.reservedQuantity,
+      available: s => s.availableQuantity,
+    },
+    search: s => `${s.warehouseName} ${s.sectionName ?? ''} ${s.binCode ?? ''} ${variantMap.get(s.variantId)?.sku ?? ''}`,
+  })
+  const stockColumns: GridColumn<StockDto>[] = [
+    { key: 'warehouse', header: 'DEPO', sortable: true, frozen: true, lockVisible: true, filter: { type: 'text', label: 'Depo' }, cell: s => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{s.warehouseName}</span> },
+    { key: 'section', header: 'KISIM', sortable: true, priority: 2, filter: { type: 'text', label: 'Kısım' }, cell: s => <span className="text-xs" style={{ color: 'var(--text-m)' }}>{s.sectionName ?? '—'}</span> },
+    { key: 'bin', header: 'RAF', sortable: true, priority: 1, filter: { type: 'text', label: 'Raf' }, cell: s => s.binCode ? <code className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>{s.binCode}</code> : <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span> },
+    { key: 'variant', header: 'VARYANT', sortable: true, priority: 1, filter: { type: 'text', label: 'Varyant (SKU)' }, cell: s => <span className="text-xs" style={{ color: 'var(--text-m)' }}>{variantMap.get(s.variantId)?.sku ?? '—'}</span> },
+    { key: 'quantity', header: 'TOPLAM', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Toplam' }, cell: s => <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{s.quantity}</span> },
+    { key: 'reserved', header: 'REZERVE', sortable: true, align: 'right', priority: 2, filter: { type: 'number', label: 'Rezerve' }, cell: s => <span className="text-sm font-semibold" style={{ color: s.reservedQuantity > 0 ? '#d97706' : 'var(--text-s)' }}>{s.reservedQuantity}</span> },
+    { key: 'available', header: 'KULLANILABİLİR', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Kullanılabilir' }, cell: s => <span className="text-sm font-semibold" style={{ color: 'var(--brand)' }}>{s.availableQuantity}</span> },
+  ]
+
   const stockSummary = useMemo(() => ({
     total:     allStocks.reduce((s, x) => s + x.quantity, 0),
     reserved:  allStocks.reduce((s, x) => s + x.reservedQuantity, 0),
@@ -2695,8 +2720,8 @@ export function ProductDetailPage() {
             </div>
           </div>
 
-          {/* Raf Bazlı Stok */}
-          <div className="card overflow-hidden max-w-4xl">
+          {/* Raf Bazlı Stok — yerel grid (2026-09-11): satır kümesi ürünün tüm rafları, sunucuda sayfalanmaz; başlıkta sıralama + filtre */}
+          <div className="card max-w-5xl p-3">
             <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
               <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Raf Bazlı Stok</h2>
               <Link
@@ -2707,63 +2732,24 @@ export function ProductDetailPage() {
                 Stok Hareketi
               </Link>
             </div>
-            {stocksLoading ? (
-              <div className="py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor…</div>
-            ) : allStocks.length === 0 ? (
-              <div className="py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Stok kaydı bulunamadı.
-              </div>
-            ) : (
-              <div className="tbl-wrap">
-                <table className="w-full" style={{ minWidth: 560 }}>
-                  <thead>
-                    <tr style={{ background: 'var(--surface2)' }}>
-                      <th className="px-4 py-3 text-left text-xs font-semibold" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>DEPO</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold mob-hide" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>KISIM</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>RAF</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>VARYANT</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>TOPLAM</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold mob-hide" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>REZERVE</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>KULLANILABİLİR</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allStocks.map((s) => {
-                      const variant = variantMap.get(s.variantId)
-                      return (
-                        <tr key={s.id} className="trow">
-                          <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-                            <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{s.warehouseName}</span>
-                          </td>
-                          <td className="px-4 py-3 mob-hide" style={{ borderBottom: '1px solid var(--border)' }}>
-                            <span className="text-xs" style={{ color: 'var(--text-m)' }}>{s.sectionName ?? '—'}</span>
-                          </td>
-                          <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-                            {s.binCode
-                              ? <code className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>{s.binCode}</code>
-                              : <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span>}
-                          </td>
-                          <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-                            <span className="text-xs" style={{ color: 'var(--text-m)' }}>{variant?.sku ?? '—'}</span>
-                          </td>
-                          <td className="px-4 py-3 text-right" style={{ borderBottom: '1px solid var(--border)' }}>
-                            <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{s.quantity}</span>
-                          </td>
-                          <td className="px-4 py-3 text-right mob-hide" style={{ borderBottom: '1px solid var(--border)' }}>
-                            <span className={cn('text-sm font-semibold', s.reservedQuantity > 0 ? 'text-amber-500' : '')} style={s.reservedQuantity === 0 ? { color: 'var(--text-s)' } : {}}>
-                              {s.reservedQuantity}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right" style={{ borderBottom: '1px solid var(--border)' }}>
-                            <span className="text-sm font-semibold" style={{ color: 'var(--brand)' }}>{s.availableQuantity}</span>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <DataGrid<StockDto>
+              gridId="product-stock"
+              grid={stockGrid}
+              columns={stockColumns}
+              rows={stockYerel.rows}
+              totalCount={stockYerel.totalCount}
+              loading={stocksLoading}
+              rowKey={s => s.id}
+              empty="Stok kaydı bulunamadı."
+              search={{ placeholder: 'Depo, kısım, raf veya varyant ara…' }}
+              minWidth={640}
+              pageSizes={[50, 100, 250]}
+              compact={{
+                title: s => `${s.warehouseName}${s.binCode ? ' · ' + s.binCode : ''}`,
+                subtitle: s => variantMap.get(s.variantId)?.sku ?? '—',
+                right: s => `${s.availableQuantity} / ${s.quantity}`,
+              }}
+            />
           </div>
         </div>
       )}

@@ -102,7 +102,8 @@ function ImagesSection({
 
   const [selectedSetId, setSelectedSetId] = useState('')
   const [selectedVariantId, setSelectedVariantId] = useState('')
-  const [activeViewTab, setActiveViewTab] = useState<string>('__genel__')
+  // 2026-09-11 (kullanıcı): sekme seçilmemişse İLK RENK seçili gelir ('' = henüz seçilmedi); 'Ürün Geneli' sekmesi sondadır
+  const [activeViewTabState, setActiveViewTab] = useState<string>('')
   const [replaceSet, setReplaceSet] = useState(true)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null)
@@ -152,17 +153,19 @@ function ImagesSection({
     return map
   }, [variants, primaryAxisAttributeTypeId])
 
-  // Tabs: Ürün Geneli + primary axis labels in order
+  // Tabs: birincil eksen (renk) etiketleri sırayla + EN SONDA Ürün Geneli (2026-09-11 kullanıcı kararı)
   const viewTabs = useMemo(() => {
-    const tabs: { key: string; label: string }[] = [{ key: '__genel__', label: 'Ürün Geneli' }]
+    const tabs: { key: string; label: string }[] = []
     for (const pv of primaryAxisValues) {
       tabs.push({ key: pv.label, label: pv.label })
     }
     for (const lbl of variantIdsByLabel.keys()) {
       if (!tabs.some(t => t.key === lbl)) tabs.push({ key: lbl, label: lbl })
     }
+    tabs.push({ key: '__genel__', label: 'Ürün Geneli' })
     return tabs
   }, [primaryAxisValues, variantIdsByLabel])
+  const activeViewTab = activeViewTabState || viewTabs[0]?.key || '__genel__'
 
   // For active tab: per-set image lists (ALL sets always shown)
   const viewGroups = useMemo(() => {

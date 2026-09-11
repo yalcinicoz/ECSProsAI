@@ -203,6 +203,7 @@ public sealed class DataGridKeyConsistencyTests
     {
         "admin/src/pages/orders/NumberSeriesPage.tsx",
         "admin/src/pages/marketplaces/MappingPage.tsx",
+        "admin/src/pages/catalog/ProductDetailPage.tsx",   // Stok sekmesi: ürünün tüm raf satırları tam gelir (2026-09-11)
     };
 
     [TestMethod]
