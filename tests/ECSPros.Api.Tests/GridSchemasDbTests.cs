@@ -92,20 +92,29 @@ public sealed class GridSchemasDbTests
         _ => "1",
     };
 
-    private static async Task<List<string>> ExerciseAsync<T>(string ad, GridSchema<T> schema, IQueryable<T> baseQuery) where T : class
+    private static async Task<List<string>> ExerciseAsync<T>(string ad, GridSchema<T> schema, IQueryable<T> baseQuery,
+        Func<IQueryable<T>, GridRequest, IQueryable<T>>? applyFilters = null) where T : class
     {
+        applyFilters ??= (query, request) => schema.ApplyFilters(query, request);
         var hatalar = new List<string>();
         foreach (var key in schema.FilterableFields)
         {
             var type = schema.FieldTypeOf(key)!.Value;
             var req = new GridRequest { Filters = { new GridFilter(key, GridRequest.OpAuto, SampleValue(type, schema.AllowedValuesOf(key))) } };
-            try { _ = await schema.ApplyFilters(baseQuery, req).CountAsync(); }
+            try { _ = await applyFilters(baseQuery, req).CountAsync(); }
             catch (Exception ex) { hatalar.Add($"{ad}.filter[{key}:{type}] → {ex.GetType().Name}: {ex.Message.Split('\n')[0]}"); }
             // ikinci operatör: text startswith / number between / date gte / enum eq
             var op2 = type switch { GridFieldType.Text => "startswith", GridFieldType.Number => "between", GridFieldType.Date => "gte", GridFieldType.Enum => "eq", _ => null };
             if (op2 is null) continue;
             var val2 = type switch { GridFieldType.Number => "0;10", GridFieldType.Date => "2026-08-01", GridFieldType.Enum => (schema.AllowedValuesOf(key)?.FirstOrDefault() ?? "x"), _ => "a" };
-            try { _ = await schema.ApplyFilters(baseQuery, new GridRequest { Filters = { new GridFilter(key, op2, val2) } }).CountAsync(); }
+            if (ad == "orders" && key is "barcode" or "productCode")
+            {
+                // These related identifiers intentionally support exact matching only.
+                Assert.ThrowsExactly<GridException>(() => applyFilters(baseQuery,
+                    new GridRequest { Filters = { new GridFilter(key, op2, val2) } }));
+                continue;
+            }
+            try { _ = await applyFilters(baseQuery, new GridRequest { Filters = { new GridFilter(key, op2, val2) } }).CountAsync(); }
             catch (Exception ex) { hatalar.Add($"{ad}.filter[{key}:{op2}] → {ex.GetType().Name}: {ex.Message.Split('\n')[0]}"); }
         }
         foreach (var key in schema.SortableFields)
@@ -128,7 +137,8 @@ public sealed class GridSchemasDbTests
 
         await using (var db = new OrderDbContext(Opt<OrderDbContext>(ds)))
         {
-            hatalar.AddRange(await ExerciseAsync("orders", OrderGrid.Schema, db.Orders.AsNoTracking()));
+            hatalar.AddRange(await ExerciseAsync("orders", OrderGrid.Schema, db.Orders.AsNoTracking(),
+                (query, request) => OrderGrid.ApplyAll(query, new OrderListFilters(), request, db: db)));
             hatalar.AddRange(await ExerciseAsync("invoices", InvoiceGrid.Schema, db.Invoices.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("returns", ReturnGrid.Schema, db.Returns.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("quotes", QuoteGrid.Schema, db.Quotes.AsNoTracking()));

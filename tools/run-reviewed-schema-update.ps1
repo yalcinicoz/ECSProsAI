@@ -1,7 +1,7 @@
-param([switch]$AllReadOnly)
+param([switch]$Apply, [switch]$ReturnSeeds, [switch]$ReturnAudit, [switch]$ReturnFix)
 $ErrorActionPreference = 'Stop'
 $aiTunnelProcess = $null
-$aiPreviousConnection = $env:ECSPROS_ACCEPTANCE_AI_STOCK_READ
+$aiPreviousConnection = $env:ECSPROS_SCHEMA_TARGET
 $aiPreviousTestDb = $env:ECSPROS_TEST_DB
 $aiPreviousTarget = $env:ECSPROS_ACCEPTANCE_ERP_TARGET
 $aiExitCode = 1
@@ -18,7 +18,7 @@ try {
     if ([string]$aiConnection['Host'] -ne '192.168.0.241' -or [string]$aiConnection['Database'] -ne 'ecommerce_db') { throw 'Unexpected database target' }
     $aiConnection['Host'] = '127.0.0.1'
     $aiConnection['Port'] = '15432'
-    $aiConnection['Options'] = '-c default_transaction_read_only=on -c statement_timeout=15000'
+    $aiConnection['Options'] = '-c lock_timeout=5000 -c statement_timeout=120000'
     $aiArgs = @('-N', '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ExitOnForwardFailure=yes',
         '-o', 'ConnectTimeout=15', '-i', [string]$aiNode.PrivateKeyPath, '-p', [string]$aiNode.Port,
         '-L', '127.0.0.1:15432:192.168.0.241:5432', "$($aiNode.Username)@$($aiNode.Host)")
@@ -33,20 +33,19 @@ try {
         Start-Sleep -Milliseconds 200
     }
     if (-not $aiReady) { throw 'Tunnel not ready' }
-    $env:ECSPROS_ACCEPTANCE_AI_STOCK_READ = $aiConnection.get_ConnectionString()
-    $aiFilter = 'FullyQualifiedName~AiStockReadAcceptanceTests'
-    if ($AllReadOnly) {
-        $env:ECSPROS_TEST_DB = $aiConnection.get_ConnectionString()
-        $env:ECSPROS_ACCEPTANCE_ERP_TARGET = $aiConnection.get_ConnectionString()
-        $aiFilter += '|FullyQualifiedName~OrderGridDbTests|FullyQualifiedName~GridSchemasDbTests|FullyQualifiedName~YetkiLogAramaDbTests|FullyQualifiedName~PushScanDecisionTests|FullyQualifiedName~OrderGridNotesDbTests'
-    }
-    $aiStage = 'guarded read-only acceptance'
-    & dotnet test (Join-Path $aiRoot 'tests/ECSPros.Api.Tests/ECSPros.Api.Tests.csproj') --no-build --no-restore --filter $aiFilter --verbosity minimal
+    $env:ECSPROS_SCHEMA_TARGET = $aiConnection.get_ConnectionString()
+    $aiStage = 'reviewed schema migrations'
+    $migrationArgs = @()
+    if ($Apply) { $migrationArgs += '--apply' }
+    if ($ReturnSeeds) { $migrationArgs += '--return-seeds' }
+    if ($ReturnAudit) { $migrationArgs += '--return-audit' }
+    if ($ReturnFix) { $migrationArgs += '--return-fix' }
+    & dotnet (Join-Path $aiRoot 'tools/SchemaUpdate/bin/Debug/net8.0/SchemaUpdate.dll') @migrationArgs
     $aiExitCode = $LASTEXITCODE
 } catch {
     Write-Output ('Stopped at ' + $aiStage + ': ' + $_.Exception.GetType().Name)
 } finally {
-    $env:ECSPROS_ACCEPTANCE_AI_STOCK_READ = $aiPreviousConnection
+    $env:ECSPROS_SCHEMA_TARGET = $aiPreviousConnection
     $env:ECSPROS_TEST_DB = $aiPreviousTestDb
     $env:ECSPROS_ACCEPTANCE_ERP_TARGET = $aiPreviousTarget
     if ($null -ne $aiTunnelProcess) {

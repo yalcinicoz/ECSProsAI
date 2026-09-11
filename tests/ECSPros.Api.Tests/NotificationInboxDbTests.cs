@@ -40,6 +40,26 @@ public sealed class NotificationInboxDbTests
             var kuyruk = new PushKuyruk(sdb, cdb, cfg, NullLogger<PushKuyruk>.Instance);
             var kutu = new BildirimKutusu(sdb);
 
+            // Fixture belongs to this rollback transaction, not the environment's seed/panel settings.
+            foreach (var type in new[] { "order_shipped", "favorite_price_drop", "order_confirmed" })
+            {
+                var template = await sdb.PushTemplates.FirstOrDefaultAsync(x => x.Type == type);
+                if (template is null)
+                {
+                    template = new PushTemplate { Type = type };
+                    sdb.PushTemplates.Add(template);
+                }
+                template.Enabled = true;
+                template.Inbox = true;
+                template.DismissOnOpen = false;
+                template.ExpiresDays = 90;
+                template.Class = type == "favorite_price_drop" ? "marketing" : "transactional";
+                template.Name = template.Title = type;
+                template.Body = type == "favorite_price_drop" ? "{productName} {newPrice}" : "{orderNumber}";
+                template.LinkTemplate = "/";
+                template.Icon = type == "order_shipped" ? "cargo" : type == "favorite_price_drop" ? "favorite" : "order";
+            }
+
             // şablon ayarı: campaign türü seed'de yok → geçici şablon (dismissOnOpen) — işlem içinde, geri alınır
             var kampanya = await sdb.PushTemplates.FirstOrDefaultAsync(x => x.Type == "campaign");
             if (kampanya is null) sdb.PushTemplates.Add(new PushTemplate { Type = "campaign", Class = "marketing", Name = "Kampanya", Title = "Kampanya", Body = "Fırsat!", LinkTemplate = "/", Icon = "campaign", ExpiresDays = 30, DismissOnOpen = true });

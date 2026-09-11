@@ -1,15 +1,17 @@
-param([switch]$ResumeAdminOnly, [switch]$StockDetail, [switch]$BindingGuard, [switch]$BindingReplacement, [switch]$CardWindow)
+param([switch]$ResumeAdminOnly, [switch]$StockDetail, [switch]$BindingGuard, [switch]$BindingReplacement, [switch]$CardWindow, [switch]$FinalReturns, [switch]$ResumePrepared)
 $ErrorActionPreference = 'Stop'
 $release = '20260911_ai_dynamic_returns'
 if ($StockDetail) { $release = '20260911_ai_stock_detail' }
 if ($BindingGuard) { $StockDetail = $true; $release = '20260911_ai_binding_guard' }
 if ($BindingReplacement) { $StockDetail = $true; $release = '20260911_ai_binding_replacement' }
 if ($CardWindow) { $StockDetail = $true; $release = '20260911_ai_card_window' }
+if ($FinalReturns) { $StockDetail = $true; $release = '20260911_final_returns_6ae426a8' }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $cfg = Get-Content -Raw -LiteralPath (Join-Path $root 'appsettingsTest.json') | ConvertFrom-Json
 $ssh = 'C:\Windows\System32\OpenSSH\ssh.exe'
 $scp = 'C:\Windows\System32\OpenSSH\scp.exe'
 function Remote($node, [string]$command) {
+    $command = $command.Replace("`r`n", "`n")
     & $ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -i $node.PrivateKeyPath -p $node.Port "$($node.Username)@$($node.Host)" $command
     if ($LASTEXITCODE -ne 0) { throw 'Remote step failed; later nodes were not activated.' }
 }
@@ -19,15 +21,17 @@ if ($StockDetail) { $apiDir = Join-Path $root 'output/publish/ai-stock-detail-20
 if ($BindingGuard) { $apiDir = Join-Path $root 'output/publish/ai-binding-guard-20260911' }
 if ($BindingReplacement) { $apiDir = Join-Path $root 'output/publish/ai-binding-replacement-20260911' }
 if ($CardWindow) { $apiDir = Join-Path $root 'output/publish/ai-card-window-20260911' }
+if ($FinalReturns) { $apiDir = Join-Path $root 'output/publish/ai-final-6ae426a8' }
 $adminDir = Join-Path $root 'admin/dist'
 if (-not (Test-Path -LiteralPath (Join-Path $apiDir 'ECSPros.Api.dll'))) { throw 'API publish missing' }
 $assets = Get-ChildItem -LiteralPath (Join-Path $adminDir 'assets') -Filter 'index-*.js'
+if ($FinalReturns -and -not ($assets | Where-Object { $s=Get-Content -Raw -LiteralPath $_.FullName; $s.Contains('Teslimatsız İade') -and $s.Contains('Ödenecek') -and $s.Contains('Kapanan') })) { throw 'Return labels missing from admin package' }
 if (-not ($assets | Where-Object { (Get-Content -Raw -LiteralPath $_.FullName).Contains('İadeler — detay ve özet') })) { throw 'Admin build is stale' }
 if ($StockDetail -and -not ($assets | Where-Object { (Get-Content -Raw -LiteralPath $_.FullName).Contains('Güncel stok — detay ve özet') })) { throw 'Stock detail admin build is stale' }
 if ($CardWindow -and -not ($assets | Where-Object { $content = Get-Content -Raw -LiteralPath $_.FullName; $content.Contains('cardWindowMonths') -and $content.Contains('gözlem süresi tamamlanmamış kartlar dışarıda kalır') -and $content.Contains('Personel işlem kayıtları') })) { throw 'Card window admin build is stale' }
 $apiArchive = Join-Path $root "output/$release-api.tar.gz"
 $adminArchive = Join-Path $root "output/$release-admin.tar.gz"
-if (-not $ResumeAdminOnly) {
+if (-not $ResumeAdminOnly -and -not $ResumePrepared) {
 foreach ($archive in @($apiArchive,$adminArchive)) { if (Test-Path -LiteralPath $archive) { throw 'Existing archive preserved' } }
 & tar -czf $apiArchive --exclude='appsettings*.json' -C $apiDir .
 if ($LASTEXITCODE -ne 0) { throw 'API packaging failed' }
@@ -43,9 +47,14 @@ foreach ($name in $(if ($ResumeAdminOnly) { @('NginxLb') } else { @('Api1','Api2
     $archive = if ($isAdmin) { $adminArchive } else { $apiArchive }
     $hash = if ($isAdmin) { $adminHash } else { $apiHash }
     $remoteArchive = "/tmp/$release-$(if($isAdmin){'admin'}else{'api'}).tar.gz"
-    Remote $node "test ! -e '$remoteArchive'"
-    & $scp -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -i $node.PrivateKeyPath -P $node.Port $archive "$($node.Username)@$($node.Host):$remoteArchive"
-    if ($LASTEXITCODE -ne 0) { throw 'Upload failed' }
+    $present = Remote $node "if test -e '$remoteArchive'; then echo present; else echo missing; fi"
+    if ($present -eq 'present') {
+        if (-not $ResumePrepared) { throw 'Existing remote archive preserved' }
+        Remote $node "echo '$hash  $remoteArchive' | sha256sum -c -"
+    } else {
+        & $scp -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -i $node.PrivateKeyPath -P $node.Port $archive "$($node.Username)@$($node.Host):$remoteArchive"
+        if ($LASTEXITCODE -ne 0) { throw 'Upload failed' }
+    }
     $script = if ($isAdmin) { @'
 set -eu
 target=/usr/share/nginx/admin-releases/20260911_ai_dynamic_returns
