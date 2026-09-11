@@ -435,6 +435,9 @@ function SeoTab({ product, languages, onSaved }: {
     queryKey: ['product-channel-seo', product.id],
     queryFn: async () => (await api.get(`/catalog/products/${product.id}/channel-seo`)).data.data,
   })
+  // 2026-09-11 (kullanıcı): kanallar alt alta değil, Satış Kanalları sekmesindeki gibi sekmeli; '__default__' = Varsayılan meta
+  const [seoKanal, setSeoKanal] = useState<string | null>(null)
+  const aktifKanal = seoKanal ?? (kanallar[0]?.firmPlatformId ?? '__default__')
 
   async function save() {
     setSaving(true)
@@ -458,12 +461,24 @@ function SeoTab({ product, languages, onSaved }: {
       </p>
       {isLoading && <p className="text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor…</p>}
       {!isLoading && kanallar.length === 0 && <p className="text-sm" style={{ color: 'var(--text-s)' }}>Bu ürün hiçbir satış kanalında tanımlı değil (Satış Kanalları sekmesi).</p>}
-      {kanallar.map(k => (
+      <div className="flex flex-wrap gap-1.5">
+        {[...kanallar.map(k => ({ id: k.firmPlatformId, ad: k.channelName, kod: k.channelCode, pasif: !k.isActive })), { id: '__default__', ad: 'Varsayılan meta', kod: 'tüm kanallar', pasif: false }].map(k => {
+          const active = aktifKanal === k.id
+          return (
+            <button key={k.id} type="button" onClick={() => setSeoKanal(k.id)}
+              className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all', active ? 'shadow-sm' : 'hover:opacity-80')}
+              style={active ? { background: 'var(--brand)', color: '#fff' } : { background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>
+              {k.ad}<span className="text-xs opacity-70">{k.kod}</span>{k.pasif && <span className="text-xs opacity-70">· yayında değil</span>}
+            </button>
+          )
+        })}
+      </div>
+      {kanallar.filter(k => k.firmPlatformId === aktifKanal).map(k => (
         <ChannelSeoCard key={k.firmPlatformId} productId={product.id} kanal={k} lang={activeLang}
           onSaved={() => queryClient.invalidateQueries({ queryKey: ['product-channel-seo', product.id] })} />
       ))}
 
-      <div className="card overflow-hidden p-0">
+      {aktifKanal === '__default__' && <div className="card overflow-hidden p-0">
         <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
             <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Varsayılan meta (tüm kanallar)</h2>
@@ -498,7 +513,7 @@ function SeoTab({ product, languages, onSaved }: {
               onChange={e => setMetaDesc(p => ({ ...p, [activeLang]: e.target.value }))} />
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

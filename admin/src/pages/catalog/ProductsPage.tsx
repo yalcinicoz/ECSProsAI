@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Package } from 'lucide-react'
@@ -86,12 +87,19 @@ function MultiSearchSelect({ options, value, onChange, disabled, placeholder }: 
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const ref = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  // Açılır liste PORTAL ile body'de ve sabit konumlu: akordeon kartı overflow-hidden olduğundan yerinde çizilen liste kesiliyordu (2026-09-11)
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null)
+  const konumla = () => { const r = ref.current?.getBoundingClientRect(); if (r) setPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 240) }) }
   useEffect(() => {
     if (!open) return
-    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    konumla()
+    const onDoc = (e: MouseEvent) => { const t = e.target as Node; if (ref.current?.contains(t) || panelRef.current?.contains(t)) return; setOpen(false) }
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    const onScroll = (e: Event) => { if (e.target instanceof Node && panelRef.current?.contains(e.target)) return; konumla() }
     document.addEventListener('mousedown', onDoc); document.addEventListener('keydown', onKey)
-    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey) }
+    window.addEventListener('resize', konumla); document.addEventListener('scroll', onScroll, true)
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); window.removeEventListener('resize', konumla); document.removeEventListener('scroll', onScroll, true) }
   }, [open])
   const sel = new Set(value)
   const gorunen = options.filter(o => !q || o.label.toLocaleLowerCase('tr').includes(q.toLocaleLowerCase('tr')))
@@ -104,8 +112,8 @@ function MultiSearchSelect({ options, value, onChange, disabled, placeholder }: 
         style={{ color: sel.size ? 'var(--text)' : 'var(--text-s)' }}>
         <span className="truncate">{label}</span><span className="text-xs">▾</span>
       </button>
-      {open && (
-        <div role="listbox" aria-multiselectable className="absolute left-0 right-0 mt-1 rounded-xl shadow-lg z-40" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      {open && pos && createPortal(
+        <div ref={panelRef} role="listbox" aria-multiselectable className="fixed z-[1000] rounded-xl shadow-xl" style={{ top: pos.top, left: pos.left, width: pos.width, background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <div className="p-2" style={{ borderBottom: '1px solid var(--border)' }}>
             <input autoFocus className="inp text-sm !py-1.5 w-full" placeholder="Değer ara…" value={q} onChange={e => setQ(e.target.value)} />
             <div className="flex gap-3 mt-1 text-xs">
@@ -122,8 +130,7 @@ function MultiSearchSelect({ options, value, onChange, disabled, placeholder }: 
             ))}
             {gorunen.length === 0 && <div className="px-2 py-2 text-xs" style={{ color: 'var(--text-s)' }}>Eşleşen değer yok.</div>}
           </div>
-        </div>
-      )}
+        </div>, document.body)}
     </div>
   )
 }
