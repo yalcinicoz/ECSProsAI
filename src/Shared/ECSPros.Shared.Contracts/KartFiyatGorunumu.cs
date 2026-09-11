@@ -24,6 +24,10 @@ public static class KartFiyatGorunumu
     /// çoğu üründe bedenlerin yalnız bir kısmında vardır (2026-09-10 canlı: 22.5K üründe kısmi) — P-00020386'da
     /// tek kanal fiyatı stoksuz L'de 299,99 iken S/M tabandan 399,99'a satılıyordu ve kart 299,99 gösteriyordu.
     /// </summary>
+    /// <para>★ 2026-09-11 (kullanıcı kararı, P-00018501): KATEGORİ KARTI – ÜRÜN DETAYI – SEPET aynı kurala bağlıdır.
+    /// Detay sayfasının varsayılan (beden seçilmeden) fiyatı da BU kuraldır — gösterilen havuz (web: seçili renk,
+    /// mobil: ürün) için varyant efektif fiyatlarının en yükseği; beden seçilince/sepette o varyantın efektif fiyatı
+    /// (kanal ?? taban). Eskiden detay EN DÜŞÜK varyantı alıyordu ve kart 249,99 / detay 149,99 ayrışıyordu.</para>
     /// <param name="varyantlar">Varyant başına (kanal fiyatı, taban fiyat); olmayan değer 0.</param>
     public static decimal KartTabanFiyati(IEnumerable<(decimal Kanal, decimal Taban)> varyantlar)
         => varyantlar.Select(v => v.Kanal > 0 ? v.Kanal : v.Taban).Where(p => p > 0).DefaultIfEmpty(0m).Max();

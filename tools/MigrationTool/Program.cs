@@ -1601,6 +1601,25 @@ static class Migration
                 if (batch.Count >= 1000) { PgBatchInsert("_f27_cv", new[] { "variant_id", "price", "compare_at", "is_active" }, new string?[4], batch); batch.Clear(); }
             }
         PgBatchInsert("_f27_cv", new[] { "variant_id", "price", "compare_at", "is_active" }, new string?[4], batch);
+        // ★ 2026-09-11: eski sistemde kanal fiyatı RENK başına (plurunler satırı = rengin ana varyantı) → aynı ürün +
+        // aynı birincil eksen (renk) değerini taşıyan kardeş bedenlere de yazılır (LegacySyncService.KardesYayilimiSql ile aynı).
+        PgExec(@"INSERT INTO _f27_cv(variant_id, price, compare_at, is_active)
+            SELECT k.sibling, MAX(t.price), MAX(t.compare_at), bool_or(t.is_active)
+            FROM _f27_cv t
+            JOIN (
+                SELECT DISTINCT v2.""Id"" AS sibling, v1.""Id"" AS main
+                FROM catalog.product_variants v1
+                JOIN catalog.products p ON p.""Id"" = v1.""ProductId"" AND NOT p.""IsDeleted""
+                JOIN definition.product_group_attributes ga ON ga.""ProductGroupId"" = p.""ProductGroupId"" AND ga.""IsPrimaryAxis"" AND NOT ga.""IsDeleted""
+                JOIN catalog.product_variant_attributes a1 ON a1.""VariantId"" = v1.""Id"" AND a1.""AttributeTypeId"" = ga.""AttributeTypeId"" AND NOT a1.""IsDeleted""
+                JOIN catalog.product_variant_attributes a2 ON a2.""AttributeTypeId"" = a1.""AttributeTypeId"" AND a2.""AttributeValueId"" = a1.""AttributeValueId"" AND NOT a2.""IsDeleted""
+                JOIN catalog.product_variants v2 ON v2.""Id"" = a2.""VariantId"" AND v2.""ProductId"" = v1.""ProductId"" AND NOT v2.""IsDeleted"" AND v2.""Id"" <> v1.""Id""
+                WHERE NOT v1.""IsDeleted""
+            ) k ON k.main = t.variant_id
+            WHERE t.price IS NOT NULL AND NOT EXISTS (SELECT 1 FROM _f27_cv x WHERE x.variant_id = k.sibling)
+            GROUP BY k.sibling");
+        long kardes = PgScalar<long>("SELECT COUNT(*) FROM _f27_cv") - okunan;
+        Log($"    Kardeş beden yayılımı: +{kardes} varyant (renk fiyatı tüm bedenlere).");
 
         long degisecek = PgScalar<long>($@"SELECT COUNT(*) FROM storefront.channel_variants cv JOIN _f27_cv t ON cv.""VariantId""=t.variant_id
             WHERE cv.""FirmPlatformId""='{fp}' AND cv.""IsDeleted""=false
@@ -1705,6 +1724,10 @@ static class Migration
         Log($"    Eski listede {okunan} ürün fiyatı; DEĞİŞECEK ürün: {degisecek}.");
         if (!dryRun)
         {
+            // ★ 2026-09-11: varyant taban fiyatı ürünü izler (eski sistemde varyant fiyatı yok) — LegacySyncService ile aynı.
+            PgExec($@"UPDATE {CAT}.product_variants v SET ""BasePrice""=t.price, ""UpdatedAt""=now()
+                FROM {CAT}.products p JOIN _f26_price t ON p.""Code""=t.code
+                WHERE v.""ProductId""=p.""Id"" AND v.""IsDeleted""=false AND p.""IsDeleted""=false AND t.price>0 AND v.""BasePrice"" IS DISTINCT FROM t.price");
             PgExec($@"UPDATE {CAT}.products p SET ""BasePrice""=t.price, ""BaseCost""=t.cost, ""TaxRate""=t.tax,
                 ""UpdatedAt""=now() FROM _f26_price t WHERE p.""Code""=t.code AND p.""IsDeleted""=false
                 AND (p.""BasePrice"" IS DISTINCT FROM t.price OR p.""BaseCost"" IS DISTINCT FROM t.cost OR p.""TaxRate"" IS DISTINCT FROM t.tax)");

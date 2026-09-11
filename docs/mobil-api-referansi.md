@@ -137,7 +137,7 @@ ayarından sunucu tarafında uygulanır — istemci ek filtre yapmaz. **A8 (2026
 liste de kategori ucuyla aynı renk-stok kuralını uygular (kanal "stoğu biteni göster" kapalıysa
 stoksuz renk `colors[]`'da yer almaz; kartın ana görseli stoklu renge kayar).
 
-**Ürün detayı alanları (A10, 2026-09-07 eklemeleri):** `minPrice` (satış fiyatı), `compareAtPrice`
+**Ürün detayı alanları (A10, 2026-09-07 eklemeleri; ★ 2026-09-11: `minPrice` artık KART kuralıyla aynı = ürünün varyant efektif fiyatlarının (kanal ?? taban) EN YÜKSEĞİ, alan adı korunur; varyant satırları kendi fiyatını taşır):** `minPrice` (satış fiyatı), `compareAtPrice`
 (çizili; yalnız satış fiyatından büyükse), `campaignPrice` + `campaignName` (ürün-bazlı kampanya;
 null = yok/sepette uygulanır), `descriptionI18n`, `shortDescriptionI18n`, `productGroupId`,
 `slug` (kanonik), `variantSlugs` (varyant → slug), `selectedColorValueId`. Varyantlarda

@@ -104,6 +104,31 @@ public sealed class LegacySyncService(
     }
 
     // Faz 26a portu: apurunler.satisFiyati/alisFiyati/kdvOrani → products (Code ile).
+
+    /// <summary>
+    /// ★ 2026-09-11 (kullanıcı kararı, P-00018501): eski sistemde kanal fiyatı RENK başınadır (plurunler satırı =
+    /// rengin ana varyantı, fiyat rengin TÜM bedenleri için). Ana varyanta yazılan fiyat aynı ürün + aynı birincil eksen
+    /// (renk) değerini taşıyan kardeş varyantlara da yayılır; kendi satırı olan kardeşe dokunulmaz, iki ana varyanta düşen
+    /// kardeşte en yüksek fiyat alınır. Aksi hâlde S/M/XL kanal fiyatsız kalıp bayat taban fiyattan satılıyordu.
+    /// </summary>
+    internal const string KardesYayilimiSql = @"
+        INSERT INTO _ls_cv(variant_id, price, compare_at, is_active)
+        SELECT k.sibling, MAX(t.price), MAX(t.compare_at), bool_or(t.is_active)
+        FROM _ls_cv t
+        JOIN (
+            SELECT DISTINCT v2.""Id"" AS sibling, v1.""Id"" AS main
+            FROM catalog.product_variants v1
+            JOIN catalog.products p ON p.""Id"" = v1.""ProductId"" AND NOT p.""IsDeleted""
+            JOIN definition.product_group_attributes ga ON ga.""ProductGroupId"" = p.""ProductGroupId"" AND ga.""IsPrimaryAxis"" AND NOT ga.""IsDeleted""
+            JOIN catalog.product_variant_attributes a1 ON a1.""VariantId"" = v1.""Id"" AND a1.""AttributeTypeId"" = ga.""AttributeTypeId"" AND NOT a1.""IsDeleted""
+            JOIN catalog.product_variant_attributes a2 ON a2.""AttributeTypeId"" = a1.""AttributeTypeId"" AND a2.""AttributeValueId"" = a1.""AttributeValueId"" AND NOT a2.""IsDeleted""
+            JOIN catalog.product_variants v2 ON v2.""Id"" = a2.""VariantId"" AND v2.""ProductId"" = v1.""ProductId"" AND NOT v2.""IsDeleted"" AND v2.""Id"" <> v1.""Id""
+            WHERE NOT v1.""IsDeleted""
+        ) k ON k.main = t.variant_id
+        WHERE t.price IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM _ls_cv x WHERE x.variant_id = k.sibling)
+        GROUP BY k.sibling";
+
     private async Task<int> SyncBasePriceAsync(NpgsqlConnection pg, MySqlConnection my, StringBuilder log, bool dry, CancellationToken ct)
     {
         await PgExecAsync(pg, "DROP TABLE IF EXISTS _ls_price", ct);
@@ -131,12 +156,21 @@ public sealed class LegacySyncService(
         long degisecek = await PgScalarAsync<long>(pg, $@"SELECT COUNT(*) FROM {CAT}.products p JOIN _ls_price t ON p.""Code""=t.code
             WHERE p.""IsDeleted""=false AND (p.""BasePrice"" IS DISTINCT FROM t.price
                 OR p.""BaseCost"" IS DISTINCT FROM t.cost OR p.""TaxRate"" IS DISTINCT FROM t.tax)", ct);
-        log.AppendLine($"[FİYAT] eski listede {okunan} ürün; değişecek: {degisecek}.");
+        // ★ 2026-09-11: eski sistemde varyant başına fiyat YOK (apurunvaryantlari'nde fiyat kolonu yoktur) — varyant taban
+        // fiyatı ürünü izler. Eskiden yalnız ürün güncelleniyor, varyantlar ilk aktarımdaki fiyatta (149,99) kalıyordu;
+        // efektif fiyat kuralı varyant tabanına düştüğünden bayat fiyat siteye çıkıyordu (P-00018501 S/M/XL).
+        long varyantDegisecek = await PgScalarAsync<long>(pg, $@"SELECT COUNT(*) FROM {CAT}.product_variants v JOIN {CAT}.products p ON p.""Id""=v.""ProductId""
+            JOIN _ls_price t ON p.""Code""=t.code WHERE v.""IsDeleted""=false AND p.""IsDeleted""=false AND t.price>0 AND v.""BasePrice"" IS DISTINCT FROM t.price", ct);
+        log.AppendLine($"[FİYAT] eski listede {okunan} ürün; değişecek: {degisecek} ürün, {varyantDegisecek} varyant tabanı.");
         if (!dry && degisecek > 0)
             await PgExecAsync(pg, $@"UPDATE {CAT}.products p SET ""BasePrice""=t.price, ""BaseCost""=t.cost, ""TaxRate""=t.tax,
                 ""UpdatedAt""=now() FROM _ls_price t WHERE p.""Code""=t.code AND p.""IsDeleted""=false
                 AND (p.""BasePrice"" IS DISTINCT FROM t.price OR p.""BaseCost"" IS DISTINCT FROM t.cost OR p.""TaxRate"" IS DISTINCT FROM t.tax)", ct);
-        return (int)degisecek;
+        if (!dry && varyantDegisecek > 0)
+            await PgExecAsync(pg, $@"UPDATE {CAT}.product_variants v SET ""BasePrice""=t.price, ""UpdatedAt""=now()
+                FROM {CAT}.products p JOIN _ls_price t ON p.""Code""=t.code
+                WHERE v.""ProductId""=p.""Id"" AND v.""IsDeleted""=false AND p.""IsDeleted""=false AND t.price>0 AND v.""BasePrice"" IS DISTINCT FROM t.price", ct);
+        return (int)(degisecek + varyantDegisecek);
     }
 
     // Faz 27 portu: plurunler (platform 41) → channel_variants Price/CompareAt/IsActive (mishar).
@@ -167,13 +201,16 @@ public sealed class LegacySyncService(
                 if (batch.Count >= 1000) { await PgBatchInsertAsync(pg, "_ls_cv", new[] { "variant_id", "price", "compare_at", "is_active" }, new string?[4], batch, ct); batch.Clear(); }
             }
         await PgBatchInsertAsync(pg, "_ls_cv", new[] { "variant_id", "price", "compare_at", "is_active" }, new string?[4], batch, ct);
+        // ★ Renk fiyatı kardeş bedenlere yayılır (KardesYayilimiSql).
+        await PgExecAsync(pg, KardesYayilimiSql, ct);
+        long kardes = await PgScalarAsync<long>(pg, "SELECT COUNT(*) FROM _ls_cv", ct) - okunan;
 
         long degisecek = await PgScalarAsync<long>(pg, $@"SELECT COUNT(*) FROM storefront.channel_variants cv JOIN _ls_cv t ON cv.""VariantId""=t.variant_id
             WHERE cv.""FirmPlatformId""='{fp}' AND cv.""IsDeleted""=false
             AND (cv.""Price"" IS DISTINCT FROM t.price OR cv.""CompareAtPrice"" IS DISTINCT FROM t.compare_at OR cv.""IsActive"" IS DISTINCT FROM t.is_active)", ct);
         long yeni = await PgScalarAsync<long>(pg, $@"SELECT COUNT(*) FROM _ls_cv t WHERE NOT EXISTS (
             SELECT 1 FROM storefront.channel_variants cv WHERE cv.""FirmPlatformId""='{fp}' AND cv.""VariantId""=t.variant_id AND cv.""IsDeleted""=false)", ct);
-        log.AppendLine($"[KANAL FİYAT] eşleşen {okunan} varyant (atlanan {atlanan}); değişecek: {degisecek}, yeni: {yeni}.");
+        log.AppendLine($"[KANAL FİYAT] eşleşen {okunan} ana varyant + {kardes} kardeş beden (atlanan {atlanan}); değişecek: {degisecek}, yeni: {yeni}.");
         if (!dry && (degisecek > 0 || yeni > 0))
         {
             await PgExecAsync(pg, $@"UPDATE storefront.channel_variants cv SET ""Price""=t.price, ""CompareAtPrice""=t.compare_at,

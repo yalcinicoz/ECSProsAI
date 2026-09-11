@@ -222,17 +222,17 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
             .Select(v => new StoreProductVideoDto(v.Url!, v.ThumbnailUrl))
             .ToList();
 
-        // A10: ürün seviyesi fiyat özeti — Razor detayla (StoreUrunDetayBuilder) aynı kural:
-        // kanal fiyatı → varyant fiyatı → en düşük pozitif; çizili fiyat yalnız satış fiyatından büyükse.
+        // A10: ürün seviyesi fiyat özeti — ★ 2026-09-11: KART kuralıyla aynı (KartFiyatGorunumu.KartTabanFiyati:
+        // varyant efektif fiyatlarının EN YÜKSEĞİ; eskiden en düşük pozitifti → liste/detay ayrışması). `minPrice`
+        // alan adı mobil sözleşme gereği korunur (B9: "satış fiyatı"). Varyant satırları kendi efektif fiyatını taşır.
         var enDusukPozitif = variants
             .SelectMany(v => new[] { v.PlatformPrice ?? 0m, v.BasePrice })
             .Where(f => f > 0).DefaultIfEmpty(product.BasePrice).Min();
-        var fiyatliVaryant = variants
-            .Where(v => (v.PlatformPrice ?? v.BasePrice) > 0)
-            .OrderBy(v => v.PlatformPrice ?? v.BasePrice)
-            .FirstOrDefault() ?? variants.FirstOrDefault();
-        var minPrice = fiyatliVaryant is null ? product.BasePrice : (fiyatliVaryant.PlatformPrice ?? fiyatliVaryant.BasePrice);
+        var minPrice = ECSPros.Shared.Contracts.KartFiyatGorunumu.KartTabanFiyati(variants.Select(v => (v.PlatformPrice ?? 0m, v.BasePrice)));
         if (minPrice <= 0) minPrice = enDusukPozitif;
+        // Kanonik slug için temsilci varyant: gösterilen fiyatı taşıyan ilk varyant (yoksa ilk varyant).
+        var fiyatliVaryant = variants.FirstOrDefault(v => (v.PlatformPrice is > 0 ? v.PlatformPrice.Value : v.BasePrice) == minPrice)
+            ?? variants.FirstOrDefault();
         // ★ M3 (2026-09-09): çizili fiyat artık LİSTE ile AYNI kuralla bulunur — ürünün aktif
         // varyantlarındaki EN YÜKSEK çizili fiyat (satış fiyatından büyükse). Eskiden yalnız
         // "en ucuz varyantın" çizili fiyatına bakılıyordu; o varyantta çizili fiyat yoksa detay

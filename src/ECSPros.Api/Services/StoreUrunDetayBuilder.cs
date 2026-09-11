@@ -152,11 +152,10 @@ public class StoreUrunDetayBuilder(
                 .ToList();
         }
 
-        var fiyatliVaryant = havuz
-            .Where(v => (v.PlatformPrice ?? v.BasePrice) > 0)
-            .OrderBy(v => v.PlatformPrice ?? v.BasePrice)
-            .FirstOrDefault() ?? havuz[0];
-        var fiyat = fiyatliVaryant.PlatformPrice ?? fiyatliVaryant.BasePrice;
+        // ★ 2026-09-11: varsayılan fiyat KART kuralıyla aynı (KartFiyatGorunumu.KartTabanFiyati — havuzdaki varyant
+        // efektif fiyatlarının EN YÜKSEĞİ; eskiden en düşük varyanttı → kategori 249,99 / detay 149,99 ayrışması).
+        // Beden seçilince BedenSecenekVm.Fiyat (kanal ?? taban) ve sepet aynı varyant kuralını uygular.
+        var fiyat = ECSPros.Shared.Contracts.KartFiyatGorunumu.KartTabanFiyati(havuz.Select(v => (v.PlatformPrice ?? 0m, v.BasePrice)));
         if (fiyat <= 0) fiyat = enDusukPozitif;
         // M3 (2026-09-09): çizili fiyat kuralı LİSTE ile aynı — havuzdaki EN YÜKSEK çizili fiyat
         // (satış fiyatından büyükse). Eskiden yalnız en ucuz varyanta bakılıyordu: o varyantta
