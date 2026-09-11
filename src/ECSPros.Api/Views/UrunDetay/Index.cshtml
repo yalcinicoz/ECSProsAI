@@ -1,6 +1,8 @@
 ﻿@{
-    // B9: başlık controller'dan gelir (ürün adı)
-    ViewData["Title"] = (ViewData["MsUrunDetay"] as ECSPros.Api.Models.Store.UrunDetayVm)?.Ad ?? "Ürün Detay";
+    // B9: başlık controller'dan gelir; 2026-09-11 kanal bazlı SEO: MetaBaslik/MetaAciklama (kanal ?? ürün ?? ad/kısa açıklama)
+    var msVm = ViewData["MsUrunDetay"] as ECSPros.Api.Models.Store.UrunDetayVm;
+    ViewData["Title"] = msVm?.MetaBaslik ?? msVm?.Ad ?? "Ürün Detay";
+    if (!string.IsNullOrWhiteSpace(msVm?.MetaAciklama)) ViewData["MetaDescription"] = msVm!.MetaAciklama;
 }
 
 <partial name="~/Views/ProjeElementleri/UrunDetay/_UrunDetaySayfasi.cshtml" />

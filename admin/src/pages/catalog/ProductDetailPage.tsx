@@ -3,6 +3,7 @@ import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/rea
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ChevronRight, Save, EyeOff, Trash2, CheckCircle, AlertCircle, Info, Settings2 } from 'lucide-react'
 import api from '@/api/client'
+import { InfoTip } from '@/components/ui/InfoTip'
 import { DataGrid, useGridState, useLocalGrid, type GridColumn } from '@/components/grid'
 import { type Mannequin, mankenAd, mankenOzet } from './CatalogSettingsPage'
 import { cn } from '@/lib/utils'
@@ -338,10 +339,83 @@ function TagsTab({ product, onSaved }: { product: ProductDetail; onSaved: () => 
 
 // ── SEO Tab ───────────────────────────────────────────────────────────────────
 
-function toSlug(text: string): string {
-  const map: Record<string, string> = { ç:'c',Ç:'c',ğ:'g',Ğ:'g',ı:'i',İ:'i',ö:'o',Ö:'o',ş:'s',Ş:'s',ü:'u',Ü:'u' }
-  return text.split('').map(c => map[c] ?? c).join('')
-    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+// ── Kanal bazlı SEO ─────────────────────────────────────────────────────────
+// 2026-09-11 (kullanıcı): sitede ürün URL'si ürün kaydındaki "URL Slug"tan DEĞİL, kanal + renk bazlı channel_variants.Slug'tan
+// üretilir; meta başlık/açıklama da kanal başına. Ürün düzeyi meta alanları yalnız "kanal özel değer yoksa" yedeğidir.
+interface ChannelSeoColor { colorValueId: string | null; colorName: string; slug: string | null; variantIds: string[] }
+interface ChannelSeo {
+  firmPlatformId: string; channelCode: string; channelName: string; canonicalDomain: string
+  metaTitleI18n: Record<string, string> | null; metaDescriptionI18n: Record<string, string> | null; isActive: boolean; colors: ChannelSeoColor[]
+}
+
+function ChannelSeoCard({ productId, kanal, lang, onSaved }: { productId: string; kanal: ChannelSeo; lang: string; onSaved: () => void }) {
+  const [title, setTitle] = useState<Record<string, string>>(kanal.metaTitleI18n ?? {})
+  const [desc, setDesc] = useState<Record<string, string>>(kanal.metaDescriptionI18n ?? {})
+  const [slugs, setSlugs] = useState<Record<string, string>>(Object.fromEntries(kanal.colors.map(c => [c.colorValueId ?? '__none__', c.slug ?? ''])))
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const kok = (kanal.canonicalDomain || '').replace(/\/$/, '')
+  const save = async () => {
+    setSaving(true); setMsg(null)
+    try {
+      await api.put(`/catalog/products/${productId}/channel-seo/${kanal.firmPlatformId}`, {
+        metaTitleI18n: Object.keys(title).length ? title : null,
+        metaDescriptionI18n: Object.keys(desc).length ? desc : null,
+        colors: kanal.colors.map(c => ({ colorValueId: c.colorValueId, slug: slugs[c.colorValueId ?? '__none__'] || null })),
+      })
+      setMsg({ ok: true, text: 'Kaydedildi' }); onSaved()
+    } catch (e) { setMsg({ ok: false, text: (e as { response?: { data?: { error?: string } } }).response?.data?.error ?? 'Kaydedilemedi.' }) }
+    finally { setSaving(false) }
+  }
+  return (
+    <div className="card overflow-hidden p-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div>
+          <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>{kanal.channelName} <code className="text-xs font-normal" style={{ color: 'var(--text-s)' }}>{kanal.channelCode}</code></h2>
+          <p className="text-xs" style={{ color: 'var(--text-s)' }}>{kok || 'canonicalDomain tanımsız (Ayarlar › Satış Kanalları)'}{!kanal.isActive && ' · bu kanalda yayında değil'}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {msg && <span className="text-xs" style={{ color: msg.ok ? '#16a34a' : '#dc2626' }}>{msg.text}</span>}
+          <Button size="sm" onClick={save} loading={saving}><Save size={13} /> Kaydet</Button>
+        </div>
+      </div>
+      <div className="p-4 space-y-4">
+        <div>
+          <div className="flbl flex items-center">Ürün URL'leri <InfoTip text="Sitede kullanılan gerçek adres; renk başına bir adres, rengin tüm bedenlerine uygulanır. Küçük harf, rakam ve tire; kanal içinde benzersiz olmalıdır. Değiştirilen eski adres için otomatik yönlendirme YAPILMAZ." /></div>
+          <div className="space-y-2">
+            {kanal.colors.map(c => {
+              const key = c.colorValueId ?? '__none__'
+              const v = slugs[key] ?? ''
+              return (
+                <div key={key} className="flex items-center gap-2">
+                  <span className="text-xs w-28 shrink-0 truncate" style={{ color: 'var(--text-m)' }} title={c.colorName}>{c.colorName}</span>
+                  <div className="flex-1 flex items-center rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                    <span className="px-2 py-1.5 text-xs shrink-0" style={{ background: 'var(--surface2)', color: 'var(--text-s)', borderRight: '1px solid var(--border)' }}>{(kok || '').replace(/^https?:\/\//, '') || 'site'}/</span>
+                    <input className="flex-1 bg-transparent outline-none text-sm px-2 py-1.5 font-mono" style={{ color: 'var(--text)' }} value={v}
+                      onChange={e => setSlugs(s => ({ ...s, [key]: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') }))} placeholder="adres-yok" />
+                  </div>
+                  {v && kok && <a href={`${kok}/${v}`} target="_blank" rel="noreferrer" className="text-xs underline shrink-0" style={{ color: 'var(--brand)' }}>Aç</a>}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <div className="flex items-center justify-between mb-1"><span className="flbl">Meta Başlık ({lang.toUpperCase()})</span>
+              <span className="text-xs" style={{ color: (title[lang] ?? '').length > 60 ? '#dc2626' : 'var(--text-s)' }}>{(title[lang] ?? '').length}/60</span></div>
+            <input className="inp" value={title[lang] ?? ''} placeholder="Boşsa ürün düzeyi meta, o da boşsa ürün adı" onChange={e => setTitle(t => ({ ...t, [lang]: e.target.value }))} />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1"><span className="flbl">Meta Açıklama ({lang.toUpperCase()})</span>
+              <span className="text-xs" style={{ color: (desc[lang] ?? '').length > 160 ? '#dc2626' : 'var(--text-s)' }}>{(desc[lang] ?? '').length}/160</span></div>
+            <textarea className="ta" rows={2} value={desc[lang] ?? ''} placeholder="Boşsa ürün düzeyi meta, o da boşsa kısa açıklama" onChange={e => setDesc(d => ({ ...d, [lang]: e.target.value }))} />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function SeoTab({ product, languages, onSaved }: {
@@ -349,182 +423,79 @@ function SeoTab({ product, languages, onSaved }: {
   languages: { code: string; name: string; isDefault?: boolean }[]
   onSaved: () => void
 }) {
+  const queryClient = useQueryClient()
   const defaultLang = languages.find(l => l.isDefault)?.code ?? languages[0]?.code ?? 'tr'
   const [activeLang, setActiveLang] = useState(defaultLang)
-  const [slug, setSlug] = useState(product.slug ?? '')
-  const [slugManual, setSlugManual] = useState(!!product.slug)
   const [metaTitle, setMetaTitle] = useState<Record<string, string>>(product.metaTitleI18n ?? {})
   const [metaDesc, setMetaDesc] = useState<Record<string, string>>(product.metaDescriptionI18n ?? {})
-  const [metaKeywords, setMetaKeywords] = useState<Record<string, string>>(product.metaKeywordsI18n ?? {})
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'ok' | 'err'>('idle')
 
-  const autoSlug = toSlug(product.nameI18n?.['tr'] ?? product.nameI18n?.[defaultLang] ?? product.code)
-  const effectiveSlug = slugManual ? slug : autoSlug
-
-  const previewTitle = metaTitle[activeLang] || product.nameI18n?.[activeLang] || product.nameI18n?.['tr'] || product.code
-  const previewDesc  = metaDesc[activeLang] || product.shortDescriptionI18n?.[activeLang] || product.shortDescriptionI18n?.['tr'] || ''
-  const previewUrl   = `siteniz.com/urun/${effectiveSlug}`
+  const { data: kanallar = [], isLoading } = useQuery<ChannelSeo[]>({
+    queryKey: ['product-channel-seo', product.id],
+    queryFn: async () => (await api.get(`/catalog/products/${product.id}/channel-seo`)).data.data,
+  })
 
   async function save() {
     setSaving(true)
     try {
       await api.put(`/catalog/products/${product.id}/seo`, {
-        slug: effectiveSlug || null,
+        slug: product.slug ?? null,
         metaTitleI18n: Object.keys(metaTitle).length ? metaTitle : null,
         metaDescriptionI18n: Object.keys(metaDesc).length ? metaDesc : null,
-        metaKeywordsI18n: Object.keys(metaKeywords).length ? metaKeywords : null,
+        metaKeywordsI18n: product.metaKeywordsI18n ?? null,
       })
-      onSaved()
-      setSaveStatus('ok')
-      setTimeout(() => setSaveStatus('idle'), 2500)
+      onSaved(); setSaveStatus('ok'); setTimeout(() => setSaveStatus('idle'), 2500)
     } catch { setSaveStatus('err') }
     finally { setSaving(false) }
   }
 
   return (
-    <div className="vc flex detail-cols gap-4">
-      {/* LEFT — form */}
-      <div className="flex-1 space-y-4 min-w-0">
-        {/* URL Slug */}
-        <div className="card space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>URL Slug</h2>
-            {slugManual && (
-              <button onClick={() => { setSlugManual(false); setSlug('') }}
-                className="text-xs" style={{ color: 'var(--brand)' }}>
-                Otomatiğe döndür
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-2 rounded-xl overflow-hidden"
-            style={{ border: '1px solid var(--border)' }}>
-            <span className="px-3 py-2 text-xs shrink-0"
-              style={{ background: 'var(--surface2)', color: 'var(--text-s)', borderRight: '1px solid var(--border)' }}>
-              /urun/
-            </span>
-            <input
-              className="flex-1 bg-transparent outline-none text-sm px-2 py-2"
-              style={{ color: 'var(--text)' }}
-              value={slugManual ? slug : autoSlug}
-              placeholder={autoSlug}
-              onChange={e => { setSlugManual(true); setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')) }}
-            />
-            {!slugManual && (
-              <span className="px-2.5 text-xs shrink-0" style={{ color: 'var(--brand)' }}>Otomatik</span>
-            )}
-          </div>
-          <p className="text-xs" style={{ color: 'var(--text-s)' }}>
-            Sadece küçük harf, rakam ve tire. Benzersiz olmalıdır.
-          </p>
-        </div>
+    <div className="vc space-y-4">
+      <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+        SEO satış kanalı bazlıdır: ürünün her kanaldaki gerçek adresi (renk başına) ve meta alanları aşağıda kanal kartlarında düzenlenir.
+        Kanal özel değer girilmemişse en alttaki "Varsayılan meta" kullanılır.
+      </p>
+      {isLoading && <p className="text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor…</p>}
+      {!isLoading && kanallar.length === 0 && <p className="text-sm" style={{ color: 'var(--text-s)' }}>Bu ürün hiçbir satış kanalında tanımlı değil (Satış Kanalları sekmesi).</p>}
+      {kanallar.map(k => (
+        <ChannelSeoCard key={k.firmPlatformId} productId={product.id} kanal={k} lang={activeLang}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ['product-channel-seo', product.id] })} />
+      ))}
 
-        {/* Meta alanları — dil sekmeli */}
-        <div className="card overflow-hidden p-0">
-          <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-            <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Meta Alanları</h2>
+      <div className="card overflow-hidden p-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+          <div>
+            <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Varsayılan meta (tüm kanallar)</h2>
+            <p className="text-xs" style={{ color: 'var(--text-s)' }}>Kanal kartında değer yoksa kullanılır; o da boşsa ürün adı ve kısa açıklama.</p>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="flex gap-0.5">
               {languages.map(l => (
                 <button key={l.code} onClick={() => setActiveLang(l.code)}
-                  className={cn('px-2.5 py-0.5 rounded-lg text-xs font-medium transition-all',
-                    activeLang === l.code ? 'text-[var(--brand)]' : 'text-[var(--text-s)]')}
-                  style={activeLang === l.code
-                    ? { background: 'var(--brand-bg)', border: '1px solid var(--brand-b)' }
-                    : { border: '1px solid transparent' }}>
+                  className={cn('px-2.5 py-0.5 rounded-lg text-xs font-medium transition-all', activeLang === l.code ? 'text-[var(--brand)]' : 'text-[var(--text-s)]')}
+                  style={activeLang === l.code ? { background: 'var(--brand-bg)', border: '1px solid var(--brand-b)' } : { border: '1px solid transparent' }}>
                   {l.code.toUpperCase()}
-                  {(metaTitle[l.code] || metaDesc[l.code]) && (
-                    <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-current opacity-60" />
-                  )}
                 </button>
               ))}
             </div>
-          </div>
-          <div className="p-4 space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="flbl">Meta Başlık</label>
-                <span className="text-xs" style={{ color: (metaTitle[activeLang] ?? '').length > 60 ? '#dc2626' : 'var(--text-s)' }}>
-                  {(metaTitle[activeLang] ?? '').length}/60
-                </span>
-              </div>
-              <input className="inp" value={metaTitle[activeLang] ?? ''}
-                placeholder={product.nameI18n?.[activeLang] ?? product.nameI18n?.['tr'] ?? ''}
-                onChange={e => setMetaTitle(p => ({ ...p, [activeLang]: e.target.value }))} />
-              <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Boş bırakılırsa ürün adı kullanılır.</p>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="flbl">Meta Açıklama</label>
-                <span className="text-xs" style={{ color: (metaDesc[activeLang] ?? '').length > 160 ? '#dc2626' : 'var(--text-s)' }}>
-                  {(metaDesc[activeLang] ?? '').length}/160
-                </span>
-              </div>
-              <textarea className="ta" rows={3} value={metaDesc[activeLang] ?? ''}
-                placeholder={product.shortDescriptionI18n?.[activeLang] ?? ''}
-                onChange={e => setMetaDesc(p => ({ ...p, [activeLang]: e.target.value }))} />
-              <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Boş bırakılırsa kısa açıklama kullanılır.</p>
-            </div>
-            <div>
-              <label className="flbl">Anahtar Kelimeler</label>
-              <input className="inp" value={metaKeywords[activeLang] ?? ''}
-                placeholder="kelime1, kelime2, kelime3"
-                onChange={e => setMetaKeywords(p => ({ ...p, [activeLang]: e.target.value }))} />
-              <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Virgülle ayırın.</p>
-            </div>
+            {saveStatus === 'ok' && <span className="flex items-center gap-1 text-xs" style={{ color: '#16a34a' }}><CheckCircle size={12} /> Kaydedildi</span>}
+            {saveStatus === 'err' && <span className="text-xs" style={{ color: '#dc2626' }}>Kaydedilemedi</span>}
+            <Button size="sm" onClick={save} loading={saving}><Save size={13} /> Kaydet</Button>
           </div>
         </div>
-
-        {/* Save */}
-        <div className="flex items-center justify-end gap-3">
-          {saveStatus === 'ok' && (
-            <span className="flex items-center gap-1 text-xs" style={{ color: '#16a34a' }}>
-              <CheckCircle size={12} /> Kaydedildi
-            </span>
-          )}
-          {saveStatus === 'err' && (
-            <span className="text-xs" style={{ color: '#dc2626' }}>
-              Hata — slug çakışıyor olabilir
-            </span>
-          )}
-          <Button onClick={save} loading={saving}><Save size={13} /> Kaydet</Button>
-        </div>
-      </div>
-
-      {/* RIGHT — Google önizleme */}
-      <div className="detail-right w-full md:w-80 flex-shrink-0 space-y-4">
-        <div className="card overflow-hidden p-0">
-          <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-            <h3 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Google Önizleme</h3>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>{activeLang.toUpperCase()} dili</p>
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <div className="flex items-center justify-between mb-1"><span className="flbl">Meta Başlık</span>
+              <span className="text-xs" style={{ color: (metaTitle[activeLang] ?? '').length > 60 ? '#dc2626' : 'var(--text-s)' }}>{(metaTitle[activeLang] ?? '').length}/60</span></div>
+            <input className="inp" value={metaTitle[activeLang] ?? ''} placeholder={product.nameI18n?.[activeLang] ?? product.nameI18n?.['tr'] ?? ''}
+              onChange={e => setMetaTitle(p => ({ ...p, [activeLang]: e.target.value }))} />
           </div>
-          <div className="p-4">
-            <div className="rounded-xl p-3 space-y-1" style={{ background: '#fff', border: '1px solid #dadce0' }}>
-              <p className="text-xs truncate" style={{ color: '#006621', fontFamily: 'sans-serif' }}>
-                {previewUrl}
-              </p>
-              <p className="text-base leading-snug font-normal"
-                style={{ color: '#1a0dab', fontFamily: 'sans-serif', fontSize: 18 }}>
-                {previewTitle.slice(0, 60) || 'Ürün Adı'}
-              </p>
-              <p className="text-xs leading-relaxed line-clamp-2"
-                style={{ color: '#545454', fontFamily: 'sans-serif', fontSize: 13 }}>
-                {previewDesc.slice(0, 160) || 'Ürün açıklaması burada görünür. Meta açıklama girilmemişse kısa açıklama kullanılır.'}
-              </p>
-            </div>
-            <div className="mt-3 space-y-1">
-              <div className="flex justify-between text-xs">
-                <span style={{ color: 'var(--text-s)' }}>Başlık uzunluğu</span>
-                <span style={{ color: previewTitle.length > 60 ? '#dc2626' : '#16a34a' }}>
-                  {previewTitle.length}/60
-                </span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span style={{ color: 'var(--text-s)' }}>Açıklama uzunluğu</span>
-                <span style={{ color: previewDesc.length > 160 ? '#dc2626' : '#16a34a' }}>
-                  {previewDesc.length}/160
-                </span>
-              </div>
-            </div>
+          <div>
+            <div className="flex items-center justify-between mb-1"><span className="flbl">Meta Açıklama</span>
+              <span className="text-xs" style={{ color: (metaDesc[activeLang] ?? '').length > 160 ? '#dc2626' : 'var(--text-s)' }}>{(metaDesc[activeLang] ?? '').length}/160</span></div>
+            <textarea className="ta" rows={2} value={metaDesc[activeLang] ?? ''} placeholder={product.shortDescriptionI18n?.[activeLang] ?? ''}
+              onChange={e => setMetaDesc(p => ({ ...p, [activeLang]: e.target.value }))} />
           </div>
         </div>
       </div>

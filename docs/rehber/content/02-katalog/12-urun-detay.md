@@ -230,7 +230,7 @@ oluşturun." uyarısı görünür.
 | Resim Yükle kartı | "Tıkla veya sürükle & bırak" alanı — JPG, PNG, WEBP; çoklu seçim. Seçilen dosyalar küçük önizleme olarak listelenir; üzerine gelince ad/boyut ve kaldırma (×) butonu çıkar. |
 | Mevcut resimleri arşivle (bu set + varyant için) | Varsayılan **işaretli**. İşaretliyken yükleme onaylandığında aynı set + aynı varyant (veya ürün geneli) için mevcut aktif resimler **arşive** alınır (silinmez). |
 | Yükle (N) | Yüklemeyi başlatır; ilerleme çubuğu "Yükleniyor… 3 / 5" gösterir. Bitince "Resimler başarıyla yüklendi." |
-| Mevcut Resimler | Toplam adet; üstte varyant/renk sekmeleri (her sekmede resim sayısı rozeti; hiç resmi olmayan sekmede turuncu nokta "Resim yüklenmemiş"). Her set ayrı başlık altında listelenir; resmi olmayan sette "Resim yok". |
+| Mevcut Resimler | Sekmenin **en üstünde** (yükleme elemanları altta). Renk sekmeleri sırayla, **`Ürün Geneli` en sonda**; sayfa açılınca **ilk renk seçili** gelir. Her sekmede resim sayısı rozeti; hiç resmi olmayan sekmede turuncu nokta "Resim yüklenmemiş". Her set ayrı başlık altında listelenir; resmi olmayan sette "Resim yok". Eski sistemden aktarılan tüm resimler "Standart Resim Seti" altındadır. |
 | Resim kartı | `Ana` rozeti kapak resmini gösterir (kenarlığı renkli). Üzerine gelince: ⭐ **Ana görsel yap** / ⭐ Ana görsel (kaldır) ve 🗑 **Arşivle**. |
 
 Kurallar:
@@ -269,23 +269,25 @@ Etiketler arama, filtreleme ve segmentasyonda kullanılır.
 | Kaydet | Kart başlığı sağı | Etiket listesini kaydeder; `Kaydedildi` / `Hata oluştu`. | Listede değişiklik olmalı (yoksa pasif). |
 
 ### SEO
-![SEO sekmesi — URL slug, dil sekmeli meta alanları ve Google önizleme](img/catalog-products-detay--seo-sekmesi.webp)
+![SEO sekmesi — kanal kartları (renk başına URL + meta) ve varsayılan meta](img/catalog-products-detay--seo-sekmesi.webp)
+
+SEO **satış kanalı bazlıdır**. Sitede ürünün adresi ürün kaydındaki genel bir slug'tan değil, **kanal + renk** bazlı adresten
+üretilir; sayfa başlığı ve meta açıklaması da kanal başına tutulur. Sekme, ürünün tanımlı olduğu her kanal için bir kart gösterir:
 
 | Alan | Zorunlu | Açıklama / kurallar |
 |---|---|---|
-| URL Slug | Hayır | Ürün sayfasının adresi: `/urun/<slug>`. Boşken Türkçe addan **otomatik** üretilir (Türkçe karakterler dönüştürülür, yalnız küçük harf-rakam-tire) ve sağda `Otomatik` etiketi görünür. Elle yazılınca yalnız `a-z`, `0-9`, `-` kabul edilir; **Otomatiğe döndür** bağlantısıyla tekrar otomatiğe alınır. Mağaza genelinde benzersiz olmalıdır. |
-| Meta Başlık | Hayır | Dil sekmeli; sayaç `n/60`, 60'ı aşınca kırmızı. Boşsa ürün adı kullanılır. |
-| Meta Açıklama | Hayır | Dil sekmeli; sayaç `n/160`. Boşsa kısa açıklama kullanılır. |
-| Anahtar Kelimeler | Hayır | Virgülle ayrılmış liste. |
-
-- Dil sekmelerinde (TR/EN…) o dilde meta başlık ya da açıklama girildiyse küçük bir nokta görünür.
-- Sağdaki **Google Önizleme** kartı, seçili dil için adres, başlık ve açıklamanın arama sonucunda nasıl görüneceğini ve
-  uzunluk sayaçlarını gösterir.
+| Ürün URL'leri | Hayır | Renk başına bir adres (`kanal-alan-adı/<adres>`); rengin tüm bedenlerine uygulanır. Küçük harf, rakam ve tire; kanal içinde benzersiz olmalıdır (çakışırsa "… adresi bu kanalda başka bir üründe kullanılıyor."). Yanındaki **Aç** bağlantısı sayfayı sitede açar. Adres değişince eski adres için otomatik yönlendirme **yapılmaz**. |
+| Meta Başlık (kanal) | Hayır | Sayaç `n/60`. Boşsa "Varsayılan meta", o da boşsa ürün adı kullanılır. |
+| Meta Açıklama (kanal) | Hayır | Sayaç `n/160`. Boşsa "Varsayılan meta", o da boşsa kısa açıklama kullanılır. |
+| Varsayılan meta (tüm kanallar) | Hayır | En alttaki kart; dil sekmeli (TR/EN…). Kanal kartında değer yoksa devreye girer. |
 
 | Buton/Aksiyon | Nerede | Ne olur | Ön koşul / yetki |
 |---|---|---|---|
-| Kaydet | Formun altı | Slug ve meta alanlarını kaydeder. Başarısızsa "Hata — slug çakışıyor olabilir" (sunucu mesajları: "Bu slug başka bir ürün tarafından kullanılıyor." / "Geçerli bir URL üretilemedi — slug harf/rakam içermeli."). | — |
-| Otomatiğe döndür | URL Slug başlığı | Elle girilen slug'ı siler, otomatik slug'a döner. | Slug elle girilmiş olmalı. |
+| Kaydet (kanal kartı) | Kart başlığı | O kanalın URL'lerini ve meta alanlarını kaydeder. | `catalog.products.manage` |
+| Kaydet (varsayılan meta) | Kart başlığı | Ürün düzeyi meta alanlarını kaydeder. | `catalog.products.manage` |
+| Aç | URL satırı | Adresi sitede yeni sekmede açar (kanalın canonical alan adı tanımlıysa). | — |
+
+> **Dikkat:** "Ürün hiçbir satış kanalında tanımlı değil" görünüyorsa önce Satış Kanalları sekmesinden kanala ekleyin.
 
 ## Durumlar ve iş kuralları
 | Durum / kural | Açıklama |

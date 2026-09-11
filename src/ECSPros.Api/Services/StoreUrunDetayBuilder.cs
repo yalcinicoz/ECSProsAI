@@ -214,6 +214,11 @@ public class StoreUrunDetayBuilder(
                     .ToList();
         }
 
+        // 2026-09-11 kanal bazlı SEO: channel_products meta → ürün meta → ad / kısa açıklama (tek yer: burası + view ViewData)
+        var kanalSeo = (await mediator.Send(new ECSPros.Storefront.Application.Queries.GetChannelProductSeo.GetChannelProductSeoQuery(platformId, urun.Id), ct)).Value;
+        var seoBaslik = kanalSeo?.Title;
+        var seoAciklama = kanalSeo?.Description ?? (urun.ShortDescriptionI18n is { } seoKisa && seoKisa.TryGetValue("tr", out var seoKv) && !string.IsNullOrWhiteSpace(seoKv) ? seoKv : null);
+
         var vm = new UrunDetayVm(
             Kod: urun.Code,
             Ad: TrAd(urun.NameI18n),
@@ -247,7 +252,9 @@ public class StoreUrunDetayBuilder(
             PuanDagilimi: puanDagilimi,
             KampanyaAdi: kampanyaAdi,
             KampanyaFiyat: kampanyaFiyat,
-            KampanyaRenk: kampanyaRenk);
+            KampanyaRenk: kampanyaRenk,
+            MetaBaslik: seoBaslik,
+            MetaAciklama: seoAciklama);
 
         // E12: üyenin gezme kaydı — render'ı aksatmaz.
         if (uye is not null)

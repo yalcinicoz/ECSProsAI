@@ -12,6 +12,9 @@ public class ChannelProduct : BaseEntity
     public Guid ProductId { get; set; }
     public Dictionary<string, string>? NameI18n { get; set; }
     public Dictionary<string, string>? ShortDescriptionI18n { get; set; }
+    /// <summary>Kanal bazlı SEO (2026-09-11): sayfa başlığı ve meta açıklaması; boşsa ürün düzeyi meta, o da boşsa ürün adı / kısa açıklama.</summary>
+    public Dictionary<string, string>? MetaTitleI18n { get; set; }
+    public Dictionary<string, string>? MetaDescriptionI18n { get; set; }
 
     // K2 (kanal seçimi — satış görünürlüğü M2): ürünün bu kanalda satılıp satılmayacağı.
     // Opt-out semantiği: satır yok VEYA IsActive=true → kanalda satılır; IsActive=false →

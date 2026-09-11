@@ -579,7 +579,7 @@ oluşturun.&quot; uyarısı görünür.</p>
 </tr>
 <tr>
 <td>Mevcut Resimler</td>
-<td>Toplam adet; üstte varyant/renk sekmeleri (her sekmede resim sayısı rozeti; hiç resmi olmayan sekmede turuncu nokta &quot;Resim yüklenmemiş&quot;). Her set ayrı başlık altında listelenir; resmi olmayan sette &quot;Resim yok&quot;.</td>
+<td>Sekmenin <strong>en üstünde</strong> (yükleme elemanları altta). Renk sekmeleri sırayla, <strong><code>Ürün Geneli</code> en sonda</strong>; sayfa açılınca <strong>ilk renk seçili</strong> gelir. Her sekmede resim sayısı rozeti; hiç resmi olmayan sekmede turuncu nokta &quot;Resim yüklenmemiş&quot;. Her set ayrı başlık altında listelenir; resmi olmayan sette &quot;Resim yok&quot;. Eski sistemden aktarılan tüm resimler &quot;Standart Resim Seti&quot; altındadır.</td>
 </tr>
 <tr>
 <td>Resim kartı</td>
@@ -665,7 +665,9 @@ Etiketler arama, filtreleme ve segmentasyonda kullanılır.</p>
 </tr>
 </tbody></table>
 <h3 id="seo">SEO<a class="anchor" href="#seo" aria-hidden="true">#</a></h3>
-<p><figure class="ekran"><a href="/rehber/img/catalog-products-detay--seo-sekmesi.webp" class="buyut" data-alt="SEO sekmesi — URL slug, dil sekmeli meta alanları ve Google önizleme"><img src="/rehber/img/catalog-products-detay--seo-sekmesi.webp" alt="SEO sekmesi — URL slug, dil sekmeli meta alanları ve Google önizleme" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>SEO sekmesi — URL slug, dil sekmeli meta alanları ve Google önizleme</figcaption></figure></p>
+<p><figure class="ekran"><a href="/rehber/img/catalog-products-detay--seo-sekmesi.webp" class="buyut" data-alt="SEO sekmesi — kanal kartları (renk başına URL + meta) ve varsayılan meta"><img src="/rehber/img/catalog-products-detay--seo-sekmesi.webp" alt="SEO sekmesi — kanal kartları (renk başına URL + meta) ve varsayılan meta" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>SEO sekmesi — kanal kartları (renk başına URL + meta) ve varsayılan meta</figcaption></figure></p>
+<p>SEO <strong>satış kanalı bazlıdır</strong>. Sitede ürünün adresi ürün kaydındaki genel bir slug&#39;tan değil, <strong>kanal + renk</strong> bazlı adresten
+üretilir; sayfa başlığı ve meta açıklaması da kanal başına tutulur. Sekme, ürünün tanımlı olduğu her kanal için bir kart gösterir:</p>
 <table>
 <thead>
 <tr>
@@ -675,31 +677,26 @@ Etiketler arama, filtreleme ve segmentasyonda kullanılır.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td>URL Slug</td>
+<td>Ürün URL&#39;leri</td>
 <td>Hayır</td>
-<td>Ürün sayfasının adresi: <code>/urun/&lt;slug&gt;</code>. Boşken Türkçe addan <strong>otomatik</strong> üretilir (Türkçe karakterler dönüştürülür, yalnız küçük harf-rakam-tire) ve sağda <code>Otomatik</code> etiketi görünür. Elle yazılınca yalnız <code>a-z</code>, <code>0-9</code>, <code>-</code> kabul edilir; <strong>Otomatiğe döndür</strong> bağlantısıyla tekrar otomatiğe alınır. Mağaza genelinde benzersiz olmalıdır.</td>
+<td>Renk başına bir adres (<code>kanal-alan-adı/&lt;adres&gt;</code>); rengin tüm bedenlerine uygulanır. Küçük harf, rakam ve tire; kanal içinde benzersiz olmalıdır (çakışırsa &quot;… adresi bu kanalda başka bir üründe kullanılıyor.&quot;). Yanındaki <strong>Aç</strong> bağlantısı sayfayı sitede açar. Adres değişince eski adres için otomatik yönlendirme <strong>yapılmaz</strong>.</td>
 </tr>
 <tr>
-<td>Meta Başlık</td>
+<td>Meta Başlık (kanal)</td>
 <td>Hayır</td>
-<td>Dil sekmeli; sayaç <code>n/60</code>, 60&#39;ı aşınca kırmızı. Boşsa ürün adı kullanılır.</td>
+<td>Sayaç <code>n/60</code>. Boşsa &quot;Varsayılan meta&quot;, o da boşsa ürün adı kullanılır.</td>
 </tr>
 <tr>
-<td>Meta Açıklama</td>
+<td>Meta Açıklama (kanal)</td>
 <td>Hayır</td>
-<td>Dil sekmeli; sayaç <code>n/160</code>. Boşsa kısa açıklama kullanılır.</td>
+<td>Sayaç <code>n/160</code>. Boşsa &quot;Varsayılan meta&quot;, o da boşsa kısa açıklama kullanılır.</td>
 </tr>
 <tr>
-<td>Anahtar Kelimeler</td>
+<td>Varsayılan meta (tüm kanallar)</td>
 <td>Hayır</td>
-<td>Virgülle ayrılmış liste.</td>
+<td>En alttaki kart; dil sekmeli (TR/EN…). Kanal kartında değer yoksa devreye girer.</td>
 </tr>
 </tbody></table>
-<ul>
-<li>Dil sekmelerinde (TR/EN…) o dilde meta başlık ya da açıklama girildiyse küçük bir nokta görünür.</li>
-<li>Sağdaki <strong>Google Önizleme</strong> kartı, seçili dil için adres, başlık ve açıklamanın arama sonucunda nasıl görüneceğini ve
-uzunluk sayaçlarını gösterir.</li>
-</ul>
 <table>
 <thead>
 <tr>
@@ -710,18 +707,27 @@ uzunluk sayaçlarını gösterir.</li>
 </tr>
 </thead>
 <tbody><tr>
-<td>Kaydet</td>
-<td>Formun altı</td>
-<td>Slug ve meta alanlarını kaydeder. Başarısızsa &quot;Hata — slug çakışıyor olabilir&quot; (sunucu mesajları: &quot;Bu slug başka bir ürün tarafından kullanılıyor.&quot; / &quot;Geçerli bir URL üretilemedi — slug harf/rakam içermeli.&quot;).</td>
-<td>—</td>
+<td>Kaydet (kanal kartı)</td>
+<td>Kart başlığı</td>
+<td>O kanalın URL&#39;lerini ve meta alanlarını kaydeder.</td>
+<td><code>catalog.products.manage</code></td>
 </tr>
 <tr>
-<td>Otomatiğe döndür</td>
-<td>URL Slug başlığı</td>
-<td>Elle girilen slug&#39;ı siler, otomatik slug&#39;a döner.</td>
-<td>Slug elle girilmiş olmalı.</td>
+<td>Kaydet (varsayılan meta)</td>
+<td>Kart başlığı</td>
+<td>Ürün düzeyi meta alanlarını kaydeder.</td>
+<td><code>catalog.products.manage</code></td>
+</tr>
+<tr>
+<td>Aç</td>
+<td>URL satırı</td>
+<td>Adresi sitede yeni sekmede açar (kanalın canonical alan adı tanımlıysa).</td>
+<td>—</td>
 </tr>
 </tbody></table>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> &quot;Ürün hiçbir satış kanalında tanımlı değil&quot; görünüyorsa önce Satış Kanalları sekmesinden kanala ekleyin.</p>
+</blockquote>
 <h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
 <table>
 <thead>

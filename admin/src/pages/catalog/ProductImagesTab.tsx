@@ -293,119 +293,6 @@ function ImagesSection({
 
   return (
     <div className="vc flex flex-col gap-5">
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <SetSelector imageSets={imageSets} selectedSetId={selectedSetId} onSelect={setSelectedSetId} />
-
-        {/* Variant / Primary-axis selector */}
-        {primaryAxisValues.length > 0 ? (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Ana Varyant:</span>
-            <div className="flex gap-1.5 flex-wrap">
-              <button
-                onClick={() => setSelectedVariantId('')}
-                className={cn('px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
-                  selectedVariantId === '' ? 'text-white border-transparent' : 'border-[var(--border)] hover:border-[var(--brand)]')}
-                style={selectedVariantId === '' ? { background: 'var(--brand)' } : { color: 'var(--text-m)', background: 'var(--surface2)' }}
-              >
-                Ürün Geneli
-              </button>
-              {primaryAxisValues.map(pv => (
-                <button
-                  key={pv.valueId}
-                  onClick={() => setSelectedVariantId(pv.representativeVariantId)}
-                  className={cn('px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
-                    selectedVariantId === pv.representativeVariantId ? 'text-white border-transparent' : 'border-[var(--border)] hover:border-[var(--brand)]')}
-                  style={selectedVariantId === pv.representativeVariantId ? { background: 'var(--brand)' } : { color: 'var(--text-m)', background: 'var(--surface2)' }}
-                >
-                  {pv.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : variants.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Varyant:</span>
-            <select className="sel text-xs" value={selectedVariantId} onChange={e => setSelectedVariantId(e.target.value)}
-              style={{ padding: '6px 10px', minWidth: 160 }}>
-              <option value="">Ürün Geneli</option>
-              {variants.map(v => <option key={v.id} value={v.id}>{v.sku}</option>)}
-            </select>
-          </div>
-        )}
-      </div>
-
-      {/* Upload zone */}
-      <div className="card" style={{ maxWidth: 680 }}>
-        <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--text)' }}>Resim Yükle</h2>
-        <label
-          className="relative rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-8 gap-2 cursor-pointer transition-colors hover:border-[var(--brand)]"
-          style={{ borderColor: 'var(--border)' }}
-        >
-          <Upload size={20} style={{ color: 'var(--text-s)', pointerEvents: 'none' }} />
-          <p className="text-sm font-medium" style={{ color: 'var(--text-m)', pointerEvents: 'none' }}>Tıkla veya sürükle &amp; bırak</p>
-          <p className="text-xs" style={{ color: 'var(--text-s)', pointerEvents: 'none' }}>JPG, PNG, WEBP · Çoklu seçim desteklenir</p>
-          <input
-            ref={imageInputRef}
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleFileChange}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
-          />
-        </label>
-
-        {pendingFiles.length > 0 && (
-          <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-            {pendingFiles.map((f, i) => {
-              const url = URL.createObjectURL(f)
-              return (
-                <div key={i} className="relative group rounded-lg overflow-hidden aspect-square"
-                  style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-                  <img src={url} alt={f.name} className="w-full h-full object-cover"
-                    onLoad={() => URL.revokeObjectURL(url)} />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all gap-1"
-                    style={{ background: 'rgba(0,0,0,.55)' }}>
-                    <p className="text-[10px] text-white px-1 text-center leading-tight line-clamp-2">{f.name}</p>
-                    <p className="text-[10px]" style={{ color: 'rgba(255,255,255,.6)' }}>{(f.size / 1024).toFixed(0)} KB</p>
-                    <button onClick={() => setPendingFiles(p => p.filter((_, j) => j !== i))}
-                      className="mt-1 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors">
-                      <X size={11} />
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        <label className="flex items-center gap-2 mt-3 cursor-pointer select-none">
-          <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={replaceSet} onChange={e => setReplaceSet(e.target.checked)} />
-          <span className="text-xs font-medium" style={{ color: 'var(--text-m)' }}>Mevcut resimleri arşivle (bu set + varyant için)</span>
-        </label>
-
-        {isUploading && (
-          <div className="mt-3">
-            <div className="flex items-center justify-between text-xs mb-1" style={{ color: 'var(--text-s)' }}>
-              <span>Yükleniyor...</span>
-              <span>{uploadProgress!.current} / {uploadProgress!.total}</span>
-            </div>
-            <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface2)' }}>
-              <div className="h-full rounded-full transition-all"
-                style={{ width: `${(uploadProgress!.current / uploadProgress!.total) * 100}%`, background: 'var(--brand)' }} />
-            </div>
-          </div>
-        )}
-        {uploadDone && <p className="flex items-center gap-1.5 text-xs mt-3" style={{ color: 'var(--brand)' }}><CheckCircle2 size={13} /> Resimler başarıyla yüklendi.</p>}
-        {uploadError && <p className="text-xs mt-3" style={{ color: '#ef4444' }}>{uploadError}</p>}
-
-        <div className="flex justify-end mt-4">
-          <Button size="sm" onClick={handleUpload} loading={isUploading} disabled={pendingFiles.length === 0 || !selectedSetId}>
-            <Upload size={13} className="mr-1.5" /> Yükle ({pendingFiles.length})
-          </Button>
-        </div>
-      </div>
-
       {/* Active images — tabbed by variant, per-set sections always shown */}
       <div style={{ maxWidth: 680 }}>
         <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--text)' }}>
@@ -519,6 +406,121 @@ function ImagesSection({
           </p>
         )}
       </div>
+
+      {/* 2026-09-11 (kullanıcı): yüklü resimler ÜSTTE, hedef seçimi + yükleme elemanları ALTTA */}
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <SetSelector imageSets={imageSets} selectedSetId={selectedSetId} onSelect={setSelectedSetId} />
+
+        {/* Variant / Primary-axis selector */}
+        {primaryAxisValues.length > 0 ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Ana Varyant:</span>
+            <div className="flex gap-1.5 flex-wrap">
+              <button
+                onClick={() => setSelectedVariantId('')}
+                className={cn('px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
+                  selectedVariantId === '' ? 'text-white border-transparent' : 'border-[var(--border)] hover:border-[var(--brand)]')}
+                style={selectedVariantId === '' ? { background: 'var(--brand)' } : { color: 'var(--text-m)', background: 'var(--surface2)' }}
+              >
+                Ürün Geneli
+              </button>
+              {primaryAxisValues.map(pv => (
+                <button
+                  key={pv.valueId}
+                  onClick={() => setSelectedVariantId(pv.representativeVariantId)}
+                  className={cn('px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
+                    selectedVariantId === pv.representativeVariantId ? 'text-white border-transparent' : 'border-[var(--border)] hover:border-[var(--brand)]')}
+                  style={selectedVariantId === pv.representativeVariantId ? { background: 'var(--brand)' } : { color: 'var(--text-m)', background: 'var(--surface2)' }}
+                >
+                  {pv.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : variants.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Varyant:</span>
+            <select className="sel text-xs" value={selectedVariantId} onChange={e => setSelectedVariantId(e.target.value)}
+              style={{ padding: '6px 10px', minWidth: 160 }}>
+              <option value="">Ürün Geneli</option>
+              {variants.map(v => <option key={v.id} value={v.id}>{v.sku}</option>)}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Upload zone */}
+      <div className="card" style={{ maxWidth: 680 }}>
+        <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--text)' }}>Resim Yükle</h2>
+        <label
+          className="relative rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-8 gap-2 cursor-pointer transition-colors hover:border-[var(--brand)]"
+          style={{ borderColor: 'var(--border)' }}
+        >
+          <Upload size={20} style={{ color: 'var(--text-s)', pointerEvents: 'none' }} />
+          <p className="text-sm font-medium" style={{ color: 'var(--text-m)', pointerEvents: 'none' }}>Tıkla veya sürükle &amp; bırak</p>
+          <p className="text-xs" style={{ color: 'var(--text-s)', pointerEvents: 'none' }}>JPG, PNG, WEBP · Çoklu seçim desteklenir</p>
+          <input
+            ref={imageInputRef}
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleFileChange}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+          />
+        </label>
+
+        {pendingFiles.length > 0 && (
+          <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+            {pendingFiles.map((f, i) => {
+              const url = URL.createObjectURL(f)
+              return (
+                <div key={i} className="relative group rounded-lg overflow-hidden aspect-square"
+                  style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                  <img src={url} alt={f.name} className="w-full h-full object-cover"
+                    onLoad={() => URL.revokeObjectURL(url)} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all gap-1"
+                    style={{ background: 'rgba(0,0,0,.55)' }}>
+                    <p className="text-[10px] text-white px-1 text-center leading-tight line-clamp-2">{f.name}</p>
+                    <p className="text-[10px]" style={{ color: 'rgba(255,255,255,.6)' }}>{(f.size / 1024).toFixed(0)} KB</p>
+                    <button onClick={() => setPendingFiles(p => p.filter((_, j) => j !== i))}
+                      className="mt-1 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors">
+                      <X size={11} />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        <label className="flex items-center gap-2 mt-3 cursor-pointer select-none">
+          <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={replaceSet} onChange={e => setReplaceSet(e.target.checked)} />
+          <span className="text-xs font-medium" style={{ color: 'var(--text-m)' }}>Mevcut resimleri arşivle (bu set + varyant için)</span>
+        </label>
+
+        {isUploading && (
+          <div className="mt-3">
+            <div className="flex items-center justify-between text-xs mb-1" style={{ color: 'var(--text-s)' }}>
+              <span>Yükleniyor...</span>
+              <span>{uploadProgress!.current} / {uploadProgress!.total}</span>
+            </div>
+            <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface2)' }}>
+              <div className="h-full rounded-full transition-all"
+                style={{ width: `${(uploadProgress!.current / uploadProgress!.total) * 100}%`, background: 'var(--brand)' }} />
+            </div>
+          </div>
+        )}
+        {uploadDone && <p className="flex items-center gap-1.5 text-xs mt-3" style={{ color: 'var(--brand)' }}><CheckCircle2 size={13} /> Resimler başarıyla yüklendi.</p>}
+        {uploadError && <p className="text-xs mt-3" style={{ color: '#ef4444' }}>{uploadError}</p>}
+
+        <div className="flex justify-end mt-4">
+          <Button size="sm" onClick={handleUpload} loading={isUploading} disabled={pendingFiles.length === 0 || !selectedSetId}>
+            <Upload size={13} className="mr-1.5" /> Yükle ({pendingFiles.length})
+          </Button>
+        </div>
+      </div>
+
     </div>
   )
 }
@@ -650,6 +652,61 @@ function VideosSection({ productId, imageSets, publicBaseUrl, cdn }: {
 
   return (
     <div className="vc flex flex-col gap-5">
+      {/* Active videos list */}
+      <div style={{ maxWidth: 680 }}>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>
+            Mevcut Videolar
+            {videos.length > 0 && <span className="ml-2 text-xs font-normal" style={{ color: 'var(--text-s)' }}>{videos.length} adet</span>}
+          </h2>
+        </div>
+
+        {videosLoading ? <PageSpinner /> : videos.length === 0 ? (
+          <div className="rounded-xl flex flex-col items-center justify-center py-10 gap-2" style={{ background: 'var(--surface2)', color: 'var(--text-s)' }}>
+            <Film size={24} />
+            <p className="text-sm">Bu set için henüz video yüklenmemiş.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {videos.sort((a, b) => a.sortOrder - b.sortOrder).map(vid => {
+              const url = vid.videoUrl ?? buildImageUrl(vid.fileName, cdn, publicBaseUrl) // H5: URL kaydı önce
+              return (
+                <div key={vid.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                  {(vid.videoUrl ? isPlayable(vid.videoUrl) : isPlayable(vid.fileName)) ? (
+                    <video
+                      src={url}
+                      controls
+                      preload="metadata"
+                      className="w-full"
+                      style={{ maxHeight: 240, background: '#000' }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center py-8" style={{ background: '#111' }}>
+                      <Film size={32} style={{ color: '#555' }} />
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between px-3 py-2.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Film size={13} style={{ color: 'var(--text-s)', flexShrink: 0 }} />
+                      <span className="text-xs truncate font-mono" style={{ color: 'var(--text-m)' }}>{vid.videoUrl ?? vid.fileName}</span>
+                    </div>
+                    <button
+                      title="Arşivle"
+                      onClick={() => archiveMutation.mutate(vid.id)}
+                      disabled={archiveMutation.isPending}
+                      className="ml-3 flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 2026-09-11 (kullanıcı): mevcut videolar ÜSTTE, yükleme elemanları ALTTA */}
       {/* Set selector */}
       <div className="flex flex-wrap items-center gap-3">
         <SetSelector imageSets={imageSets} selectedSetId={selectedSetId} onSelect={setSelectedSetId} />
@@ -739,59 +796,6 @@ function VideosSection({ productId, imageSets, publicBaseUrl, cdn }: {
         {urlError && <p className="text-xs mt-2" style={{ color: '#ef4444' }}>{urlError}</p>}
       </div>
 
-      {/* Active videos list */}
-      <div style={{ maxWidth: 680 }}>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>
-            Mevcut Videolar
-            {videos.length > 0 && <span className="ml-2 text-xs font-normal" style={{ color: 'var(--text-s)' }}>{videos.length} adet</span>}
-          </h2>
-        </div>
-
-        {videosLoading ? <PageSpinner /> : videos.length === 0 ? (
-          <div className="rounded-xl flex flex-col items-center justify-center py-10 gap-2" style={{ background: 'var(--surface2)', color: 'var(--text-s)' }}>
-            <Film size={24} />
-            <p className="text-sm">Bu set için henüz video yüklenmemiş.</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {videos.sort((a, b) => a.sortOrder - b.sortOrder).map(vid => {
-              const url = vid.videoUrl ?? buildImageUrl(vid.fileName, cdn, publicBaseUrl) // H5: URL kaydı önce
-              return (
-                <div key={vid.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--surface2)' }}>
-                  {(vid.videoUrl ? isPlayable(vid.videoUrl) : isPlayable(vid.fileName)) ? (
-                    <video
-                      src={url}
-                      controls
-                      preload="metadata"
-                      className="w-full"
-                      style={{ maxHeight: 240, background: '#000' }}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center py-8" style={{ background: '#111' }}>
-                      <Film size={32} style={{ color: '#555' }} />
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between px-3 py-2.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Film size={13} style={{ color: 'var(--text-s)', flexShrink: 0 }} />
-                      <span className="text-xs truncate font-mono" style={{ color: 'var(--text-m)' }}>{vid.videoUrl ?? vid.fileName}</span>
-                    </div>
-                    <button
-                      title="Arşivle"
-                      onClick={() => archiveMutation.mutate(vid.id)}
-                      disabled={archiveMutation.isPending}
-                      className="ml-3 flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
     </div>
   )
 }

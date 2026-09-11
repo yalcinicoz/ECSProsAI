@@ -46,7 +46,9 @@ public sealed record UrunDetayVm(
     IReadOnlyDictionary<int, int>? PuanDagilimi = null, // İP-2.1: yıldız tooltip'i (5→adet ... 1→adet)
     string? KampanyaAdi = null,               // F3: ürün için etkin kampanya adı/rozeti (varsa)
     decimal? KampanyaFiyat = null,            // F3: ürün-bazlı kampanyalı fiyat (null = sepette/yok)
-    string? KampanyaRenk = null)              // 2026-08-03: kazanan kampanyanın palet rengi (hex; null = varsayılan)
+    string? KampanyaRenk = null,              // 2026-08-03: kazanan kampanyanın palet rengi (hex; null = varsayılan)
+    string? MetaBaslik = null,                // 2026-09-11 kanal bazlı SEO: <title> (kanal meta ?? ürün meta ?? ad)
+    string? MetaAciklama = null)              // 2026-09-11: meta description (kanal ?? ürün ?? kısa açıklama)
 {
     public int IndirimYuzdesi =>
         EskiFiyat is { } eski && Fiyat is { } yeni && eski > yeni

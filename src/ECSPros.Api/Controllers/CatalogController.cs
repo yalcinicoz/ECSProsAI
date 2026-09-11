@@ -103,6 +103,26 @@ public class CatalogController : ControllerBase
         return Ok(new { success = true, data = new { refreshed = yapildi, refreshedAt = await refresher.LastRefreshAsync(ct) } });
     }
 
+    /// <summary>Kanal bazlı SEO (2026-09-11): kanal başına renk URL'leri (channel_variants.Slug) + meta başlık/açıklama (channel_products).</summary>
+    [HttpGet("products/{id:guid}/channel-seo")]
+    public async Task<IActionResult> GetProductChannelSeo(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Api.Handlers.GetProductChannelSeoQuery(id), ct);
+        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    [HttpPut("products/{id:guid}/channel-seo/{firmPlatformId:guid}")]
+    [RequirePermission(Permissions.CatalogProductsManage)]
+    public async Task<IActionResult> SaveProductChannelSeo(Guid id, Guid firmPlatformId, [FromBody] SaveProductChannelSeoRequest req, CancellationToken ct)
+    {
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
+        var result = await _mediator.Send(new ECSPros.Api.Handlers.SaveProductChannelSeoCommand(id, firmPlatformId, req.MetaTitleI18n, req.MetaDescriptionI18n,
+            (req.Colors ?? new()).Select(c => new ECSPros.Api.Handlers.ProductChannelSeoColorInput(c.ColorValueId, c.Slug)).ToList(), userId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
     [HttpPost("products/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
     public async Task<IActionResult> ExportProducts([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
@@ -790,3 +810,6 @@ public record UpdateSeoRequest(
     Dictionary<string, string>? MetaDescriptionI18n,
     Dictionary<string, string>? MetaKeywordsI18n);
 
+
+public record SaveProductChannelSeoColorRequest(Guid? ColorValueId, string? Slug);
+public record SaveProductChannelSeoRequest(Dictionary<string, string>? MetaTitleI18n, Dictionary<string, string>? MetaDescriptionI18n, List<SaveProductChannelSeoColorRequest>? Colors);
