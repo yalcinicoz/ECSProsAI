@@ -89,8 +89,16 @@ function MultiSearchSelect({ options, value, onChange, disabled, placeholder }: 
   const ref = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   // Açılır liste PORTAL ile body'de ve sabit konumlu: akordeon kartı overflow-hidden olduğundan yerinde çizilen liste kesiliyordu (2026-09-11)
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null)
-  const konumla = () => { const r = ref.current?.getBoundingClientRect(); if (r) setPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 240) }) }
+  // Alt boşluk liste yüksekliğine (yaklaşık 330px) yetmiyorsa ve üstte yer varsa YUKARI açılır (2026-09-11 kullanıcı isteği)
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null)
+  const konumla = () => {
+    const r = ref.current?.getBoundingClientRect(); if (!r) return
+    const gerekli = 330, altBosluk = window.innerHeight - r.bottom, ustBosluk = r.top
+    const yukari = altBosluk < gerekli && ustBosluk > altBosluk
+    setPos(yukari
+      ? { bottom: window.innerHeight - r.top + 4, left: r.left, width: Math.max(r.width, 240) }
+      : { top: r.bottom + 4, left: r.left, width: Math.max(r.width, 240) })
+  }
   useEffect(() => {
     if (!open) return
     konumla()
@@ -113,7 +121,7 @@ function MultiSearchSelect({ options, value, onChange, disabled, placeholder }: 
         <span className="truncate">{label}</span><span className="text-xs">▾</span>
       </button>
       {open && pos && createPortal(
-        <div ref={panelRef} role="listbox" aria-multiselectable className="fixed z-[1000] rounded-xl shadow-xl" style={{ top: pos.top, left: pos.left, width: pos.width, background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <div ref={panelRef} role="listbox" aria-multiselectable className="fixed z-[1000] rounded-xl shadow-xl" style={{ top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <div className="p-2" style={{ borderBottom: '1px solid var(--border)' }}>
             <input autoFocus className="inp text-sm !py-1.5 w-full" placeholder="Değer ara…" value={q} onChange={e => setQ(e.target.value)} />
             <div className="flex gap-3 mt-1 text-xs">
