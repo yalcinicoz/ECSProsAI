@@ -202,7 +202,7 @@ export function ProductsPage() {
         grid={grid}
         columns={columns}
         extraFilters={extraFilters}
-        advancedFilters={{ fields: advancedFields, note: statsNote }}
+        advancedFilters={{ fields: advancedFields, note: statsNote, layout: 'card', title: 'Filtrele' }}
         search={{ placeholder: 'Ürün adı, kod, tedarikçi ürün kodu…' }}
         rows={items}
         totalCount={totalCount}

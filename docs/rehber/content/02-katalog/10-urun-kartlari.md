@@ -37,7 +37,7 @@ bu ekranı kullanır. Listedeki her satır bir **ürün**dür; ürünün satıla
 |---|---|
 | `Tümü` / `Satışta` | `Satışta` seçilince yalnızca satışa açık ürünler listelenir; `Tümü` satışa kapalı ürünleri de gösterir. Seçim değişince sayfa 1'e döner. |
 | Arama kutusu ("Ürün adı, kod…") | Ürün kodunda ve Türkçe ürün adında geçen metni arar (büyük/küçük harf duyarsız). Yazmayı bıraktıktan kısa bir süre sonra otomatik süzer; sayfa 1'e döner. |
-| **Gelişmiş filtre ▾** | Açılır/kapanır kapsamlı filtre paneli (açık/kapalı durumu hatırlanır). Alanlar: Ürün kodu, Ürün adı, Tedarikçi ürün kodu, Varyant barkodu (tam eşleşme ya da içerir), Ürün grubu, Kaynak, Satışta, **Görsel durumu** (Var / Kısmi / Yok), **Stok adedi** (fiziksel; `≥`, `≤`, `aralık` ile en az / en çok), Satılabilir stok, Liste fiyatı, Varyant sayısı, Görsel sayısı, Oluşturma tarihi, Son görsel tarihi. Seçilen filtreler çip olarak görünür; "Tümünü temizle" hepsini kaldırır. |
+| **Filtrele kartı** (listenin üstünde, başlığına tıklayınca genişler; açık/kapalı durumu hatırlanır) | Kapsamlı filtre paneli. Alanlar: Ürün kodu, Ürün adı, Tedarikçi ürün kodu, Varyant barkodu (tam eşleşme ya da içerir), Ürün grubu, Kaynak, Satışta, **Görsel durumu** (Var / Kısmi / Yok), **Stok adedi** (fiziksel; `≥`, `≤`, `aralık` ile en az / en çok), Satılabilir stok, Liste fiyatı, Varyant sayısı, Görsel sayısı, Oluşturma tarihi, Son görsel tarihi. Seçilen filtreler çip olarak görünür; "Tümünü temizle" hepsini kaldırır. |
 | Sütun başlığı filtreleri | Her sütun başlığındaki huni ikonu o alana özgü filtre açar (Görsel ve Stok kolonlarında da). |
 
 - **Sıralama:** Liste ürün koduna göre sıralıdır; sütun başlıklarına tıklayarak sıralama değiştirilemez.

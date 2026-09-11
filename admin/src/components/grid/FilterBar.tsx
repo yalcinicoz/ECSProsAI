@@ -18,7 +18,7 @@ interface Props {
   /** sütun başlığında ikonla sunulan alanlar (çubukta tekrar gösterilmez) */
   headerFieldKeys?: Set<string>
   /** Açılır/kapanır "Gelişmiş filtre" paneli (2026-09-11, ürünler): alanlar formda dikey/ızgara dizilir; açık/kapalı durumu localStorage'da */
-  advanced?: boolean | { fields: GridFilterField[]; storageKey: string; note?: ReactNode }
+  advanced?: boolean | { fields: GridFilterField[]; storageKey: string; note?: ReactNode; layout?: 'button' | 'card'; title?: string }
 }
 
 export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, advanced: advancedOption }: Props) {
@@ -33,6 +33,34 @@ export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, 
   const [advOpen, setAdvOpen] = useState<boolean>(() => { try { return advanced ? localStorage.getItem(advanced.storageKey) === '1' : false } catch { return false } })
   const toggleAdv = () => setAdvOpen(o => { const n = !o; try { if (advanced) localStorage.setItem(advanced.storageKey, n ? '1' : '0') } catch { /* yok say */ } return n })
   const activeAdv = (advanced?.fields ?? []).filter(f => state.filters.some(x => x.field === f.key)).length
+  const cardLayout = advanced?.layout === 'card'
+  // 2026-09-11 (kullanıcı): ürünler sayfasında filtre bir düğmeyle değil, listenin ÜSTÜNDE başlığına tıklayınca genişleyen
+  // tam genişlikte bir kartla açılır (eski panel /urun/urun-yonetim "Filtrele" kartı). Başlık satırı her zaman görünür.
+  const advancedCard = advanced && cardLayout ? (
+    <div className="card p-0 overflow-hidden">
+      <button type="button" onClick={toggleAdv} aria-expanded={advOpen} aria-controls="grid-advanced-filters"
+        className="w-full flex items-center justify-between px-4 py-2.5 text-left"
+        style={{ borderBottom: advOpen ? '1px solid var(--border)' : undefined, background: 'var(--surface2)' }}>
+        <span className="inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text)' }}>
+          <SlidersHorizontal size={15} /> {advanced.title ?? 'Filtrele'}
+          {activeAdv > 0 && <span className="text-xs px-1.5 rounded-full font-normal" style={{ background: 'var(--brand)', color: '#fff' }}>{activeAdv}</span>}
+        </span>
+        <ChevronDown size={16} className={cn('transition-transform', advOpen && 'rotate-180')} style={{ color: 'var(--text-s)' }} />
+      </button>
+      {advOpen && (
+        <div id="grid-advanced-filters" className="p-3">
+          <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+            {advanced.fields.map(f => <FieldRow key={f.key} field={f} grid={grid} stacked />)}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+            <div className="text-xs" style={{ color: 'var(--text-s)' }}>{advanced.note}</div>
+            <button type="button" onClick={() => grid.clearFilters({ keepSearch: true })} disabled={state.filters.length === 0}
+              className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40" style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Tümünü temizle</button>
+          </div>
+        </div>
+      )}
+    </div>
+  ) : null
   const [otherOpen, setOtherOpen] = useState(false)
   const otherRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -51,6 +79,7 @@ export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, 
   if (bp === 'mobile') {
     return (
       <div className="space-y-2">
+        {advancedCard}
         <div className="flex items-center gap-2">
           {leading}
           {search !== false && <SearchBox grid={grid} placeholder={search?.placeholder} className="flex-1 min-w-0" />}
@@ -79,11 +108,12 @@ export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, 
 
   return (
     <div className="space-y-2">
+      {advancedCard}
       <div className="flex flex-wrap items-center gap-2">
         {leading}
         {search !== false && <SearchBox grid={grid} placeholder={search?.placeholder} />}
         {quick.map(f => <FieldRow key={f.key} field={f} grid={grid} />)}
-        {advanced && advanced.fields.length > 0 && (
+        {advanced && !cardLayout && advanced.fields.length > 0 && (
           <button type="button" onClick={toggleAdv} aria-expanded={advOpen} aria-controls="grid-advanced-filters"
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm"
             style={{ border: '1px solid var(--border)', color: 'var(--text)', background: advOpen ? 'var(--surface2)' : undefined }}>
@@ -107,7 +137,7 @@ export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, 
           </div>
         )}
       </div>
-      {advanced && advOpen && (
+      {advanced && !cardLayout && advOpen && (
         <div id="grid-advanced-filters" className="rounded-xl p-3" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
             {advanced.fields.map(f => <FieldRow key={f.key} field={f} grid={grid} stacked />)}

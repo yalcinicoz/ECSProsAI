@@ -50,7 +50,7 @@ export interface DataGridProps<T> {
   /** kolona bağlı olmayan ek filtre alanları (örn. 'paid' boolean) */
   extraFilters?: GridFilterField[]
   /** Açılır/kapanır gelişmiş filtre paneli (FilterBar.advanced); alanlar çip ve mobil listesine de girer */
-  advancedFilters?: boolean | { fields: GridFilterField[]; note?: ReactNode }
+  advancedFilters?: boolean | { fields: GridFilterField[]; note?: ReactNode; layout?: 'button' | 'card'; title?: string }
   /** filtre satırının en solunda (örn. küçük seçici) */
   filterLeading?: ReactNode
   /** Excel export (plan §2.8): verilirse "Excel'e aktar ▾" düğmesi Kolonlar'ın solunda */
@@ -314,7 +314,7 @@ export function DataGrid<T>({
             {viewsEnabled && <ViewsMenu views={viewsApi} />}
             {toolbarLeft}
             {hasFilterBar && <FilterBar grid={grid} fields={filterFields} search={search} bp={bp} leading={filterLeading} headerFieldKeys={headerFieldKeys}
-              advanced={typeof advancedFilters === 'object' ? { fields: advancedFilters.fields, storageKey: `grid:${gridId}:adv`, note: advancedFilters.note } : advancedFilters} />}
+              advanced={typeof advancedFilters === 'object' ? { fields: advancedFilters.fields, storageKey: `grid:${gridId}:adv`, note: advancedFilters.note, layout: advancedFilters.layout, title: advancedFilters.title } : advancedFilters} />}
           </div>
           <div className="flex items-center gap-2 ml-auto">
             {toolbarRight}
