@@ -23,7 +23,6 @@ koşullar sağlanınca kendiliğinden uygulanır.
 ## Liste ve filtreler
 | Sütun | Anlamı |
 |---|---|
-| KOD | Kampanyanın benzersiz kodu (oluşturulduktan sonra değiştirilemez). |
 | AD | Kampanya adı (Türkçe). |
 | TİP | Seçilen kampanya tipinin adı (bkz. [Kampanya Tipleri](/rehber/pazarlama/kampanya-tipleri/)). |
 | KAPSAM | Ürün doldurma tipi: `Tüm ürünler`, `Manuel`, `Filtre`, `Karma`. |

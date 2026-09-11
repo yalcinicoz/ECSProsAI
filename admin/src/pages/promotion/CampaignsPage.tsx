@@ -43,9 +43,9 @@ export function CampaignsPage() {
   const switchTab = (key: 'active' | 'all') => grid.mutate(n => { if (key === 'all') n.delete('tab'); else n.set('tab', key) })
 
   const columns: GridColumn<Campaign>[] = [
-    { key: 'code', header: 'KOD', filters: [{ field: 'badgeLabel', label: 'Rozet', type: 'text' }], frozen: true, lockVisible: true, sortable: true, minWidth: 120,
-      cell: c => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{c.code}</code> },
-    { key: 'name', header: 'AD', priority: 1, exportable: true, sortable: true, filter: { type: 'text', label: 'Ad' }, cell: c => <span className="text-sm" style={{ color: 'var(--text)' }}>{tr(c.nameI18n)}</span> },
+    // 2026-09-11 (kullanıcı): kampanya KODU listede gösterilmez (kod sistem üretimi, iç kimlik) — AD ilk/sabit kolon.
+    { key: 'name', header: 'AD', frozen: true, lockVisible: true, priority: 1, exportable: true, sortable: true, minWidth: 180, filter: { type: 'text', label: 'Ad' },
+      filters: [{ field: 'badgeLabel', label: 'Rozet', type: 'text' }], cell: c => <span className="text-sm" style={{ color: 'var(--text)' }}>{tr(c.nameI18n)}</span> },
     { key: 'campaignTypeCode', header: 'TİP', sortable: true, priority: 2, filter: { type: 'enum', multiple: true, label: 'Tip', options: types.map(t => ({ value: t.code, label: tr(t.nameI18n) })) }, cell: c => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{typeName(c.campaignTypeId, c.campaignTypeCode)}</span> },
     { key: 'fillType', header: 'KAPSAM', sortable: true, filters: [{ field: 'fillType', label: 'Kapsam', type: 'enum', multiple: true, options: Object.entries(FILL_LABEL).map(([value, label]) => ({ value, label })) }], priority: 3, cell: c => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{FILL_LABEL[c.fillType] ?? c.fillType}</span> },
     { key: 'startsAt', header: 'TARİH', filters: [{ field: 'endsAt', label: 'Bitiş', type: 'date' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Başlangıç', quick: true },
@@ -75,7 +75,7 @@ export function CampaignsPage() {
         views
         grid={grid}
         columns={columns}
-        search={{ placeholder: 'Kampanya kodu veya rozet etiketi…' }}
+        search={{ placeholder: 'Kampanya adı veya rozet etiketi…' }}
         rows={campaigns}
         totalCount={totalCount}
         loading={isLoading}
@@ -87,7 +87,7 @@ export function CampaignsPage() {
         export={{ endpoint: '/promotion/campaigns/export', named: () => ({ activeOnly: String(tab === 'active') }), fallbackFileName: 'kampanyalar.xlsx' }}
         compact={{
           title: c => tr(c.nameI18n),
-          subtitle: c => `${c.code} · ${typeName(c.campaignTypeId, c.campaignTypeCode)}`,
+          subtitle: c => typeName(c.campaignTypeId, c.campaignTypeCode),
           right: c => new Date(c.startsAt).toLocaleDateString('tr-TR'),
           badge: c => <Badge variant={c.isActive ? 'success' : 'neutral'}>{c.isActive ? 'Aktif' : 'Pasif'}</Badge>,
         }}
