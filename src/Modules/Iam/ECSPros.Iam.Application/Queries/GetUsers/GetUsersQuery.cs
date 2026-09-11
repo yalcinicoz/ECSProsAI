@@ -28,4 +28,5 @@ public record UserListDto(
     string? Phone,
     bool IsActive,
     DateTime? LastLoginAt,
-    List<string> Roles);
+    List<string> Roles,
+    bool IsSuperAdmin);   // Rol = süper admin bayrağı (K5): true → "Süper Admin", false → "Çalışan"

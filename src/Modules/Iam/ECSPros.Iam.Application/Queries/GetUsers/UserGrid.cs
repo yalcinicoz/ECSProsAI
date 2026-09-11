@@ -22,6 +22,7 @@ public static class UserGrid
         .Text("department", u => u.Department)
         .Text("jobTitle", u => u.JobTitle)
         .Bool("isActive", u => u.IsActive)
+        .Bool("isSuperAdmin", u => u.IsSuperAdmin)   // ROL kolonu: Süper Admin / Çalışan
         .Date("lastLoginAt", u => u.LastLoginAt)
         .Date("createdAt", u => u.CreatedAt)
         .Sort("username", u => u.Username)
@@ -35,6 +36,7 @@ public static class UserGrid
         .Sort("lastLoginAt", u => u.LastLoginAt)
         .Sort("createdAt", u => u.CreatedAt)
         .Sort("isActive", u => u.IsActive)
+        .Sort("isSuperAdmin", u => u.IsSuperAdmin)
         .DefaultSort(u => u.Username, desc: false)
         .TieBreaker(u => u.Id);
 
@@ -73,7 +75,7 @@ public record UserListFilters(string? Search = null, bool ActiveOnly = false);
 
 public record UserExportRow(
     string Username, string FirstName, string LastName, string Email, string? Phone, string Department, string? JobTitle,
-    bool IsActive, DateTime? LastLoginAt, DateTime CreatedAt, string Roles);
+    bool IsActive, DateTime? LastLoginAt, DateTime CreatedAt, string Roles, bool IsSuperAdmin);
 
 public record ExportUsersQuery(UserListFilters Filters, GridRequest Grid, int MaxRows) : IRequest<Result<GridExportSource<UserExportRow>>>;
 
@@ -87,7 +89,7 @@ public class ExportUsersQueryHandler(IIamDbContext db) : IRequestHandler<ExportU
             return Result.Failure<GridExportSource<UserExportRow>>($"Sonuç {count:N0} satır; dışa aktarma sınırı {r.MaxRows:N0}. Filtreyi daraltın.");
         var rows = UserGrid.Schema.ApplySort(q, r.Grid).Select(u => new UserExportRow(
             u.Username, u.FirstName, u.LastName, u.Email, u.Phone, u.Department, u.JobTitle, u.IsActive, u.LastLoginAt, u.CreatedAt,
-            string.Join(", ", u.UserRoles.Where(x => !x.IsDeleted).Select(x => x.Role.Code))));
+            string.Join(", ", u.UserRoles.Where(x => !x.IsDeleted).Select(x => x.Role.Code)), u.IsSuperAdmin));
         return Result.Success(new GridExportSource<UserExportRow>(count, rows));
     }
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
+import { useAuthStore } from '@/store/auth'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -19,8 +20,17 @@ interface User {
   phone?: string | null
   isActive: boolean
   lastLoginAt?: string
+  /** Yetki grubu kodları (iam_roles) — yönetimi /settings/users/:id/permissions ekranında. */
   roles: string[]
+  /** Rol (K5 sistem bayrağı): true → Süper Admin, false → Çalışan. Yetki gruplarından bağımsızdır. */
+  isSuperAdmin: boolean
 }
+
+// Rol yalnız iki değer: Süper Admin (bayrak; tüm yetkiler, tüm kanallar) / Çalışan (yetkileri gruplardan alır).
+const ROL_SECENEKLERI = [
+  { value: 'calisan',     label: 'Çalışan' },
+  { value: 'super_admin', label: 'Süper Admin' },
+]
 
 interface Role { id: string; code: string; nameI18n: Record<string, string>; isSystem: boolean; isActive: boolean }
 interface PagedUsers { items: User[]; totalCount: number; page: number; pageSize: number; totalPages: number }
@@ -39,25 +49,26 @@ function UserModal({ user, onClose }: { user: User | 'new'; onClose: () => void 
   const [jobTitle, setJobTitle] = useState(u?.jobTitle ?? '')
   const [phone, setPhone] = useState(u?.phone ?? '')
   const [isActive, setIsActive] = useState(u?.isActive ?? true)
-  const [roleId, setRoleId] = useState('')
+  const [superAdmin, setSuperAdmin] = useState(u?.isSuperAdmin ?? false)
   const [error, setError] = useState('')
   const [bilgi, setBilgi] = useState('')
-
-  const { data: roles } = useQuery<Role[]>({
-    queryKey: ['roles-select'],
-    queryFn: async () => (await api.get('/iam/roles')).data.data,
-  })
+  const navigate = useNavigate()
+  // Süper adminliği yalnız süper admin verebilir/kaldırabilir (sunucu kuralı; K5) — seçici diğerlerine kilitli.
+  const benSuperAdmin = useAuthStore(s => s.user?.isSuperAdmin === true)
+  const kendim = useAuthStore(s => s.user?.id) === u?.id
 
   const save = useMutation({
     mutationFn: async () => {
       setError(''); setBilgi('')
+      let id = u?.id
       if (isNew) {
-        await api.post('/iam/users', {
+        const { data } = await api.post('/iam/users', {
           username: username.trim(), email: email.trim(), password,
           firstName: firstName.trim(), lastName: lastName.trim(),
           department: department.trim(), jobTitle: jobTitle.trim() || null,
           phone: phone.trim() || null, mustChangePassword: true,
         })
+        id = data.data.id as string
       } else {
         await api.put(`/iam/users/${u!.id}`, {
           firstName: firstName.trim(), lastName: lastName.trim(),
@@ -65,6 +76,9 @@ function UserModal({ user, onClose }: { user: User | 'new'; onClose: () => void 
           phone: phone.trim() || null, isActive,
         })
       }
+      // Rol = süper admin bayrağı; yalnız değiştiyse ayrı uca gider (kendi denetim kaydı vardır).
+      const eski = u?.isSuperAdmin ?? false
+      if (superAdmin !== eski) await api.put(`/iam/users/${id}/super-admin`, { deger: superAdmin })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['iam-users'] })
@@ -83,18 +97,6 @@ function UserModal({ user, onClose }: { user: User | 'new'; onClose: () => void 
     },
     onSuccess: () => setBilgi('Şifre sıfırlandı.'),
     onError: (e: unknown) => { if ((e as Error).message !== 'iptal') setError(errText(e)) },
-  })
-
-  const rolAta = useMutation({
-    mutationFn: async () => {
-      setError(''); setBilgi('')
-      await api.post(`/iam/users/${u!.id}/roles`, { roleId })
-    },
-    onSuccess: () => {
-      setBilgi('Rol atandı.')
-      queryClient.invalidateQueries({ queryKey: ['iam-users'] })
-    },
-    onError: (e: unknown) => setError(errText(e)),
   })
 
   const valid = isNew
@@ -146,26 +148,38 @@ function UserModal({ user, onClose }: { user: User | 'new'; onClose: () => void 
           <label className="flbl">Telefon</label>
           <input className="inp" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="05xx xxx xx xx" />
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="flbl">Rol</label>
+            <select className="inp" value={superAdmin ? 'super_admin' : 'calisan'} disabled={!benSuperAdmin || kendim}
+              onChange={e => setSuperAdmin(e.target.value === 'super_admin')}>
+              {ROL_SECENEKLERI.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+              {kendim ? 'Kendi rolünüzü değiştiremezsiniz.'
+                : !benSuperAdmin ? 'Rolü yalnız süper admin değiştirebilir.'
+                : superAdmin ? 'Tüm yetkiler ve tüm kanallar; yetki grupları uygulanmaz.'
+                : 'Yetkilerini yetki gruplarından alır.'}
+            </p>
+          </div>
+          {!isNew && (
+            <div>
+              <label className="flbl">Yetki Grupları</label>
+              <p className="text-sm py-2" style={{ color: 'var(--text)' }}>{u!.roles.join(', ') || '—'}</p>
+              <button type="button" className="text-xs underline" style={{ color: 'var(--brand)' }}
+                onClick={() => { onClose(); navigate(`/settings/users/${u!.id}/permissions`) }}>Yetkileri düzenle →</button>
+            </div>
+          )}
+        </div>
         {!isNew && (
-          <>
+          <div className="flex items-center justify-between gap-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
             <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--text)' }}>
               <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} />
               Aktif
             </label>
-            <div className="flex items-end gap-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
-              <div className="flex-1">
-                <label className="flbl">Rol Ata <span className="text-xs" style={{ color: 'var(--text-s)' }}>(mevcut: {u!.roles.join(', ') || '—'})</span></label>
-                <select className="inp" value={roleId} onChange={e => setRoleId(e.target.value)}>
-                  <option value="">Seçin…</option>
-                  {(roles ?? []).map(r => <option key={r.id} value={r.id}>{i18nAd(r.nameI18n)}</option>)}
-                </select>
-              </div>
-              <Button variant="secondary" size="sm" disabled={!roleId} loading={rolAta.isPending}
-                onClick={() => rolAta.mutate()}>Ata</Button>
-              <Button variant="secondary" size="sm" loading={sifreSifirla.isPending}
-                onClick={() => sifreSifirla.mutate()}>Şifre Sıfırla</Button>
-            </div>
-          </>
+            <Button variant="secondary" size="sm" loading={sifreSifirla.isPending}
+              onClick={() => sifreSifirla.mutate()}>Şifre Sıfırla</Button>
+          </div>
         )}
         {error && <p className="text-sm text-red-500">{error}</p>}
         {bilgi && <p className="text-sm text-green-600">{bilgi}</p>}
@@ -207,7 +221,9 @@ export function UsersPage() {
     { key: 'phone', header: 'TELEFON', priority: 3, sortable: true, filter: { type: 'text', label: 'Telefon', ops: ['contains', 'startswith'] }, cell: u => u.phone || '—' },
     { key: 'department', header: 'DEPARTMAN', priority: 3, defaultVisible: false, sortable: true, filter: { type: 'text', label: 'Departman' }, cell: u => u.department || '—' },
     { key: 'jobTitle', header: 'ÜNVAN', priority: 3, defaultVisible: false, sortable: true, filter: { type: 'text', label: 'Ünvan' }, cell: u => u.jobTitle || '—' },
-    { key: 'roles', header: 'ROLLER', priority: 2, filter: { type: 'enum', multiple: true, label: 'Rol', field: 'role', options: roleOptions },
+    { key: 'isSuperAdmin', header: 'ROL', priority: 2, sortable: true, filter: { type: 'boolean', label: 'Süper admin' },
+      cell: u => u.isSuperAdmin ? <Badge variant="info">Süper Admin</Badge> : <span className="text-sm">Çalışan</span> },
+    { key: 'roles', header: 'YETKİ GRUPLARI', priority: 3, filter: { type: 'enum', multiple: true, label: 'Yetki grubu', field: 'role', options: roleOptions },
       cell: u => (u.roles.length ? u.roles.join(', ') : '—') },
     { key: 'lastLoginAt', header: 'SON GİRİŞ', priority: 3, sortable: true, filter: { type: 'date', label: 'Son giriş' }, cell: u => tarihSaat(u.lastLoginAt) },
     { key: 'isActive', header: 'DURUM', priority: 1, sortable: true, filter: { type: 'boolean', label: 'Aktif', quick: true },
