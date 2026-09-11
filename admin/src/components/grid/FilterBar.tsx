@@ -18,7 +18,7 @@ interface Props {
   /** sütun başlığında ikonla sunulan alanlar (çubukta tekrar gösterilmez) */
   headerFieldKeys?: Set<string>
   /** Açılır/kapanır "Gelişmiş filtre" paneli (2026-09-11, ürünler): alanlar formda dikey/ızgara dizilir; açık/kapalı durumu localStorage'da */
-  advanced?: boolean | { fields: GridFilterField[]; storageKey: string; note?: ReactNode; layout?: 'button' | 'card'; title?: string }
+  advanced?: boolean | { fields: GridFilterField[]; storageKey: string; note?: ReactNode; layout?: 'button' | 'card' | 'external'; title?: string }
 }
 
 export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, advanced: advancedOption }: Props) {
@@ -34,6 +34,7 @@ export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, 
   const toggleAdv = () => setAdvOpen(o => { const n = !o; try { if (advanced) localStorage.setItem(advanced.storageKey, n ? '1' : '0') } catch { /* yok say */ } return n })
   const activeAdv = (advanced?.fields ?? []).filter(f => state.filters.some(x => x.field === f.key)).length
   const cardLayout = advanced?.layout === 'card'
+  const externalLayout = advanced?.layout === 'external'   // akordeon sayfada (FilterAccordion) — çubukta hiçbir şey çizilmez
   // 2026-09-11 (kullanıcı): ürünler sayfasında filtre bir düğmeyle değil, listenin ÜSTÜNDE başlığına tıklayınca genişleyen
   // tam genişlikte bir kartla açılır (eski panel /urun/urun-yonetim "Filtrele" kartı). Başlık satırı her zaman görünür.
   const advancedCard = advanced && cardLayout ? (
@@ -113,7 +114,7 @@ export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, 
         {leading}
         {search !== false && <SearchBox grid={grid} placeholder={search?.placeholder} />}
         {quick.map(f => <FieldRow key={f.key} field={f} grid={grid} />)}
-        {advanced && !cardLayout && advanced.fields.length > 0 && (
+        {advanced && !cardLayout && !externalLayout && advanced.fields.length > 0 && (
           <button type="button" onClick={toggleAdv} aria-expanded={advOpen} aria-controls="grid-advanced-filters"
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm"
             style={{ border: '1px solid var(--border)', color: 'var(--text)', background: advOpen ? 'var(--surface2)' : undefined }}>
@@ -137,7 +138,7 @@ export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, 
           </div>
         )}
       </div>
-      {advanced && !cardLayout && advOpen && (
+      {advanced && !cardLayout && !externalLayout && advOpen && (
         <div id="grid-advanced-filters" className="rounded-xl p-3" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
             {advanced.fields.map(f => <FieldRow key={f.key} field={f} grid={grid} stacked />)}

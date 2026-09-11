@@ -7,7 +7,7 @@ import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { errText } from '@/components/ui/DataTable.utils'
-import { DataGrid, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
+import { DataGrid, FilterAccordion, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
 
 // Ürünler — DataGrid göçü (docs/datagrid-standardi-plani.md F4). Tümü/Satışta anahtarı `?tab=` ile URL'de (activeOnly named parametresi
 // korunur); filtre/arama/sıralama/sayfa URL'de, kolon tercihleri localStorage'da. Sunucu beyaz listesi: ProductGrid.Schema.
@@ -196,13 +196,16 @@ export function ProductsPage() {
         </div>
       </div>
 
+      {/* 2026-09-11 (kullanıcı): filtre, eski panel /urun/urun-yonetim gibi listenin ÜSTÜNDE tam satır akordeon — başlangıçta kapalı */}
+      <FilterAccordion grid={grid} fields={advancedFields} storageKey="grid:products:adv" title="Filtrele" note={statsNote} />
+
       <DataGrid<ProductListItem>
         gridId="products"
         views
         grid={grid}
         columns={columns}
         extraFilters={extraFilters}
-        advancedFilters={{ fields: advancedFields, note: statsNote, layout: 'card', title: 'Filtrele' }}
+        advancedFilters={{ fields: advancedFields, layout: 'external' }}
         search={{ placeholder: 'Ürün adı, kod, tedarikçi ürün kodu…' }}
         rows={items}
         totalCount={totalCount}

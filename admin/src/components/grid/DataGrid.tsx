@@ -50,7 +50,7 @@ export interface DataGridProps<T> {
   /** kolona bağlı olmayan ek filtre alanları (örn. 'paid' boolean) */
   extraFilters?: GridFilterField[]
   /** Açılır/kapanır gelişmiş filtre paneli (FilterBar.advanced); alanlar çip ve mobil listesine de girer */
-  advancedFilters?: boolean | { fields: GridFilterField[]; note?: ReactNode; layout?: 'button' | 'card'; title?: string }
+  advancedFilters?: boolean | { fields: GridFilterField[]; note?: ReactNode; layout?: 'button' | 'card' | 'external'; title?: string }
   /** filtre satırının en solunda (örn. küçük seçici) */
   filterLeading?: ReactNode
   /** Excel export (plan §2.8): verilirse "Excel'e aktar ▾" düğmesi Kolonlar'ın solunda */
