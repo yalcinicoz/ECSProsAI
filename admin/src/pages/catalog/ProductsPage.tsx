@@ -271,18 +271,19 @@ export function ProductsPage() {
     staleTime: 5 * 60 * 1000,
   })
   const attrsValue = grid.state.filters.find(f => f.field === 'attrs')?.value ?? ''
-  const attrsChip = (v: string) => {
+  // Çipler: özellik başına BİR çip "Özellikler: Marka" (değerler gösterilmez); ✕ o özelliğin TÜM seçili değerlerini kaldırır
+  const attrsChips = (v: string) => {
     const m = attrsParse(v)
-    return 'Özellikler: ' + Object.entries(m).map(([t, vs]) => {
+    return Object.keys(m).map(t => {
       const tt = attrTypes.find(x => x.id === t)
-      const names = vs.map(id => { const vv = tt?.values.find(x => x.id === id); return vv ? getName({ nameI18n: vv.nameI18n, code: id }) : id.slice(0, 6) })
-      return `${tt ? getName(tt) : t.slice(0, 6)} = ${names.join(' / ')}`
-    }).join(' · ')
+      const kalan = { ...m }; delete kalan[t]
+      return { key: t, text: `Özellikler: ${tt ? getName(tt) : t.slice(0, 6)}`, valueAfterRemove: attrsStringify(kalan) }
+    })
   }
 
 
   // Çip/mobil liste için özellik filtresi alanı (akordeonda özel bileşenle çizilir; FieldRow listesine GİRMEZ)
-  const attrsField: GridFilterField = useMemo(() => ({ key: 'attrs', label: 'Özellikler', type: 'text', chipText: attrsChip }), [attrTypes]) // eslint-disable-line react-hooks/exhaustive-deps
+  const attrsField: GridFilterField = useMemo(() => ({ key: 'attrs', label: 'Özellikler', type: 'text', chips: attrsChips }), [attrTypes]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Görsel/stok istatistiklerinin tazeliği + "Şimdi yenile"
   const queryClient = useQueryClient()
@@ -371,6 +372,7 @@ export function ProductsPage() {
         columns={columns}
         extraFilters={extraFilters}
         advancedFilters={{ fields: [...advancedFields, attrsField], layout: 'external' }}
+        chipsMode="label"
         search={{ placeholder: 'Ürün adı, kod, tedarikçi ürün kodu…' }}
         rows={items}
         totalCount={totalCount}

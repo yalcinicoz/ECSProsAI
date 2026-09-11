@@ -20,6 +20,8 @@ export interface GridFilterDef {
   searchable?: boolean
   /** Aktif filtre çipinin metni (özel biçimli değerler için, örn. ürün özellik filtresi) */
   chipText?: (value: string) => string
+  /** Tek filtre değerinden BİRDEN ÇOK çip (örn. özellik başına bir çip); kaldırma sonrası yeni değer boşsa filtre silinir */
+  chips?: (value: string) => { key: string; text: string; valueAfterRemove: string }[]
   /** Hızlı filtre çubuğunda görünsün (aksi halde Gelişmiş panelde) */
   quick?: boolean
   /** text için izin verilen operatörler (varsayılan contains|eq|startswith) */
