@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Package } from 'lucide-react'
@@ -79,6 +79,55 @@ const attrsParse = (v: string): Record<string, string[]> => {
 }
 const attrsStringify = (m: Record<string, string[]>) => Object.entries(m).filter(([, vs]) => vs.length).map(([t, vs]) => `${t}:${vs.join(',')}`).join(';')
 
+// Aranabilir çoklu seçim (Değerler): arama kutusu + onay kutulu liste; dışarı tıklama/Esc kapatır (2026-09-11 kullanıcı isteği)
+function MultiSearchSelect({ options, value, onChange, disabled, placeholder }: {
+  options: { value: string; label: string }[]; value: string[]; onChange: (v: string[]) => void; disabled?: boolean; placeholder?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDoc); document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey) }
+  }, [open])
+  const sel = new Set(value)
+  const gorunen = options.filter(o => !q || o.label.toLocaleLowerCase('tr').includes(q.toLocaleLowerCase('tr')))
+  const toggle = (v: string) => { const n = new Set(sel); if (n.has(v)) n.delete(v); else n.add(v); onChange(Array.from(n)) }
+  const label = sel.size === 0 ? (placeholder ?? 'Seçin') : sel.size === 1 ? (options.find(o => sel.has(o.value))?.label ?? '1 seçili') : `${sel.size} değer seçili`
+  return (
+    <div className="relative" ref={ref}>
+      <button type="button" disabled={disabled} onClick={() => setOpen(o => !o)} aria-haspopup="listbox" aria-expanded={open}
+        className="inp text-sm !py-1.5 !px-2 !h-auto !inline-flex items-center justify-between w-full disabled:opacity-50"
+        style={{ color: sel.size ? 'var(--text)' : 'var(--text-s)' }}>
+        <span className="truncate">{label}</span><span className="text-xs">▾</span>
+      </button>
+      {open && (
+        <div role="listbox" aria-multiselectable className="absolute left-0 right-0 mt-1 rounded-xl shadow-lg z-40" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <div className="p-2" style={{ borderBottom: '1px solid var(--border)' }}>
+            <input autoFocus className="inp text-sm !py-1.5 w-full" placeholder="Değer ara…" value={q} onChange={e => setQ(e.target.value)} />
+            <div className="flex gap-3 mt-1 text-xs">
+              <button type="button" className="underline" style={{ color: 'var(--brand)' }} onClick={() => onChange(Array.from(new Set([...value, ...gorunen.map(o => o.value)])))}>Görünenleri seç</button>
+              <button type="button" className="underline" style={{ color: 'var(--text-s)' }} onClick={() => onChange([])}>Tümünü kaldır</button>
+            </div>
+          </div>
+          <div className="max-h-56 overflow-y-auto thin-scroll p-1">
+            {gorunen.map(o => (
+              <label key={o.value} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm cursor-pointer hover:bg-[var(--surface2)]" style={{ color: 'var(--text)' }}>
+                <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={sel.has(o.value)} onChange={() => toggle(o.value)} />
+                {o.label}
+              </label>
+            ))}
+            {gorunen.length === 0 && <div className="px-2 py-2 text-xs" style={{ color: 'var(--text-s)' }}>Eşleşen değer yok.</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AttributeFilter({ types, value, onChange }: { types: AttrType[]; value: string; onChange: (v: string) => void }) {
   const [typeId, setTypeId] = useState<string | null>(null)
   const [picked, setPicked] = useState<string[]>([])
@@ -103,18 +152,12 @@ function AttributeFilter({ types, value, onChange }: { types: AttrType[]; value:
           <SearchableSelect value={typeId} onChange={v => { setTypeId(v); setPicked([]) }} placeholder="Özellik seçin" clearable portal
             options={types.filter(t => t.isActive && t.values.length > 0).map(t => ({ value: t.id, label: getName(t) }))} /></div>
         <div>
-          <div className="flex items-center justify-between"><span className="flbl">Değerler</span>
-            <span className="flex gap-2 text-xs">
-              <button type="button" className="underline" style={{ color: 'var(--brand)' }} disabled={!tip} onClick={() => setPicked(degerler.map(v => v.id))}>Tümünü seç</button>
-              <button type="button" className="underline" style={{ color: 'var(--text-s)' }} onClick={() => setPicked([])}>Tümünü kaldır</button>
-            </span></div>
-          <select multiple className="inp h-36 text-sm" value={picked} disabled={!tip}
-            onChange={e => setPicked(Array.from(e.target.selectedOptions).map(o => o.value))}>
-            {!tip && <option value="">Önce özellik seçin</option>}
-            {degerler.map(v => <option key={v.id} value={v.id}>{getName({ nameI18n: v.nameI18n, code: v.id })}</option>)}
-          </select>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-xs" style={{ color: 'var(--text-s)' }}>{picked.length ? `${picked.length} değer seçili` : 'Ctrl/⌘ ile çoklu seçim'}</span>
+          <span className="flbl">Değerler</span>
+          <div className="flex items-start gap-2">
+            <div className="flex-1 min-w-0">
+              <MultiSearchSelect disabled={!tip} value={picked} onChange={setPicked} placeholder={tip ? 'Değer seçin' : 'Önce özellik seçin'}
+                options={degerler.map(v => ({ value: v.id, label: getName({ nameI18n: v.nameI18n, code: v.id }) }))} />
+            </div>
             <Button size="sm" variant="secondary" disabled={!typeId || picked.length === 0} onClick={ekle}>Ekle</Button>
           </div>
         </div>
@@ -122,9 +165,9 @@ function AttributeFilter({ types, value, onChange }: { types: AttrType[]; value:
       <div>
         <div className="flex items-center justify-between mb-1"><span className="flbl">Seçilen Özellikler</span>
           <input className="inp text-xs py-1 w-32" placeholder="Ara…" value={q} onChange={e => setQ(e.target.value)} /></div>
-        <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="rounded-lg overflow-y-auto thin-scroll" style={{ border: '1px solid var(--border)', maxHeight: 200 }}>
           <table className="w-full text-sm">
-            <thead><tr style={{ background: 'var(--surface2)' }}>
+            <thead className="sticky top-0"><tr style={{ background: 'var(--surface2)' }}>
               <th className="px-2 py-1.5 text-left text-xs font-semibold" style={{ color: 'var(--text-s)' }}>FİLTRE</th>
               <th className="px-2 py-1.5 text-left text-xs font-semibold" style={{ color: 'var(--text-s)' }}>SEÇİLEN DEĞER</th>
               <th className="px-2 py-1.5 w-10"></th>
