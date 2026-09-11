@@ -122,3 +122,68 @@ public class CouponUsageConfiguration : IEntityTypeConfiguration<CouponUsage>
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }
+
+// ── Şans oyunları (docs/BACKEND_OYUNLAR.md, 2026-09-11) ─────────────────────────────────────
+public class GameConfiguration : IEntityTypeConfiguration<Game>
+{
+    public void Configure(EntityTypeBuilder<Game> builder)
+    {
+        builder.ToTable("prm_games");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Code).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Type).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.TitleI18n).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.SubtitleI18n).HasColumnType("jsonb");
+        builder.Property(x => x.DescriptionI18n).HasColumnType("jsonb");
+        builder.Property(x => x.RulesTextI18n).HasColumnType("jsonb");
+        builder.Property(x => x.CtaLabel).HasMaxLength(60);
+        builder.Property(x => x.ImageUrl).HasMaxLength(500);
+        builder.Property(x => x.ThemeColor).HasMaxLength(9);
+        builder.Property(x => x.AccentColor).HasMaxLength(9);
+        builder.Property(x => x.LimitPeriod).HasMaxLength(10).IsRequired();
+        foreach (var p in new[] { nameof(Game.LabelAvailable), nameof(Game.LabelCooldown), nameof(Game.LabelExhausted),
+                 nameof(Game.LabelLoginRequired), nameof(Game.LabelEnded), nameof(Game.WinMessage), nameof(Game.LoseMessage) })
+            builder.Property(p).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.WinSubMessage).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.LoseSubMessage).HasMaxLength(500).IsRequired();
+        builder.HasIndex(x => new { x.FirmPlatformId, x.Code }).IsUnique();
+        builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.HasMany(x => x.Prizes).WithOne(x => x.Game).HasForeignKey(x => x.GameId);
+        builder.HasMany(x => x.Plays).WithOne(x => x.Game).HasForeignKey(x => x.GameId);
+    }
+}
+
+public class GamePrizeConfiguration : IEntityTypeConfiguration<GamePrize>
+{
+    public void Configure(EntityTypeBuilder<GamePrize> builder)
+    {
+        builder.ToTable("prm_game_prizes");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Label).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.ShortLabel).HasMaxLength(30);
+        builder.Property(x => x.Kind).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.Color).HasMaxLength(9);
+        builder.Property(x => x.IconUrl).HasMaxLength(500);
+        builder.Property(x => x.Description).HasMaxLength(200);
+        builder.Property(x => x.CouponType).HasMaxLength(20);
+        builder.Property(x => x.CouponValue).HasPrecision(18, 2);
+        builder.Property(x => x.MinimumCartTotal).HasPrecision(18, 2);
+        builder.HasIndex(x => x.GameId);
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
+public class GamePlayConfiguration : IEntityTypeConfiguration<GamePlay>
+{
+    public void Configure(EntityTypeBuilder<GamePlay> builder)
+    {
+        builder.ToTable("prm_game_plays");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.PeriodKey).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.CouponCode).HasMaxLength(100);
+        builder.HasIndex(x => new { x.GameId, x.MemberId, x.PeriodKey });
+        builder.HasIndex(x => new { x.MemberId, x.PlayedAt });
+        builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.HasOne(x => x.Prize).WithMany().HasForeignKey(x => x.PrizeId).OnDelete(DeleteBehavior.SetNull);
+    }
+}

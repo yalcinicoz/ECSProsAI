@@ -73,6 +73,7 @@ public sealed class DataGridKeyConsistencyTests
         ["admin/src/pages/promotion/CampaignsPage.tsx"] = new[] { "src/Modules/Promotion/ECSPros.Promotion.Application/Queries/GetCampaigns/CampaignGrid.cs" },
         ["admin/src/pages/promotion/CampaignTypesPage.tsx"] = new[] { "src/Modules/Promotion/ECSPros.Promotion.Application/Queries/GetCampaignTypes/CampaignTypeGrid.cs" },
         ["admin/src/pages/promotion/CouponsPage.tsx"] = new[] { "src/Modules/Promotion/ECSPros.Promotion.Application/Queries/GetCoupons/CouponGrid.cs" },
+        ["admin/src/pages/promotion/GamesPage.tsx"] = new[] { "src/Modules/Promotion/ECSPros.Promotion.Application/Games/GameGrid.cs" },
         ["admin/src/pages/requests/RequestsPage.tsx"] = new[] { "src/Modules/Requests/ECSPros.Requests.Application/Queries/GetRequests/RequestGrid.cs" },
         ["admin/src/pages/settings/PermissionCatalogPage.tsx"] = new[] { "src/Modules/Iam/ECSPros.Iam.Application/Yetkilendirme/YetkiKatalogGrid.cs" },
         ["admin/src/pages/settings/PermissionGroupsPage.tsx"] = new[] { "src/Modules/Iam/ECSPros.Iam.Application/Yetkilendirme/YetkiGrubuGrid.cs" },

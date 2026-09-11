@@ -190,6 +190,67 @@ public class PromotionController : ControllerBase
         return Ok(new { success = true, data = new { id = result.Value } });
     }
 
+    // ── Şans oyunları (docs/BACKEND_OYUNLAR.md, 2026-09-11) — panel CRUD; oynanış + ödül verme mağaza ucunda ──
+    [HttpGet("games")]
+    public async Task<IActionResult> GetGames([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, [FromQuery] string? search, CancellationToken ct)
+    {
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, await kanalKapsami.KanallarAsync(Permissions.PromotionView, ct), defaultPageSize: 50);
+        var result = await _mediator.Send(new ECSPros.Promotion.Application.Games.GetGamesQuery(search, grid.Page, grid.PageSize, grid), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    [HttpGet("games/{id:guid}")]
+    public async Task<IActionResult> GetGame([FromServices] ECSPros.Api.Authorization.IKanalKapsami kanalKapsami, Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Promotion.Application.Games.GetGameDetailQuery(id), ct);
+        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+        var kanallar = await kanalKapsami.KanallarAsync(Permissions.PromotionView, ct);
+        if (kanallar is not null && !kanallar.Contains(result.Value!.FirmPlatformId)) return NotFound(new { success = false, error = "Oyun bulunamadı." });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    [HttpGet("games/{id:guid}/plays")]
+    public async Task<IActionResult> GetGamePlays(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new ECSPros.Promotion.Application.Games.GetGamePlaysQuery(id, Math.Max(1, page), Math.Clamp(pageSize, 1, 250)), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    [HttpPost("games")]
+    [RequirePermission(Permissions.PromotionManage)]
+    public async Task<IActionResult> CreateGame([FromBody] SaveGameRequest req, CancellationToken ct)
+    {
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
+        var result = await _mediator.Send(req.ToCommand(null, userId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await _audit.LogAsync(HttpContext, "Created", "Game", result.Value, null, req, req.FirmPlatformId, req.Code, ct);
+        return Created($"/api/promotion/games/{result.Value}", new { success = true, data = new { id = result.Value } });
+    }
+
+    [HttpPut("games/{id:guid}")]
+    [RequirePermission(Permissions.PromotionManage)]
+    public async Task<IActionResult> UpdateGame(Guid id, [FromBody] SaveGameRequest req, CancellationToken ct)
+    {
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
+        var eski = await _mediator.Send(new ECSPros.Promotion.Application.Games.GetGameDetailQuery(id), ct);
+        var result = await _mediator.Send(req.ToCommand(id, userId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await _audit.LogAsync(HttpContext, "Updated", "Game", id, eski.IsSuccess ? eski.Value : null, req, req.FirmPlatformId, req.Code, ct);
+        return Ok(new { success = true });
+    }
+
+    [HttpDelete("games/{id:guid}")]
+    [RequirePermission(Permissions.PromotionManage)]
+    public async Task<IActionResult> DeleteGame(Guid id, CancellationToken ct)
+    {
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
+        var eski = await _mediator.Send(new ECSPros.Promotion.Application.Games.GetGameDetailQuery(id), ct);
+        var result = await _mediator.Send(new ECSPros.Promotion.Application.Games.DeleteGameCommand(id, userId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await _audit.LogAsync(HttpContext, "Deleted", "Game", id, eski.IsSuccess ? eski.Value : null, null, eski.IsSuccess ? eski.Value!.FirmPlatformId : Guid.Empty, eski.IsSuccess ? eski.Value!.Code : null, ct);
+        return Ok(new { success = true });
+    }
+
     /// <summary>Kampanya tipleri (P3 — oluşturma formunun tip seçicisi).</summary>
     /// <summary>Kampanya tiplerini TAM liste olarak (ayar şemasıyla) döner — kampanya listesi ve
     /// kampanya detayı bunu bekler. ⚠ Sayfalanmaz; liste EKRANI için /campaign-types/grid kullanın.</summary>
@@ -446,3 +507,20 @@ public record UseCouponRequest(
     Guid MemberId,
     Guid OrderId,
     decimal DiscountAmount);
+
+/// <summary>Şans oyunu kaydı (panel formu) — alan adları GameDetailDto ile aynı.</summary>
+public record SaveGameRequest(
+    Guid FirmPlatformId, string Code, string Type,
+    Dictionary<string, string> TitleI18n, Dictionary<string, string>? SubtitleI18n, Dictionary<string, string>? DescriptionI18n,
+    Dictionary<string, string>? RulesTextI18n, string? CtaLabel, string? ImageUrl, string? ThemeColor, string? AccentColor,
+    bool AlwaysWin, DateTime StartsAt, DateTime? EndsAt, bool IsActive, string LimitPeriod, int LimitCount, int CouponValidDays, int SortOrder,
+    string? LabelAvailable, string? LabelCooldown, string? LabelExhausted, string? LabelLoginRequired, string? LabelEnded,
+    string? WinMessage, string? WinSubMessage, string? LoseMessage, string? LoseSubMessage,
+    List<ECSPros.Promotion.Application.Games.GamePrizeDto> Prizes)
+{
+    public ECSPros.Promotion.Application.Games.SaveGameCommand ToCommand(Guid? id, Guid userId) => new(
+        id, FirmPlatformId, Code, Type, TitleI18n, SubtitleI18n, DescriptionI18n, RulesTextI18n, CtaLabel, ImageUrl, ThemeColor, AccentColor,
+        AlwaysWin, StartsAt, EndsAt, IsActive, LimitPeriod, Math.Max(1, LimitCount), Math.Max(1, CouponValidDays), SortOrder,
+        LabelAvailable, LabelCooldown, LabelExhausted, LabelLoginRequired, LabelEnded, WinMessage, WinSubMessage, LoseMessage, LoseSubMessage,
+        Prizes ?? new(), userId);
+}

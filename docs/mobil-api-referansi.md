@@ -523,3 +523,22 @@ adım. **İptal edilen siparişte `timeline` boş dizidir** — şerit çizilmez
 
 `fee` kapıda ödeme hizmet bedeli (kartta `0`), `maxOrderTotal` kapıda ödeme üst sınırı (`0` = sınır yok).
 Eski `methods: ["kart", …]` düz dizisi **`methodCodes`** adıyla korundu.
+
+## 17. Şans oyunları — `/api/store/games` (docs/BACKEND_OYUNLAR.md rev.2, 2026-09-11 UYGULANDI)
+
+Çarkıfelek (`wheel`) · Salla Kazan (`shake`) · Kazı Kazan (`scratch`). Sözleşme dokümandaki alan adlarıyla birebir;
+kararlar `docs/BACKEND_OYUNLAR_CEVAP.md`. Kanal kimliği `X-Firm-Platform` (ya da `?firmPlatformId=`).
+
+| Uç | Kimlik | Açıklama |
+|---|---|---|
+| `GET /api/store/games` | cihaz ya da üye token'ı | Yayındaki oyunlar (aktif + tarih aralığı) + bu üye için `status/statusLabel/remainingPlays/nextPlayAt`. Misafirde `status: "login_required"`. Aktif oyun yoksa `[]`. |
+| `POST /api/store/games/{code}/play` | **üye** | Sunucu ödülü ağırlıkla seçer, kuponu/puanı hesaba işler, hakkı düşer, sonucu döner. Misafir → 401 `{success:false,error}`; oyun bitti/tanımsız → 409. **Hak bitmişse yeni ödül üretilmez: o dönemin son oynanışı aynı `playId` ve sonuçla döner** (ağ kopması / çift dokunuş güvenli). |
+| `GET /api/store/account/games/history` | üye | Oynanışlar: `{playId, gameCode, gameTitle, playedAt, won, prizeLabel, couponCode, points}`. |
+
+- **Ödül türleri (v1):** `coupon` (percentage / fixed → üyeye özel, tek kullanımlık kupon; `GET /account/coupons`'ta aynı sözleşmeyle görünür: `couponType/discountText/endsAt/minimumCartTotal`), `points` (sadakat puanı, `LoyaltyAccount` earn), `none` (Pas). `free_shipping` ve `product` panelde seçilemez (kupon motoru desteklemiyor — sonraki tur).
+- **Kazı kazan:** `cells[]` tam 6 hücre; `won:true` ⇔ kazanan ödül tam 3 hücre; `won:false` ⇔ hiçbir değer 3 kez geçmez. Panel kaydında en az 3 farklı kazandıran ödül istenir.
+- **alwaysWin:** panel kutusu; açıkken `none` ödül kaydedilemez ve `play` asla `won:false` dönmez.
+- **Hak:** oyun başına panelden `limitPeriod` (day = İstanbul günü, week = ISO hafta, total) + `limitCount`; `statusLabel` metinleri panelde ({n}, {next}, {prize} yer tutucuları).
+- **Kupon kodu:** `{OYUNKODU}{DEĞER}-{XXXX}` (ör. `CARK50-7K2M`), `validUntil` = oyunun "kupon geçerliliği (gün)" ayarı, `amountText` "50 TL" / "%10".
+- `imageUrl`/`themeColor`/`accentColor`/`prizes[].color` panelden; boş bırakılırsa mobil varsayılanı.
+- Push senaryoları (hak yenilendi / yeni oyun) bu turda YOK; bildirim şablonu + `data.link:"/oyunlar/{code}"` ile sonraki tur.

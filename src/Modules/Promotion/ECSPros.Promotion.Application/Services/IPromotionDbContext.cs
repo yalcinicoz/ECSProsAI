@@ -12,6 +12,9 @@ public interface IPromotionDbContext
     DbSet<Coupon> Coupons { get; }
     DbSet<CouponUsage> CouponUsages { get; }
     DbSet<CampaignSupplierParticipation> CampaignSupplierParticipations { get; }
+    DbSet<Game> Games { get; }
+    DbSet<GamePrize> GamePrizes { get; }
+    DbSet<GamePlay> GamePlays { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

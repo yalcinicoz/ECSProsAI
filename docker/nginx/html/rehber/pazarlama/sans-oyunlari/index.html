@@ -1,0 +1,273 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Şans Oyunları — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/kanal-kapsami/" class="">Kanal Kapsamı</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/personele-dagit/" class="">Personele Dağıt</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/koli-sorgu/" class="">Koli Sorgu</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><a href="/rehber/stok/raf-islemleri/" class="">Raf İşlemleri</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/sans-oyunlari/" class="active">Şans Oyunları</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a><div class="group">Tedarik</div><a href="/rehber/tedarik/satin-almalar/" class="">Satın Almalar</a><a href="/rehber/tedarik/mal-kabul/" class="">Mal Kabul</a><a href="/rehber/tedarik/etiket-sablonlari/" class="">Etiket Şablonları</a><a href="/rehber/tedarik/etiket-basimi/" class="">Etiket Basımı</a><a href="/rehber/tedarik/sayim-teslim/" class="">Sayım / Depoya Teslim</a><a href="/rehber/tedarik/tedarik-raporu/" class="">Tedarik Raporu</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Pazarlama</span> › <b>Şans Oyunları</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Pazarlama</div><h1>Şans Oyunları</h1>
+<p class="ozet">Mobil uygulamadaki Çarkıfelek, Salla Kazan ve Kazı Kazan kampanyalarının tanımlandığı, ödül ve hak kurallarının yönetildiği ekran.</p><p class="rota">Panel adresi: <code>/admin/promotion/games</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#form-alanlari">Form alanları</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Şans oyunları günlük kampanya araçlarıdır: bugün çark, yarın kazı kazan yayına alınır. Yayındaki oyun mobil uygulamanın ana
+sayfasında taşınabilir yuvarlak bir ikon olarak çıkar; müşteri oynar, kazandığı kupon otomatik olarak Kuponlarım&#39;a düşer.
+<strong>Sonucu her zaman sunucu belirler</strong>: hangi dilimde duracağı, kutucuklarda ne çıkacağı, kupon kodu — hepsi burada tanımlanan
+ödül ağırlıklarına göre sunucuda hesaplanır; uygulama yalnız animasyon oynatır. Pazarlama personeli kullanır.</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/promotion-games.webp" class="buyut" data-alt="Şans Oyunları listesi"><img src="/rehber/img/promotion-games.webp" alt="Şans Oyunları listesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Şans Oyunları listesi</figcaption></figure></p>
+<ol>
+<li><strong>Başlık</strong> — &quot;Şans Oyunları&quot; + oyun sayısı; sağda <strong>+ Yeni Oyun</strong>.</li>
+<li><strong>Sekmeler</strong> — Yayında (bugün aktif olanlar) / Tümü.</li>
+<li><strong>Oyun tablosu</strong> — satıra tıklayınca oyun detayı açılır.</li>
+</ol>
+<h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OYUN</td>
+<td>Ad ve altında kod (<code>/oyunlar/{kod}</code> derin linki).</td>
+</tr>
+<tr>
+<td>TİP</td>
+<td>Çarkıfelek / Salla Kazan / Kazı Kazan.</td>
+</tr>
+<tr>
+<td>HAK</td>
+<td>Hak dönemi ve sayısı (Günde 1, Haftada 3, Toplam 1).</td>
+</tr>
+<tr>
+<td>KAZANMA</td>
+<td><code>Herkes kazanır</code> (Pas yok) ya da <code>Şanslı</code> (Pas dilimi/kaybetme olasılığı var).</td>
+</tr>
+<tr>
+<td>ÖDÜL</td>
+<td>Aktif ödül sayısı.</td>
+</tr>
+<tr>
+<td>OYNANIŞ</td>
+<td>Toplam oynanış / kazanan sayısı.</td>
+</tr>
+<tr>
+<td>TARİH</td>
+<td>Başlangıç → bitiş (boş = süresiz).</td>
+</tr>
+<tr>
+<td>DURUM</td>
+<td><code>Yayında</code> (aktif + tarih aralığında, mobilde ikon çıkar) · <code>Aktif (tarih dışı)</code> · <code>Pasif</code>.</td>
+</tr>
+</tbody></table>
+<p>Arama kutusu ad ve kodda arar; her sütun başlığında filtre vardır.</p>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>+ Yeni Oyun</td>
+<td>Liste sağ üst</td>
+<td>Boş oyun formu açılır (3 örnek ödül satırıyla).</td>
+<td><code>promotion.manage</code></td>
+</tr>
+<tr>
+<td>Kaydet</td>
+<td>Detay sağ üst</td>
+<td>Genel + Ödüller + Metinler birlikte kaydedilir; hata varsa ilgili sekmeye dönülür.</td>
+<td>Platform, kod, ad ve en az bir kazandıran ödül</td>
+</tr>
+<tr>
+<td>Sil ⚠️</td>
+<td>Detay sağ üst</td>
+<td>Hiç oynanmamış oyun silinir; oynanmış oyun silinemez (&quot;pasife alın&quot;).</td>
+<td><code>promotion.manage</code></td>
+</tr>
+<tr>
+<td>ⓘ bilgi ikonu</td>
+<td>Alan etiketleri</td>
+<td>Alanın açıklaması.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<h2 id="form-alanlari">Form alanları<a class="anchor" href="#form-alanlari" aria-hidden="true">#</a></h2>
+<h3 id="genel">Genel<a class="anchor" href="#genel" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Platform</td>
+<td>Evet</td>
+<td>Oyunun çıkacağı satış kanalı (mobil uygulamanın kanalı).</td>
+</tr>
+<tr>
+<td>Oyun tipi</td>
+<td>Evet</td>
+<td>Çark: ödüller dilim sırasıyla döner. Salla kazan: kutudan tek ödül çıkar. Kazı kazan: 6 kutucuk, 3 aynı = kazandı.</td>
+</tr>
+<tr>
+<td>Kod</td>
+<td>Evet</td>
+<td>Küçük harf/rakam/tire; kanal içinde benzersiz (ör. <code>cark</code>). Mobil derin link ve push anahtarı.</td>
+</tr>
+<tr>
+<td>Ad, Alt başlık, Açıklama</td>
+<td>Ad zorunlu</td>
+<td>Oyun ekranı metinleri.</td>
+</tr>
+<tr>
+<td>Hak dönemi / Hak sayısı</td>
+<td>Evet</td>
+<td>Günde n (İstanbul günü), Haftada n (ISO hafta) ya da Toplam n (kampanya boyunca).</td>
+</tr>
+<tr>
+<td>Kupon geçerliliği (gün)</td>
+<td>Evet</td>
+<td>Kazanılan kuponun son kullanma süresi (varsayılan 7).</td>
+</tr>
+<tr>
+<td>Başlangıç / Bitiş</td>
+<td>Başlangıç</td>
+<td>Yayın aralığı; bitiş boş = süresiz.</td>
+</tr>
+<tr>
+<td>İkon görseli (URL), Tema rengi, Vurgu rengi</td>
+<td>Hayır</td>
+<td>Mobil ikon ve oyun ekranı renkleri; boşsa uygulama varsayılanı.</td>
+</tr>
+<tr>
+<td>Düğme metni, Sıra</td>
+<td>Hayır</td>
+<td>Ana düğme metni; birden çok oyun yayındaysa ikon sırası.</td>
+</tr>
+<tr>
+<td>Aktif</td>
+<td>—</td>
+<td>Kapalıysa tarih aralığında bile yayında değildir.</td>
+</tr>
+<tr>
+<td>Herkes kazanır</td>
+<td>—</td>
+<td>Açıkken Pas ödül tanımlanamaz, her oynanış kazanır.</td>
+</tr>
+</tbody></table>
+<h3 id="oduller">Ödüller<a class="anchor" href="#oduller" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sıra (▲▼)</td>
+<td>—</td>
+<td>Çarkta dilim sırası (saat yönünde, üstten).</td>
+</tr>
+<tr>
+<td>Ad / Kısa</td>
+<td>Ad</td>
+<td>&quot;50 TL İndirim&quot; / dilim ve kutucuk metni &quot;50 TL&quot;.</td>
+</tr>
+<tr>
+<td>Tür</td>
+<td>Evet</td>
+<td>Kupon (indirim), Puan, Pas (kaybetti).</td>
+</tr>
+<tr>
+<td>Değer</td>
+<td>Kupon/puan</td>
+<td>Kupon: TL ya da % + değer (yüzde 100&#39;ü aşamaz). Puan: sadakat puanı.</td>
+</tr>
+<tr>
+<td>Asgari sepet / Koşul metni</td>
+<td>Hayır</td>
+<td>Kuponun asgari sepet tutarı; müşteriye görünen koşul cümlesi (&quot;300 TL üzeri&quot;).</td>
+</tr>
+<tr>
+<td>Renk</td>
+<td>Hayır</td>
+<td>Dilim/kutucuk rengi; boşsa mobil paleti.</td>
+</tr>
+<tr>
+<td>Ağırlık</td>
+<td>Evet</td>
+<td>Olasılık payı; tablo yanında yüzdesi hesaplanır. 0 = hiç çıkmaz (kazı kazanda yalnız dolgu değeri).</td>
+</tr>
+</tbody></table>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Kazı kazanda en az 3 farklı kazandıran ödül gerekir (kazanan 3 kutucuk + hiçbir değerin 3 kez geçmediği dolgu).
+Çarkta en az 2 dilim gerekir.</p>
+</blockquote>
+<h3 id="metinler">Metinler<a class="anchor" href="#metinler" aria-hidden="true">#</a></h3>
+<p>Mobil uygulama hiçbir metin üretmez; durum etiketleri (&quot;Bugün 1 hakkın var&quot;, &quot;Yarın tekrar gel&quot;, &quot;Hakkın bitti&quot;, &quot;Oynamak için
+giriş yap&quot;, &quot;Kampanya bitti&quot;) ve sonuç panelindeki başlık/açıklamalar burada yazılır. Yer tutucular: <code>{n}</code> kalan hak, <code>{next}</code>
+sonraki hak günü, <code>{prize}</code> ödül adı. Kurallar metni (i) ikonuyla açılır.</p>
+<h3 id="oynanislar">Oynanışlar<a class="anchor" href="#oynanislar" aria-hidden="true">#</a></h3>
+<p>Kim, ne zaman, hangi dönemde, sonuç, ödül ve üretilen kupon kodu / puan.</p>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<ul>
+<li><strong>Yayında:</strong> Aktif + başlangıç ≤ bugün + (bitiş boş ya da ≥ bugün). Yayındaki her oyun için mobilde ayrı ikon çıkar.</li>
+<li><strong>Misafir oynayamaz:</strong> kupon üyeye bağlandığı için oyun kartını görür, oynamak için girişe yönlenir.</li>
+<li><strong>Hak düşümü ve tekrar:</strong> her oynanış hakkı düşürür. Hak bitmişken tekrar dokunulursa yeni ödül üretilmez; aynı dönemin
+son sonucu aynen gösterilir.</li>
+<li><strong>Kupon:</strong> kazanınca üyeye özel, tek kullanımlık kupon üretilir (<code>OYUNKODU+DEĞER-XXXX</code>, ör. <code>CARK50-7K2M</code>) ve Kuponlarım&#39;a
+düşer; geçerlilik &quot;kupon geçerliliği (gün)&quot; ayarıdır. Puan ödülü sadakat hesabına işlenir.</li>
+<li><strong>Silme:</strong> oynanmış oyun silinmez; yayından kaldırmak için Aktif kutusunu kaldırın ya da bitiş tarihi verin.</li>
+<li><strong>Denetim:</strong> oyun ekleme/düzenleme/silme Ayarlar › Denetim Logları&#39;na (varlık tipi <code>Game</code>) yazılır.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>Günlük çark kampanyası</strong></p>
+<ol>
+<li><strong>+ Yeni Oyun</strong> → Platform, tip Çarkıfelek, kod <code>cark</code>, ad &quot;Çarkıfelek&quot;, Hak: Günde 1, Başlangıç bugün, Bitiş ay sonu.</li>
+<li>Ödüller: &quot;%10 İndirim&quot; (Kupon, %, 10, ağırlık 3), &quot;50 TL İndirim&quot; (Kupon, TL, 50, asgari 300, ağırlık 1), &quot;Bir dahaki sefere&quot; (Pas, ağırlık 4).</li>
+<li>Metinler sekmesinde etiketleri kontrol edin → <strong>Kaydet</strong>. Uygulamada ikon anında görünür.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Kayıp olasılığını Pas ödülünün ağırlığıyla ayarlayın; olasılık sütunu anlık yüzdeyi gösterir.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> &quot;Herkes kazanır&quot; açıkken Pas satırı varsa kayıt reddedilir: satırı kaldırın ya da pasife alın.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/pazarlama/kuponlar/">Kuponlar</a> — kazanılan kuponlar burada listelenir (kişiye özel).</li>
+<li><a href="/rehber/pazarlama/kampanyalar/">Kampanyalar</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/pazarlama/hediye-karti/">← Hediye Kartı</a><a class="sonraki" href="/rehber/pazarlama/bildirimler/">Bildirimler →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

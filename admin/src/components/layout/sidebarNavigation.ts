@@ -78,6 +78,7 @@ export const NAV_SECTIONS: NavSection[] = [
   { id: 'marketing', label: 'Pazarlama', icon: 'percent', items: [
     { label: 'Kampanyalar',  to: '/promotion/campaigns',  icon: 'percent', permission: 'promotion.view' },
     { label: 'Kuponlar',     to: '/promotion/coupons',    icon: 'ticket', permission: 'promotion.view' },
+    { label: 'Şans Oyunları', to: '/promotion/games',     icon: 'dice', permission: 'promotion.view' },
     { label: 'Hediye Kartı', to: '/orders/gift-cards',    icon: 'gift', permission: 'promotion.view' },
     { label: 'Bildirimler',      to: '/storefront/notifications', icon: 'bell', permission: 'storefront.notifications.view' },
     { label: 'Bülten Aboneleri', to: '/storefront/newsletter',    icon: 'mail', permission: 'storefront.notifications.view' },

@@ -17,6 +17,9 @@ public class PromotionDbContext : DbContext, IPromotionDbContext
     public DbSet<Coupon> Coupons => Set<Coupon>();
     public DbSet<CouponUsage> CouponUsages => Set<CouponUsage>();
     public DbSet<CampaignSupplierParticipation> CampaignSupplierParticipations => Set<CampaignSupplierParticipation>();
+    public DbSet<Game> Games => Set<Game>();
+    public DbSet<GamePrize> GamePrizes => Set<GamePrize>();
+    public DbSet<GamePlay> GamePlays => Set<GamePlay>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

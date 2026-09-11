@@ -77,6 +77,8 @@ import { CampaignsPage } from '@/pages/promotion/CampaignsPage'
 import { CampaignTypesPage } from '@/pages/promotion/CampaignTypesPage'
 import { CampaignDetailPage } from '@/pages/promotion/CampaignDetailPage'
 import { CouponsPage } from '@/pages/promotion/CouponsPage'
+import { GamesPage } from '@/pages/promotion/GamesPage'
+import { GameDetailPage } from '@/pages/promotion/GameDetailPage'
 import { MembersPage } from '@/pages/crm/MembersPage'
 import { MemberDetailPage } from '@/pages/crm/MemberDetailPage'
 import { MemberGroupsPage } from '@/pages/crm/MemberGroupsPage'
@@ -220,6 +222,8 @@ export const router = createBrowserRouter(
             // Promosyon
             { path: 'promotion/campaigns', element: <CampaignsPage /> },
             { path: 'promotion/campaigns/:id', element: <CampaignDetailPage /> },
+            { path: 'promotion/games', element: <GamesPage /> },
+            { path: 'promotion/games/:id', element: <GameDetailPage /> },
             { path: 'promotion/campaign-types', element: <CampaignTypesPage /> },
             { path: 'promotion/coupons',   element: <CouponsPage /> },
 

@@ -91,6 +91,11 @@ test('original routes/icons remain unique, with the new permission pages and man
     ['/settings/permission-groups', 'Yetki Grupları', 'iam.permissions.manage'],
     ['/settings/permissions', 'Yetki İçerikleri', 'iam.permissions.manage'],
     ['/settings/permission-logs', 'Yetki Logları', 'iam.audit.view'],
+    ['/promotion/games', 'Şans Oyunları', 'promotion.view'],
+    // FAZ 15.3/15.4 (2026-09-10) sayfaları — testte eksikti
+    ['/fulfillment/assignments', 'Personele Dağıt', 'fulfillment.view'],
+    ['/fulfillment/box-lookup', 'Koli Sorgu', 'fulfillment.view'],
+    ['/inventory/shelf', 'Raf İşlemleri', 'inventory.view'],
   ]
   assert.equal(items.length, baseline.length + added.length)
   assert.equal(new Set(items.map((item) => item.to)).size, items.length)
