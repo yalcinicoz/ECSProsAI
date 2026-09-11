@@ -25,7 +25,7 @@ public class GetOrderStatusCountsQueryHandler : IRequestHandler<GetOrderStatusCo
 
     public async Task<Result<Dictionary<string, int>>> Handle(GetOrderStatusCountsQuery request, CancellationToken cancellationToken)
     {
-        var baseQuery = OrderGrid.ApplyAll(_context.Orders.AsQueryable(), request.Filters ?? new OrderListFilters(), request.Grid, includeStatus: false);
+        var baseQuery = OrderGrid.ApplyAll(_context.Orders.AsQueryable(), request.Filters ?? new OrderListFilters(), request.Grid, includeStatus: false, db: _context);
         var counts = await baseQuery
             .Where(o => request.Statuses.Contains(o.Status))
             .GroupBy(o => o.Status)

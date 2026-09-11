@@ -19,7 +19,7 @@ public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, Result<Page
         // DataGrid F0 (2026-09-08): adlandırılmış filtreler + global arama + beyaz listeli grid filtreleri TEK yerden (OrderGrid).
         var filters = new OrderListFilters(request.Status, request.Statuses, request.MemberId, request.FirmPlatformId,
             request.CreatedFrom, request.CreatedTo, request.PaymentMethod, request.PaymentCollected, request.Search);
-        var query = OrderGrid.ApplyAll(_context.Orders.AsQueryable(), filters, request.Grid);
+        var query = OrderGrid.ApplyAll(_context.Orders.AsQueryable(), filters, request.Grid, db: _context);
 
         var totalCount = await query.CountAsync(cancellationToken);
 

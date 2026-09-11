@@ -58,7 +58,10 @@ export const NAV_SECTIONS: NavSection[] = [
     { label: 'Mal Kabul', to: '/procurement/receipts', icon: 'box', permission: 'procurement.manage' },
     { label: 'Etiket Basımı', to: '/procurement/labels', icon: 'filetext', permission: 'procurement.manage' },
     { label: 'Sayım / Teslim', to: '/procurement/sorting', icon: 'layers', permission: 'procurement.sort' },
-    { label: 'Tedarik Raporu', to: '/procurement/report', icon: 'gauge', permission: 'procurement.manage' },
+  ]},
+  { id: 'reports', label: 'Raporlar', icon: 'gauge', items: [
+    { label: 'Stok Durumu', to: '/reports/stocks', icon: 'warehouse', permission: 'inventory.view' },
+    { label: 'AI Raporlama', to: '/reports/ai', icon: 'gauge', permission: 'reports.ai.use' },
   ]},
   { id: 'crm', label: 'Müşteriler / CRM', icon: 'users', items: [
     { label: 'Üyeler', to: '/crm/members',       icon: 'users', permission: 'crm.members.view' },

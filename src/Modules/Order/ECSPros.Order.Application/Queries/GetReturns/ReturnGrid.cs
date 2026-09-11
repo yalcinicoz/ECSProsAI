@@ -16,6 +16,7 @@ public static class ReturnGrid
     public static readonly GridSchema<Return> Schema = new GridSchema<Return>()
         .Kanal(r => r.Order.FirmPlatformId)   // Y3 (K2): iadenin kanalı SİPARİŞTEN gelir
         .Text("returnNumber", r => r.ReturnNumber)
+        .Text("orderNumber", r => r.Order.OrderNumber)
         .Text("trackingNumber", r => r.ReturnTrackingNumber)
         .Text("cargoReturnCode", r => r.CargoReturnCode)
         .Enum("status", r => r.Status, Statuses)
@@ -30,6 +31,7 @@ public static class ReturnGrid
         .Sort("returnType", r => r.ReturnType)
         .Sort("cargoReturnCode", r => r.CargoReturnCode)
         .Sort("returnNumber", r => r.ReturnNumber)
+        .Sort("orderNumber", r => r.Order.OrderNumber)
         .Sort("refundAmount", r => r.RefundAmount)
         .Sort("status", r => r.Status)
         .Sort("refundStatus", r => r.RefundStatus)
@@ -47,6 +49,7 @@ public static class ReturnGrid
             var term = f.Search.Trim().ToLower();
             query = query.Where(r =>
                 r.ReturnNumber.ToLower().Contains(term) ||
+                r.Order.OrderNumber.ToLower().Contains(term) ||
                 (r.ReturnTrackingNumber != null && r.ReturnTrackingNumber.ToLower().Contains(term)) ||
                 (r.CargoReturnCode != null && r.CargoReturnCode.ToLower().Contains(term)));
         }

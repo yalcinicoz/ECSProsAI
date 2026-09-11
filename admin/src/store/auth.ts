@@ -68,6 +68,7 @@ export const useAuthStore = create<AuthState>()(
             fullName: me.fullName,
             permissions: me.permissions ?? [],
             mustChangePassword: me.mustChangePassword ?? false,
+            isSuperAdmin: me.isSuperAdmin === true,
           },
         })
       },

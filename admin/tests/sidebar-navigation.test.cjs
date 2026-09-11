@@ -61,7 +61,6 @@ const baseline = [
   { label: 'Mal Kabul', to: '/procurement/receipts', icon: 'box', permission: 'procurement.manage' },
   { label: 'Etiket Basımı', to: '/procurement/labels', icon: 'filetext', permission: 'procurement.manage' },
   { label: 'Sayım / Teslim', to: '/procurement/sorting', icon: 'layers', permission: 'procurement.sort' },
-  { label: 'Tedarik Raporu', to: '/procurement/report', icon: 'gauge', permission: 'procurement.manage' },
   { label: 'Etiket Şablonları', to: '/settings/label-templates', icon: 'scan', permission: 'procurement.manage' },
   { label: 'Kampanyalar',  to: '/promotion/campaigns',  icon: 'percent' },
   { label: 'Kampanya Tipleri', to: '/promotion/campaign-types', icon: 'layers' },
@@ -84,14 +83,27 @@ const baseline = [
   { label: 'Ayarlar',         to: '/settings/users',          icon: 'settings' }
 ]
 const flat = (sections) => Array.from(sections.flatMap((section) => section.items))
-test('all original routes, icons, permissions and static badges are retained exactly once', () => {
+test('original routes/icons remain unique, with the new permission pages and mandatory page permissions', () => {
   const items = flat(nav.NAV_SECTIONS)
-  assert.equal(items.length, baseline.length)
-  assert.equal(new Set(items.map((item) => item.to)).size, baseline.length)
+  const added = [
+    ['/reports/stocks', 'Stok Durumu', 'inventory.view'],
+    ['/reports/ai', 'AI Raporlama', 'reports.ai.use'],
+    ['/settings/permission-groups', 'Yetki Grupları', 'iam.permissions.manage'],
+    ['/settings/permissions', 'Yetki İçerikleri', 'iam.permissions.manage'],
+    ['/settings/permission-logs', 'Yetki Logları', 'iam.audit.view'],
+  ]
+  assert.equal(items.length, baseline.length + added.length)
+  assert.equal(new Set(items.map((item) => item.to)).size, items.length)
+  for (const [to, label, permission] of added) {
+    const item = items.find(i => i.to === to)
+    assert.equal(item?.label, label)
+    assert.equal(item?.permission, permission)
+  }
+  for (const item of items) assert.ok(item.permission, 'Missing page permission: ' + item.to)
   for (const previous of baseline) {
     const item = items.find((candidate) => candidate.to === previous.to)
     assert.ok(item, previous.to)
-    for (const key of ['icon', 'permission', 'badge']) assert.equal(item[key], previous[key], previous.to + ':' + key)
+    for (const key of ['icon', 'badge']) assert.equal(item[key], previous[key], previous.to + ':' + key)
     const label = previous.to === '/crm/member-groups' ? 'Üye Grupları'
       : previous.to === '/settings/channels' ? 'Satış Kanalı Tanımları'
       : previous.to === '/settings/users' ? 'Kullanıcılar'

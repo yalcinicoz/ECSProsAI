@@ -407,6 +407,15 @@ builder.Services.AddScoped<IStoreContext, StoreContext>();
 builder.Services.AddSingleton<ECSPros.Api.Services.UrunKategoriHaritasi>(); // liste sayfası Kategori filtresi (ürün→yaprak kategori, 15 dk)
 builder.Services.AddScoped<ECSPros.Api.Services.StoreUrunDetayBuilder>(); // ürün detay VM (hem /urun/{code} hem gerçek slug URL'i kullanır)
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.VitrinSrcsetSaglayici>(); // vitrin görsel srcset üretimi (A fazı — varyant varsa basılır)
+builder.Services.AddScoped<ECSPros.Api.Services.AiReporting.StockReportExecutor>();
+builder.Services.AddScoped<ECSPros.Api.Services.AiReporting.OrderReportExecutor>();
+builder.Services.AddScoped<ECSPros.Api.Services.AiReporting.IReportShareDirectory, ECSPros.Api.Services.AiReporting.ReportShareDirectory>();
+builder.Services.AddScoped<ECSPros.Api.Services.AiReporting.IReportAttributeCatalog, ECSPros.Api.Services.AiReporting.ReportAttributeCatalog>();
+builder.Services.AddScoped<ECSPros.Api.Services.AiReporting.IOpenAiFirmSettingsProvider, ECSPros.Api.Services.AiReporting.OpenAiFirmSettingsProvider>();
+builder.Services.AddScoped<ECSPros.Api.Services.AiReporting.AiReportQuota>();
+builder.Services.AddScoped<ECSPros.Api.Services.AiReporting.IAiReportQuotaStore, ECSPros.Api.Services.AiReporting.RedisAiReportQuotaStore>();
+builder.Services.AddHttpClient<ECSPros.Api.Services.AiReporting.OpenAiReportInterpreter>()
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IInStockProductProvider, ECSPros.Api.Services.InStockProductProvider>();
 builder.Services.AddScoped<ECSPros.Shared.Contracts.Channels.IChannelStockCalculator, ECSPros.Api.Services.InStockProductProvider>(); // K17 kanal stok formülü
 builder.Services.AddScoped<ECSPros.Api.Services.ChannelListingStatusService>(); // F2 listeleme durumu hesaplayıcısı
@@ -464,7 +473,6 @@ if (nodeOptions.GenelWorkerRolu)
     builder.Services.AddHostedService<ECSPros.Api.Services.ProductStatsRefreshWorker>(); // 2026-09-11: ürün listesi görsel/stok filtreleri (mv_product_stats, 5 dk)
 }
 builder.Services.AddSingleton<ECSPros.Api.Services.ProductStatsRefresher>();
-builder.Services.AddScoped<ECSPros.Api.Services.ProcurementReportService>(); // Tedarik T6: dönem raporu
 builder.Services.AddSingleton<ECSPros.Api.Services.IStoreMemberSession, ECSPros.Api.Services.StoreMemberSession>(); // D1: SSR üye kimliği (HttpOnly cookie)
 builder.Services.AddTransient<ECSPros.Crm.Application.Services.ISmsSender, ECSPros.Api.Services.CrmSmsSenderAdapter>(); // D4: OTP SMS köprüsü
 builder.Services.AddScoped<ECSPros.Api.Services.CrmTicketOrderLookup>();

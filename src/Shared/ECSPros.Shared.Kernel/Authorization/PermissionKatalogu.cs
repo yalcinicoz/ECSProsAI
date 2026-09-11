@@ -63,6 +63,12 @@ public static class PermissionKatalogu
             "Katalog Ayarları", null, 60),
 
         // ── Stok / tedarik ───────────────────────────────────────────────────────
+        new("reports.ai.use", PermissionTuru.Sayfa, "Raporlar", "AI Raporlama", false,
+            "AI Raporlama", "Rapor tariflerini çalıştırma; ayrıca ilgili veri alanının görüntüleme yetkisi gerekir.", 65),
+        new("reports.ai.share", PermissionTuru.Aksiyon, "Raporlar", "AI Raporlama", false,
+            "AI Rapor Tarifi Paylaşma", "Etkin grup ve kullanıcı izinleri uygun olan kullanıcılarla yalnız rapor tarifini paylaşır; veri yetkisi vermez.", 66),
+        new("reports.ai.export", PermissionTuru.Aksiyon, "Raporlar", "AI Raporlama", false,
+            "AI Rapor Dışa Aktarma", "Mevcut veri yetkileri dahilinde rapor sonucunu Excel olarak indirir.", 67),
         new(Permissions.InventoryManage, PermissionTuru.Aksiyon, "Stok", "Stoklar", false,
             "Stok ve Depo Yönetimi", "Depo, stok ve transfer işlemleri.", 70),
         new(Permissions.InventoryCountApply, PermissionTuru.Aksiyon, "Stok", "Raf İşlemleri", false,

@@ -1,39 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
-import { cn } from '@/lib/utils'
-import { DataGrid, useGridState, quickDateRange, type GridColumn, type GridFilterField } from '@/components/grid'
+import { DataGrid, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
 import { errText } from '@/components/ui/DataTable.utils'
 import { ORDER_STATUS_MAP, PAYMENT_METHOD_MAP, PAYMENT_STATUS_MAP } from './orderConstants'
 
-// Siparişler — DataGrid UX pilotu (docs/datagrid-standardi-plani.md F2, K5). Durum sekmeleri (sayaçlı) korunur; sayaçlar listeyle
-// aynı filtre parametrelerini alır (durum hariç). Filtre/arama/sıralama/sayfa URL'de; kolon tercihleri localStorage'da.
-// Sunucu beyaz listesi: OrderGrid.Schema (Order.Application) — filter alanları ve sort anahtarları oradakilerle birebir.
-
-// Aktif küme küçük kalır (partial index) — sayaç yalnız bunlarda; Teslim/İptal/Tümü
-// milyonlara ulaşacağından sayaçsız + son-30-gün varsayılanıyla açılır (P1a kararı, K19)
-const ACTIVE_STATUSES = 'pending,confirmed,processing,shipped'
-
-interface OrderTab {
-  key: string
-  label: string
-  statuses: string   // virgüllü; '' = tümü
-  counted?: string   // sayaç gösterilecekse tekil durum kodu
-  heavy?: boolean    // büyük liste: varsayılan son-30-gün
-}
-
-const TABS: OrderTab[] = [
-  { key: 'active',     label: 'Aktif',    statuses: ACTIVE_STATUSES },
-  { key: 'pending',    label: 'Bekleyen', statuses: 'pending',    counted: 'pending' },
-  { key: 'confirmed',  label: 'Onaylı',   statuses: 'confirmed',  counted: 'confirmed' },
-  { key: 'processing', label: 'İşlemde',  statuses: 'processing', counted: 'processing' },
-  { key: 'shipped',    label: 'Kargoda',  statuses: 'shipped',    counted: 'shipped' },
-  { key: 'delivered',  label: 'Teslim',   statuses: 'delivered',  heavy: true },
-  { key: 'cancelled',  label: 'İptal',    statuses: 'cancelled',  heavy: true },
-  { key: 'all',        label: 'Tümü',     statuses: '',           heavy: true },
-]
-
+// Siparişler: sütun ve gelişmiş filtreler aynı URL durumunu kullanır.
 export interface OrderSummary {
   id: string
   orderNumber: string
@@ -59,10 +32,12 @@ interface PagedResult<T> {
 
 const enumOpts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
 
-// Hızlı filtreler çubukta; diğer alanlar ilgili sütun başlığının filtre penceresinde (kullanıcı kararı 2026-09-08)
+// Ek alanlar gelişmiş filtrelerde; sütun filtreleri de aynı ortak durumu kullanır.
 const EXTRA_FILTERS: GridFilterField[] = [
-  { key: 'paid', label: 'Ödemesi alınan', type: 'boolean', quick: true },
-  { key: 'hasNotes', label: 'Notu olan', type: 'boolean', quick: true },   // FAZ 15.4h (eski "Sipariş Üye Notları")
+  { key: 'paid', label: 'Ödemesi alınan', type: 'boolean' },
+  { key: 'barcode', label: 'Barkod', type: 'text', ops: ['eq'] },
+  { key: 'productCode', label: 'Ürün kodu', type: 'text', ops: ['eq'] },
+  { key: 'hasNotes', label: 'Notu olan', type: 'boolean' },
 ]
 const PAYMENT_FILTERS = [
   { field: 'paymentStatus', label: 'Ödeme durumu', type: 'enum' as const, multiple: true, options: enumOpts(PAYMENT_STATUS_MAP) },
@@ -70,40 +45,31 @@ const PAYMENT_FILTERS = [
 ]
 
 export function OrdersPage() {
+  const [params] = useSearchParams()
+  const legacyTab = params.get('tab')
+  if (legacyTab !== null) {
+    const next = new URLSearchParams(params)
+    next.delete('tab')
+    const status = legacyTab === 'active' ? 'pending,confirmed,processing,shipped'
+      : Object.hasOwn(ORDER_STATUS_MAP, legacyTab) ? legacyTab : ''
+    if (status && !next.has('f.status')) next.set('f.status', `in:${status}`)
+    return <Navigate replace to={{ search: next.toString() ? `?${next}` : '' }} />
+  }
+  return <OrdersGrid />
+}
+
+function OrdersGrid() {
   const navigate = useNavigate()
   const grid = useGridState('orders', { defaultPageSize: 20, defaultSort: 'createdAt', defaultDir: 'desc' })
-  const [sp] = useSearchParams()
-  const tabKey = sp.get('tab') ?? 'active'
-  const tab = TABS.find(t => t.key === tabKey) ?? TABS[0]
-
-  // Sayaçlar — listeyle aynı filtreler (durum sekmesi hariç); eski binary'de endpoint yoksa sessizce gizlenir
-  const countParams = (() => { const p = grid.toParams(); p.delete('page'); p.delete('pageSize'); p.delete('sort'); p.delete('dir'); return p.toString() })()
-  const { data: counts } = useQuery<Record<string, number>>({
-    queryKey: ['order-status-counts', countParams],
-    queryFn: async () => (await api.get(`/orders/status-counts?${countParams}`)).data.data,
-    refetchInterval: 60_000,
-    retry: false,
-    placeholderData: prev => prev,
-  })
-  const activeTotal = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : undefined
-
   const { data: ordersData, isLoading, isFetching, error: ordersError } = useQuery<PagedResult<OrderSummary>>({
-    queryKey: ['orders', tab.key, ...grid.queryKey],
-    queryFn: async () => (await api.get(`/orders?${grid.toParams({ statuses: tab.statuses || undefined })}`)).data.data,
+    queryKey: ['orders', ...grid.queryKey],
+    queryFn: async () => (await api.get(`/orders?${grid.toParams()}`)).data.data,
     placeholderData: prev => prev,
     retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const orders = ordersData?.items ?? []
   const totalCount = ordersData?.totalCount ?? 0
-
-  function switchTab(t: OrderTab) {
-    grid.mutate(n => {
-      if (t.key === 'active') n.delete('tab'); else n.set('tab', t.key)
-      // Büyük listeler sınırsız taranmasın: tarih filtresi yoksa son 30 güne çek (çipte görünür, kaldırılabilir)
-      if (t.heavy && !n.has('f.createdAt')) { n.set('f.createdAt', `between:${quickDateRange('last30')}`); n.set('fq.createdAt', 'last30') }
-    })
-  }
 
   const columns: GridColumn<OrderSummary>[] = [
     { key: 'orderNumber', header: 'SİPARİŞ NO', frozen: true, lockVisible: true, sortable: true, minWidth: 130,
@@ -153,26 +119,12 @@ export function OrdersPage() {
         </div>
       </div>
 
-      {/* Durum sekmeleri — hızlı filtre; sayaçlar diğer aktif filtrelerle tutarlı */}
-      <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        {TABS.map(t => {
-          const count = t.key === 'active' ? activeTotal : t.counted ? counts?.[t.counted] : undefined
-          return (
-            <button key={t.key} className={cn('stab', tab.key === t.key && 'active')} onClick={() => switchTab(t)}>
-              {t.label}
-              {count !== undefined && (
-                <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'var(--surface2)', color: 'var(--text-s)' }}>{count.toLocaleString('tr-TR')}</span>
-              )}
-            </button>
-          )
-        })}
-      </div>
-
       <DataGrid<OrderSummary>
         gridId="orders"
         grid={grid}
         columns={columns}
         extraFilters={EXTRA_FILTERS}
+        advancedFilters
         search={{ placeholder: 'Sipariş no, dış sipariş no, alıcı adı, telefon…' }}
         rows={orders}
         totalCount={totalCount}
@@ -182,7 +134,7 @@ export function OrdersPage() {
         onRowClick={o => navigate(`/orders/${o.id}`)}
         empty="Sipariş bulunamadı."
         minWidth={820}
-        export={{ endpoint: '/orders/export', named: () => ({ statuses: tab.statuses || undefined }), fallbackFileName: 'siparisler.xlsx' }}
+        export={{ endpoint: '/orders/export', fallbackFileName: 'siparisler.xlsx' }}
         views
         compact={{
           title: o => o.orderNumber,

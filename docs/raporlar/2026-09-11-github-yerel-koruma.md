@@ -1,0 +1,9 @@
+# GitHub güncellemesi ve yerel koruma
+
+- Main `164033f5` -> `704fa789`, origin/main ile commit farkı 0/0; 35 commit hızlı ileri alındı. Push yapılmadı.
+- İşlem öncesi takipli ve untracked çalışmalar `safety-before-github-sync-20260911-reports` stash'ine alındı. Stash uygulanıp korundu; eski stash'ler silinmedi. Yerel çalışmalar commit edilmeden çalışma alanında duruyor.
+- 135 untracked dosya Git blob hash'iyle güvenlik stash'i karşılaştırıldı: eksik/değişen 0.
+- Sekiz çakışma çözüldü: DataGrid, FilterBar, OrdersPage, ReturnsPage, Program.cs, OrderGrid, GetReturnsQuery, GetReturnsQueryHandler. Boolean gelişmiş filtre penceresi ile upstream nesne tabanlı gelişmiş panel birlikte destekleniyor. Sipariş barkod/ürün kodu + upstream ürün adı/not filtreleri korundu. İade listesinde sipariş numarası + upstream tip/geri ödeme alanları birleştirildi. Kaldırılmış tedarik raporu servisi geri getirilmedi; yeni ProductStatsRefresher kaydı korundu.
+- PROGRESS.md'nin gelen güncelleme notları incelendi. Yeni migration/seed dosyaları var: ürün istatistik görünümü, raf sayımı, sipariş taksit, iade akış/banka alanları ve iade nedenleri. Hiçbiri DB'ye uygulanmadı; sunucu yayını/restart yapılmadı.
+- Admin TypeScript ve 29 rapor/kayıt testi geçti. Git çakışma işareti ve çözülmemiş indeks kaydı kalmadı.
+- API testi: 570 geçti, 12 atlandı, 1 başarısız. `dotnet test ... --filter "TestCategory!=Acceptance"` filtresine rağmen `OrderGridNotesDbTests.Not_filtreleri_ve_projeksiyonu_sunucuda_cevrilir` çalıştı; 192.168.0.241:5432 bağlantısı erişim engeli nedeniyle açılamadı. Bu sonuç kod hatasını göstermiyor; DB sorgusu doğrulanamadı. Aynı sonuç TRX ile tekrar doğrulandı. Bu ortam testini doğrulamak için uygun sunucu/SSH erişimi gerekir; bu Git senkronizasyonunda bağlantı veya sunucu ayarı değiştirilmedi.

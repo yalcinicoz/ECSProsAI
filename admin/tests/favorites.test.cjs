@@ -93,6 +93,7 @@ function text(node) {
 function harness() {
   const env = setup(), state = []
   let cursor = 0, dirty = false, userId = 'user-a'
+  const permissions = new Set(['catalog.products.view', 'definitions.view', 'orders.view', 'storefront.notifications.view'])
   const navigations = [], effects = [], queries = []
   const counts = { 'fav-pending-orders': 0, 'fav-stock-alerts': 0 }
   const location = { pathname: '/catalog/products/P-123', search: '?tab=features', hash: '#details' }
@@ -106,7 +107,7 @@ function harness() {
     '@/lib/utils': { cn: (...values) => values.filter(Boolean).join(' ') },
     '@/store/favorites': { useFavoritesStore: () => env.store.getState() },
     '@/store/ui': { useUIStore: () => ui },
-    '@/store/auth': { useAuthStore: (select) => select({ user: { id: userId }, hasPermission: () => false }) },
+    '@/store/auth': { useAuthStore: (select) => select({ user: { id: userId }, hasPermission: (permission) => permissions.has(permission) }) },
     'react-router-dom': { useLocation: () => location, useNavigate: () => (to) => navigations.push(to) },
     react: {
       useState: (initial) => {
@@ -120,7 +121,7 @@ function harness() {
   }
   const { FavoritesPanel } = load('components/layout/FavoritesPanel.tsx', mocks, env.disk)
   const { Header } = load('components/layout/Header.tsx', mocks, env.disk)
-  return { ...env, ui, navigations, location, effects, counts, queries,
+  return { ...env, ui, navigations, location, effects, counts, queries, permissions,
     switchUser: (id) => { userId = id },
     header: () => Header({ onMobileMenuOpen: () => {} }),
     render: () => {
@@ -169,6 +170,16 @@ test('hidden panel is inert, and stored restricted routes do not render', () => 
   assert.equal(button(page.render(), 'Entegrasyonlar'), undefined)
   page.ui.favsPanelOpen = false
   assert.equal(all(page.render(), (node) => node.props.id === 'favorites-panel')[0].props.inert, true)
+})
+
+test('revoked page permission hides saved shortcuts and disables their badge queries', () => {
+  const page = harness()
+  page.store.getState().add('user-a', '/orders')
+  assert.ok(button(page.render(), 'Siparişler'))
+  page.permissions.delete('orders.view')
+  assert.equal(button(page.render(), 'Siparişler'), undefined)
+  assert.equal(page.queries.filter(q => q.queryKey[0] === 'fav-pending-orders').at(-1).enabled, false)
+  assert.equal(page.store.getState().byUser['user-a'].length, 1, 'Revocation does not delete user data')
 })
 
 test('existing order/stock badges retain live counts, queries are user-scoped and disabled when panel closes', () => {

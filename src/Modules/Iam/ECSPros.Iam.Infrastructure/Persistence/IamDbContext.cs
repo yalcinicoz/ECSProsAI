@@ -24,6 +24,29 @@ public class IamDbContext : DbContext, IIamDbContext, IDataProtectionKeyContext
     public DbSet<SupplierUser> SupplierUsers => Set<SupplierUser>();
     public DbSet<SupplierUserSession> SupplierUserSessions => Set<SupplierUserSession>();
 
+    // One JSON key per statement: concurrent writers never replace unrelated preferences.
+    public Task<int> WritePreferenceAsync(Guid userId, string key, string? json, bool addOnly, CancellationToken ct) =>
+        Database.ExecuteSqlInterpolatedAsync($$"""
+            UPDATE iam.iam_users
+            SET "Preferences" = CASE WHEN {{json}}::text IS NULL
+                THEN COALESCE("Preferences", '{}'::jsonb) - {{key}}
+                ELSE jsonb_set(COALESCE("Preferences", '{}'::jsonb), ARRAY[{{key}}], {{json}}::jsonb, true) END,
+                "UpdatedAt" = {{DateTime.UtcNow}}
+            WHERE "Id" = {{userId}} AND NOT "IsDeleted"
+                AND (NOT {{addOnly}} OR NOT (COALESCE("Preferences", '{}'::jsonb) ? {{key}}))
+            """, ct);
+
+    public Task<int> CompareExchangePreferenceAsync(Guid userId, string key, string expectedJson, string? nextJson, CancellationToken ct) =>
+        Database.ExecuteSqlInterpolatedAsync($$"""
+            UPDATE iam.iam_users
+            SET "Preferences" = CASE WHEN {{nextJson}}::text IS NULL
+                THEN "Preferences" - {{key}}
+                ELSE jsonb_set("Preferences", ARRAY[{{key}}], {{nextJson}}::jsonb, true) END,
+                "UpdatedAt" = {{DateTime.UtcNow}}
+            WHERE "Id" = {{userId}} AND NOT "IsDeleted"
+                AND "Preferences" -> {{key}} = {{expectedJson}}::jsonb
+            """, ct);
+
     // FAZ 10 / A1: Data Protection key ring — düğümler arası ortak depo.
     // Anahtarlar DB yedeğiyle birlikte yedeklenir; ~/.ecspros/dp-keys dosya deposu
     // bir sürüm boyunca salt-okunur geri dönüş yolu olarak kalır (Program.cs).

@@ -11,6 +11,28 @@ public class OrderDbContext : DbContext, IOrderDbContext
 
     public DbSet<Domain.Entities.Order> Orders => Set<Domain.Entities.Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    // Fixed server-owned SELECT; no model SQL or migration entity. Missing/deleted catalog retains the order snapshot.
+    public IQueryable<OrderReportLine> ReportLines() => Database.SqlQueryRaw<OrderReportLine>("""
+        SELECT i."OrderId", i."IsDeleted", i."Sku", i."ProductName", i."Quantity",
+               p."Code" AS "ProductCode", v."Barcode"
+        FROM "order".ord_order_items i
+        LEFT JOIN catalog.product_variants v ON v."Id" = i."VariantId" AND NOT v."IsDeleted"
+        LEFT JOIN catalog.products p ON p."Id" = v."ProductId" AND NOT p."IsDeleted"
+        """);
+    public IQueryable<Domain.Entities.Order> FilterOrdersByProduct(IQueryable<Domain.Entities.Order> query, string barcode, string productCode)
+    {
+        // Parametreli alt sorgu: sayfalama/export öncesi, aynı kalemde eşleşme; belleğe ID listesi çekilmez.
+        var ids = Database.SqlQuery<Guid>($"""
+            SELECT i."OrderId" AS "Value"
+            FROM "order".ord_order_items i
+            LEFT JOIN catalog.product_variants v ON v."Id"=i."VariantId"
+            LEFT JOIN catalog.products p ON p."Id"=v."ProductId"
+            WHERE NOT i."IsDeleted"
+              AND ({barcode} = '' OR v."Barcode"={barcode} OR i."Sku"={barcode})
+              AND ({productCode} = '' OR p."Code"={productCode} OR v."Sku"={productCode} OR i."Sku"={productCode})
+            """);
+        return query.Where(o => ids.Contains(o.Id));
+    }
     public DbSet<OrderDiscount> OrderDiscounts => Set<OrderDiscount>();
     public DbSet<OrderExpense> OrderExpenses => Set<OrderExpense>();
     public DbSet<OrderTax> OrderTaxes => Set<OrderTax>();

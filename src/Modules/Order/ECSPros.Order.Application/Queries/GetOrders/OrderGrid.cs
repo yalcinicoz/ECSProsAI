@@ -28,6 +28,9 @@ public static class OrderGrid
         .Text("note", o => GridJson.TextObj(o.CustomerNotes, "note"))
         .Text("internalNote", o => o.InternalNotes)
         .Bool("hasNotes", o => (o.InternalNotes != null && o.InternalNotes != "") || GridJson.TextObj(o.CustomerNotes, "note") != null)
+        // Bu iki alan ApplyAll'da ilişkili kalem/katalog alt sorgusuna yönlendirilir.
+        .ExternalText("barcode")
+        .ExternalText("productCode")
         .Enum("status", o => o.Status, Statuses)
         .Enum("paymentStatus", o => o.PaymentStatus, PaymentStatuses)
         .Enum("paymentMethod", o => o.PaymentMethod, PaymentMethods, nullToken: "none")
@@ -96,11 +99,24 @@ public static class OrderGrid
         };
     }
 
-    public static IQueryable<OrderEntity> ApplyAll(IQueryable<OrderEntity> query, OrderListFilters f, GridRequest? grid, bool includeStatus = true)
+    public static IQueryable<OrderEntity> ApplyAll(IQueryable<OrderEntity> query, OrderListFilters f, GridRequest? grid, bool includeStatus = true, IOrderDbContext? db = null)
     {
         query = ApplyNamed(query, f, includeStatus);
         query = ApplyProductFilter(query, grid);
-        query = includeStatus ? Schema.ApplyFilters(query, grid, "product") : Schema.ApplyFilters(query, grid, "status", "product");
+        string ProductFilter(string key)
+        {
+            var filters = grid?.Filters.Where(x => x.Field.Equals(key, StringComparison.OrdinalIgnoreCase)).ToArray() ?? [];
+            if (filters.Length > 1) throw new GridException($"{key}: aynı filtre birden fazla verilemez.");
+            if (filters.Length == 0) return "";
+            var filter = filters[0];
+            if (filter.Op is not ("eq" or "auto")) throw new GridException($"{key}: yalnız tam eşleşme desteklenir.");
+            return filter.Value.Trim();
+        }
+        var barcode = ProductFilter("barcode");
+        var productCode = ProductFilter("productCode");
+        if (barcode.Length > 0 || productCode.Length > 0)
+            query = (db ?? throw new GridException("Ürün filtresi bağlamı eksik.")).FilterOrdersByProduct(query, barcode, productCode);
+        query = includeStatus ? Schema.ApplyFilters(query, grid, "barcode", "productCode", "product") : Schema.ApplyFilters(query, grid, "status", "barcode", "productCode", "product");
         // Y3 (K2): kullanıcının erişemediği kanalın siparişi listeye/sayıma/exporta girmez.
         return Schema.ApplyKanalKapsami(query, grid?.KanalKisiti);
     }
@@ -138,7 +154,7 @@ public class ExportOrdersQueryHandler(IOrderDbContext db) : IRequestHandler<Expo
 {
     public async Task<Result<OrderExportSource>> Handle(ExportOrdersQuery r, CancellationToken ct)
     {
-        var q = OrderGrid.ApplyAll(db.Orders.AsNoTracking(), r.Filters, r.Grid);
+        var q = OrderGrid.ApplyAll(db.Orders.AsNoTracking(), r.Filters, r.Grid, db: db);
         var count = await q.CountAsync(ct);
         if (count > r.MaxRows)
             return Result.Failure<OrderExportSource>($"Sonuç {count:N0} satır; dışa aktarma sınırı {r.MaxRows:N0}. Filtreyi daraltın.");

@@ -33,6 +33,10 @@ Yeni sohbet şu sırayla başlamalıdır:
 - Migration yalnız hedef database kimliği doğrulandıktan ve ayrıca onaylandıktan sonra uygulanır.
 - Çalışan modüller gereksiz yeniden yazılmaz; diff istenen işle sınırlı tutulur.
 - Her tamamlanan iş `PROGRESS.md` ve ilgili faz belgesine işlenir.
+- Her GitHub güncellemesinde gelen commit/diff, `PROGRESS.md` ve ilgili faz planı birlikte kontrol edilir:
+  değişikliğin gerekçesi, bizim hedef DB'de eksik migration/seed, çalışan API ve izole worker paketlerinin
+  uyumluluğu ayrı çıkarılır. Diğer ortam için yazılmış "canlıda" notu bizim ortamda uygulanmış sayılmaz.
+  Özellikle kolon kaldırma/ad değiştirme öncesinde aynı DB'yi kullanan eski worker sorguları doğrulanır.
 - AGENTS talimatı gereği etkileşimli oturumda `npm run build` çalıştırılmaz.
 
 ## 3. Git ve çalışma ağacı durumu

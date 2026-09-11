@@ -28,6 +28,14 @@ public sealed class DataGridKeyConsistencyTests
     /// </summary>
     private static readonly Dictionary<string, string[]> Eslesme = new()
     {
+        ["admin/src/pages/reports/AiReportsPage.tsx"] = new[]
+        {
+            "src/ECSPros.Api/Services/AiReporting/StockReportQuery.cs",
+        },
+        ["admin/src/pages/reports/ReportsPage.tsx"] = new[]
+        {
+            "src/ECSPros.Api/Grid/StockGrid.cs",
+        },
         ["admin/src/pages/storefront/NotificationsMonitorPage.tsx"] = new[]
         {
             "src/Modules/Storefront/ECSPros.Storefront.Application/Queries/GetStockAlertsForAdmin/StockAlertGrid.cs",

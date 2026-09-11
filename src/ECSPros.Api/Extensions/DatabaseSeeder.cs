@@ -239,6 +239,8 @@ public static class DatabaseSeeder
 
         var servisler = new (string Kod, string Ad, string Tip, List<PlatformSchemaField> Sema)[]
         {
+            (OpenAiReportingCatalog.Code, "OpenAI — AI Raporlama", OpenAiReportingCatalog.ServiceType,
+                OpenAiReportingCatalog.CreateSchema()),
             ("smtp", "SMTP E-Posta", "email", new List<PlatformSchemaField>
             {
                 Alan("host",     "Sunucu",       "text",     "settings", zorunlu: true),

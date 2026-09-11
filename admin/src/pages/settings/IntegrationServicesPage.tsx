@@ -63,6 +63,7 @@ const CARGO_STRATEGIES = [
 ]
 
 const SERVICE_TYPES = [
+  { value: 'ai_reporting', label: 'AI Raporlama' },
   { value: 'cargo', label: 'Kargo' },
   { value: 'email', label: 'E-Posta (SMTP)' },
   { value: 'visual_search', label: 'Görsel Arama' },

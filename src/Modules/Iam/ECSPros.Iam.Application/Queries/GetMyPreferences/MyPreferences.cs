@@ -32,18 +32,11 @@ public class SetMyPreferenceCommandHandler(IIamDbContext db) : IRequestHandler<S
     {
         if (string.IsNullOrWhiteSpace(r.Key) || r.Key.Length > 80 || !r.Key.All(c => char.IsLetterOrDigit(c) || c is '.' or '_' or '-'))
             return Result.Failure<bool>("Geçersiz tercih anahtarı.");
-        if (r.Value is { } v && v.GetRawText().Length > MaxValueBytes)
+        if (r.Value is { } v && System.Text.Encoding.UTF8.GetByteCount(v.GetRawText()) > MaxValueBytes)
             return Result.Failure<bool>("Tercih değeri çok büyük (en fazla 64 KB).");
 
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == r.UserId, ct);
-        if (user is null) return Result.Failure<bool>("Kullanıcı bulunamadı.");
-
-        var prefs = new Dictionary<string, object>(user.Preferences ?? new Dictionary<string, object>());
-        if (r.Value is null || r.Value.Value.ValueKind == JsonValueKind.Null) prefs.Remove(r.Key);
-        else prefs[r.Key] = r.Value.Value.Clone();
-        user.Preferences = prefs;   // yeni sözlük örneği → EF değişikliği görür (jsonb)
-        user.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
-        return Result.Success(true);
+        var json = r.Value is null || r.Value.Value.ValueKind == JsonValueKind.Null ? null : r.Value.Value.GetRawText();
+        return await db.WritePreferenceAsync(r.UserId, r.Key, json, false, ct) == 1
+            ? Result.Success(true) : Result.Failure<bool>("Kullanıcı bulunamadı.");
     }
 }

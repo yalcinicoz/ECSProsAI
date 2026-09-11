@@ -34,6 +34,8 @@ function harness({ shared = false, failPost = false, queryError = false, pending
   const states = [], mutations = [], writes = [], invalidations = [], queries = []
   let cursor = 0, mutationCursor = 0, params = new URLSearchParams('mp=erp:nebim&tab=eslenmemis')
   const mocks = {
+    // These tests render the dictionary/modals, not the separate DataGrid tabs.
+    '@/components/grid': { DataGrid: 'DataGrid', useGridState: () => { throw new Error('Unexpected grid tab render') }, useLocalGrid: () => { throw new Error('Unexpected local grid render') } },
     react: {
       useState: (initial) => {
         const index = cursor++

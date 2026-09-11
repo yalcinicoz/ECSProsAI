@@ -33,6 +33,7 @@ const tabParams = (tab: string): Record<string, string | undefined> =>
 export interface ReturnSummary {
   id: string
   returnNumber: string
+  orderNumber?: string | null
   orderId: string
   memberId: string
   returnType: string
@@ -199,8 +200,8 @@ export function ReturnsPage() {
   const switchTab = (key: string) => grid.mutate(n => { if (key === 'requested') n.delete('tab'); else n.set('tab', key) })
 
   const columns: GridColumn<ReturnSummary>[] = [
-    { key: 'returnNumber', header: 'İADE NO', filter: { type: 'text', label: 'İade no', ops: ['startswith', 'contains', 'eq'] }, filters: [{ field: 'trackingNumber', label: 'Kargo takip no', type: 'text' }], frozen: true, lockVisible: true, sortable: true, minWidth: 140,
-      cell: r => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{r.returnNumber}</code> },
+    { key: 'orderNumber', header: 'SİPARİŞ NO', filter: { type: 'text', label: 'Sipariş no', ops: ['startswith', 'contains', 'eq'] }, filters: [{ field: 'trackingNumber', label: 'Kargo takip no', type: 'text' }], frozen: true, lockVisible: true, sortable: true, minWidth: 140,
+      cell: r => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{r.orderNumber ?? '—'}</code> },
     { key: 'returnType', header: 'TİP', sortable: true, priority: 3, filter: { type: 'enum', label: 'Tip', options: RETURN_TYPE_OPTIONS }, cell: r => { const t = RETURN_TYPE_MAP[r.returnType]; return t ? <Badge variant={t.variant}>{t.label}</Badge> : <span className="text-sm" style={{ color: 'var(--text-m)' }}>{r.returnType}</span> } },
     { key: 'refundAmount', header: 'TUTAR', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Tutar' },
       cell: r => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{r.refundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span> },
@@ -240,7 +241,7 @@ export function ReturnsPage() {
         grid={grid}
         columns={columns}
         extraFilters={RETURN_EXTRA_FILTERS}
-        search={{ placeholder: 'İade no, kargo takip no, kargo iade kodu…' }}
+        search={{ placeholder: 'Sipariş no, kargo takip no, kargo iade kodu…' }}
         rows={returns}
         totalCount={totalCount}
         loading={isLoading}
@@ -251,7 +252,7 @@ export function ReturnsPage() {
         minWidth={760}
         export={{ endpoint: '/orders/returns/export', named: () => ({ status: tab === 'payable' ? 'received' : (tab !== 'all' && tab !== '' ? tab : undefined) }), fallbackFileName: 'iadeler.xlsx' }}
         compact={{
-          title: r => r.returnNumber,
+          title: r => r.orderNumber ?? '—',
           subtitle: r => `${new Date(r.createdAt).toLocaleDateString('tr-TR')}${r.cargoReturnCode ? ` · ${r.cargoReturnCode}` : ''}`,
           right: r => r.refundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺',
           badge: r => { const st = RETURN_STATUS_MAP[r.status] ?? { label: r.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> },

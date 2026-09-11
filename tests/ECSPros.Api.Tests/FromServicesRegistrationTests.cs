@@ -7,7 +7,7 @@ namespace ECSPros.Api.Tests;
 /// 2026-09-08 canlı olayı: <c>PushEtkilesim</c> controller aksiyonlarında <c>[FromServices]</c> ile istendiği hâlde DI'a kaydedilmemişti;
 /// soru cevaplama / yorum onay-ret / iade onay-ret 500 döndü (yetki filtresi model bağlamadan önce çalıştığından kimliksiz duman testi de
 /// yakalamaz). Bu test: Api assembly'sindeki tüm controller aksiyonlarının <c>[FromServices]</c> SOMUT sınıf parametreleri için kaynakta
-/// bir <c>Add(Scoped|Singleton|Transient)&lt;…Tip&gt;</c> kaydı bulunmasını ister (arayüz/ILogger/IConfiguration vb. framework tipleri hariç).
+/// bir <c>Add(Scoped|Singleton|Transient|HttpClient)&lt;…Tip&gt;</c> kaydı bulunmasını ister (arayüz/ILogger/IConfiguration vb. framework tipleri hariç).
 /// </summary>
 [TestClass]
 public sealed class FromServicesRegistrationTests
@@ -28,10 +28,10 @@ public sealed class FromServicesRegistrationTests
             var t = p.ParameterType;
             if (t.IsInterface || t.IsAbstract || t.IsGenericType || t.Namespace?.StartsWith("Microsoft", StringComparison.Ordinal) == true
                 || t.Namespace?.StartsWith("System", StringComparison.Ordinal) == true || t.Namespace?.StartsWith("Npgsql", StringComparison.Ordinal) == true) continue;
-            // yalnız gerçek DI çağrısı sayılır: Add(Scoped|Singleton|Transient)<[Arayüz,] Tip>( ya da typeof(Tip) ile; ILogger<Tip> gibi jenerik kullanımlar SAYILMAZ
+            // Typed AddHttpClient<T> de T'yi DI'a kaydeder; ILogger<T> gibi kullanımlar kayıt değildir.
             var ad = System.Text.RegularExpressions.Regex.Escape(t.Name);
             var kayitli = System.Text.RegularExpressions.Regex.IsMatch(kaynak,
-                $@"Add(Scoped|Singleton|Transient)\s*<\s*(?:[A-Za-z0-9_.]+\s*,\s*)?(?:[A-Za-z0-9_]+\.)*{ad}\s*>\s*\(|Add(Scoped|Singleton|Transient)\s*\(\s*typeof\(\s*(?:[A-Za-z0-9_]+\.)*{ad}\s*\)");
+                $@"Add(Scoped|Singleton|Transient|HttpClient)\s*<\s*(?:[A-Za-z0-9_.]+\s*,\s*)?(?:[A-Za-z0-9_]+\.)*{ad}\s*>\s*\(|Add(Scoped|Singleton|Transient)\s*\(\s*typeof\(\s*(?:[A-Za-z0-9_]+\.)*{ad}\s*\)");
             if (!kayitli) eksik.Add($"{ctrl.Name}.{m.Name}({p.Name}: {t.FullName})");
         }
         Assert.AreEqual(0, eksik.Count, "DI kaydı bulunamayan [FromServices] tipleri:\n" + string.Join("\n", eksik));

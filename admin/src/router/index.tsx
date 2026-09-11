@@ -3,6 +3,8 @@ import { MainLayout } from '@/components/layout/MainLayout'
 import { AuthGuard } from '@/components/layout/AuthGuard'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
+import { ReportsPage } from '@/pages/reports/ReportsPage'
+import { AiReportsPage } from '@/pages/reports/AiReportsPage'
 import { MarketplacesPage } from '@/pages/marketplaces/MarketplacesPage'
 import { TrackingPage } from '@/pages/marketing/TrackingPage'
 import { TrackingConsentPage } from '@/pages/storefront/TrackingConsentPage'
@@ -40,7 +42,6 @@ import { ReceiptDetailPage } from '@/pages/procurement/ReceiptDetailPage'
 import { LabelTemplatesPage } from '@/pages/settings/LabelTemplatesPage'
 import { SortingPage } from '@/pages/procurement/SortingPage'
 import { LabelsPage } from '@/pages/procurement/LabelsPage'
-import { ProcurementReportPage } from '@/pages/procurement/ProcurementReportPage'
 import { ChannelCategoryDetailPage } from '@/pages/storefront/ChannelCategoryDetailPage'
 import { CollectionsModerationPage } from '@/pages/storefront/CollectionsModerationPage'
 import { ReviewsModerationPage } from '@/pages/storefront/ReviewsModerationPage'
@@ -124,6 +125,8 @@ export const router = createBrowserRouter(
           element: <MainLayout />,
           children: [
             { index: true, element: <DashboardPage /> },
+            { path: 'reports/stocks', element: <ReportsPage reportId="stocks" /> },
+            { path: 'reports/ai', element: <AiReportsPage /> },
 
             // Katalog
             { path: 'catalog/product-groups',     element: <ProductGroupsPage /> },
@@ -152,7 +155,6 @@ export const router = createBrowserRouter(
             { path: 'settings/label-templates',            element: <LabelTemplatesPage /> },
             { path: 'procurement/sorting',                 element: <SortingPage /> },
             { path: 'procurement/labels',                  element: <LabelsPage /> },
-            { path: 'procurement/report',                  element: <ProcurementReportPage /> },
             { path: 'storefront/collections',              element: <CollectionsModerationPage /> },
             { path: 'storefront/reviews',                  element: <ReviewsModerationPage /> },
             { path: 'storefront/questions',                element: <ProductQuestionsPage /> },

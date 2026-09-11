@@ -428,7 +428,7 @@ export function ProductCardPage() {
     placeholderData: prev => prev,
     retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
-  const messages = msgData?.items ?? []
+  const messages = useMemo(() => msgData?.items ?? [], [msgData?.items])
 
   // Kanal kategorileri (modal kapsam seçimi için)
   const [modalOpen, setModalOpen] = useState(false)

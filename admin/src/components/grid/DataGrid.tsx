@@ -50,7 +50,7 @@ export interface DataGridProps<T> {
   /** kolona bağlı olmayan ek filtre alanları (örn. 'paid' boolean) */
   extraFilters?: GridFilterField[]
   /** Açılır/kapanır gelişmiş filtre paneli (FilterBar.advanced); alanlar çip ve mobil listesine de girer */
-  advancedFilters?: { fields: GridFilterField[]; note?: ReactNode }
+  advancedFilters?: boolean | { fields: GridFilterField[]; note?: ReactNode }
   /** filtre satırının en solunda (örn. küçük seçici) */
   filterLeading?: ReactNode
   /** Excel export (plan §2.8): verilirse "Excel'e aktar ▾" düğmesi Kolonlar'ın solunda */
@@ -229,7 +229,7 @@ export function DataGrid<T>({
   const filterFields = useMemo<GridFilterField[]>(() => {
     const list = [...Array.from(columnFields.values()).flat(), ...(extraFilters ?? [])]
     const seen = new Set(list.map(f => f.key))
-    for (const f of advancedFilters?.fields ?? []) if (!seen.has(f.key)) { list.push(f); seen.add(f.key) }
+    for (const f of (typeof advancedFilters === 'object' ? advancedFilters.fields : [])) if (!seen.has(f.key)) { list.push(f); seen.add(f.key) }
     return list
   }, [columnFields, extraFilters, advancedFilters])
   const headerFieldKeys = useMemo(() => new Set(Array.from(columnFields.values()).flat().map(f => f.key)), [columnFields])
@@ -314,7 +314,7 @@ export function DataGrid<T>({
             {viewsEnabled && <ViewsMenu views={viewsApi} />}
             {toolbarLeft}
             {hasFilterBar && <FilterBar grid={grid} fields={filterFields} search={search} bp={bp} leading={filterLeading} headerFieldKeys={headerFieldKeys}
-              advanced={advancedFilters ? { fields: advancedFilters.fields, storageKey: `grid:${gridId}:adv`, note: advancedFilters.note } : undefined} />}
+              advanced={typeof advancedFilters === 'object' ? { fields: advancedFilters.fields, storageKey: `grid:${gridId}:adv`, note: advancedFilters.note } : advancedFilters} />}
           </div>
           <div className="flex items-center gap-2 ml-auto">
             {toolbarRight}

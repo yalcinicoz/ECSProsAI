@@ -26,8 +26,9 @@ public record ReturnListDto(
     string RefundStatus,
     decimal RefundAmount,
     DateTime CreatedAt,
-    string? CargoReturnCode = null, // E8: kargo iade kodu
-    string? RefundNotApplicableReason = null)   // İade planı (2026-09-10)
+    string? CargoReturnCode = null,
+    string? OrderNumber = null,
+    string? RefundNotApplicableReason = null)
 {
     /// <summary>Vitrin iade tipi etiketi (İadelerim: teslimatsız iade satırı "Teslim Edilemedi").</summary>
     public string ReturnTypeLabel => DurumEtiketleri.Etiket(DurumEtiketleri.Vitrin.IadeTipi, ReturnType);

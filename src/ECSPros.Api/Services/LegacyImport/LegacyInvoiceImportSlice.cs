@@ -75,9 +75,25 @@ public sealed class LegacyInvoiceImportSlice(
     private LegacyImportSliceReport Fail(string error, int skipped) =>
         new(Slice, false, options.DryRun, 0, skipped, error);
 
-    private static async Task<TargetReferences> LoadReferencesAsync(
+    private async Task<TargetReferences> LoadReferencesAsync(
         NpgsqlConnection connection, IReadOnlyCollection<LegacyInvoiceSourceRow> source, CancellationToken ct)
     {
+        Guid platformId;
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = """
+                SELECT "Id" FROM core.core_firm_platforms
+                 WHERE "Code" = @code AND "IsActive" AND NOT "IsDeleted"
+                """;
+            command.Parameters.AddWithValue("code", options.FirmPlatformCode);
+            await using var dbReader = await command.ExecuteReaderAsync(ct);
+            if (!await dbReader.ReadAsync(ct))
+                throw new InvalidOperationException($"Aktif hedef firma platformu bulunamadı: {options.FirmPlatformCode}");
+            platformId = dbReader.GetGuid(0);
+            if (await dbReader.ReadAsync(ct))
+                throw new InvalidOperationException($"Hedef firma platformu tekil değil: {options.FirmPlatformCode}");
+        }
+
         var orderIds = source.Select(x => x.OrderId).Distinct().ToArray();
         var orders = new Dictionary<int, TargetOrder>();
         if (orderIds.Length > 0)
@@ -88,8 +104,10 @@ public sealed class LegacyInvoiceImportSlice(
                        "BillingCompanyName","BillingAddressLine","Subtotal","TotalDiscount","TotalTax","GrandTotal"
                   FROM "order".ord_orders
                  WHERE "LegacyOrderId" = ANY(@ids) AND NOT "IsDeleted"
+                   AND "FirmPlatformId" = @platformId
                 """;
             command.Parameters.AddWithValue("ids", orderIds);
+            command.Parameters.AddWithValue("platformId", platformId);
             await using var dbReader = await command.ExecuteReaderAsync(ct);
             while (await dbReader.ReadAsync(ct))
             {
@@ -131,6 +149,7 @@ public sealed class LegacyInvoiceImportSlice(
                   FROM "order".ord_invoice_series
                  WHERE "IsActive" AND NOT "IsDeleted"
                 """;
+            // Platform devredilmiş olabilir: tarihsel seri bugünkü kanal firmasına zorlanmaz.
             // FE0 (2026-09-06): seri tekil + TİPLİ — eşleşme (serial, tip) çiftiyle
             await using var dbReader = await command.ExecuteReaderAsync(ct);
             while (await dbReader.ReadAsync(ct))
@@ -184,9 +203,13 @@ public sealed class LegacyInvoiceImportSlice(
             TargetSeries? series = null;
             if (number is not null)
             {
-                series = references.Series.SingleOrDefault(x =>
-                    x.InvoiceType == invoiceType && x.Serial.Equals(number.Serial, StringComparison.OrdinalIgnoreCase));
-                if (series is null) rowErrors.Add($"fatura {row.Id}: hedefte {number.Serial} aktif {invoiceType} fatura serisi yok");
+                var matches = references.Series.Where(x =>
+                    x.InvoiceType == invoiceType && x.Serial.Equals(number.Serial, StringComparison.OrdinalIgnoreCase)).ToArray();
+                if (matches.Length == 1) series = matches[0];
+                else if (matches.Length == 0)
+                    rowErrors.Add($"fatura {row.Id}: hedefte {number.Serial} aktif {invoiceType} fatura serisi yok");
+                else
+                    rowErrors.Add($"fatura {row.Id}: {number.Serial} {invoiceType} serisi birden fazla kayıtla eşleşiyor; tarihsel firma doğrulanmalı");
             }
             references.Existing.TryGetValue(row.Id, out var existing);
             if (existing is { IsDeleted: true }) rowErrors.Add($"fatura {row.Id}: hedef legacy kayıt silinmiş");

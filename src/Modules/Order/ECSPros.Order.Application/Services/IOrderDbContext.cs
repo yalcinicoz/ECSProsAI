@@ -7,6 +7,9 @@ public interface IOrderDbContext
 {
     DbSet<Domain.Entities.Order> Orders { get; }
     DbSet<OrderItem> OrderItems { get; }
+    IQueryable<OrderReportLine> ReportLines() => throw new NotSupportedException("Rapor satır kaynağı bu bağlamda desteklenmiyor.");
+    IQueryable<Domain.Entities.Order> FilterOrdersByProduct(IQueryable<Domain.Entities.Order> query, string barcode, string productCode)
+        => throw new NotSupportedException("Ürün filtresi bu bağlamda desteklenmiyor.");
     DbSet<OrderDiscount> OrderDiscounts { get; }
     DbSet<OrderExpense> OrderExpenses { get; }
     DbSet<OrderTax> OrderTaxes { get; }

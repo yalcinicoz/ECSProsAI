@@ -43,9 +43,10 @@ public static class ProductGroupGrid
         if (f.ActiveOnly) query = query.Where(g => g.IsActive);
         if (!string.IsNullOrWhiteSpace(f.Search))
         {
-            var term = f.Search.Trim().ToLower();
+            var term = f.Search.Trim().ToLowerInvariant();
+            var namePath = ECSPros.Catalog.Application.Helpers.ProductGroupSearch.PathFor(f.Search);
             query = query.Where(g => g.Code.ToLower().Contains(term)
-                || GridJson.Text(g.NameI18n, "tr").ToLower().Contains(term));
+                || ECSPros.Catalog.Application.Helpers.ProductGroupSearch.Matches(g.NameI18n, namePath));
         }
         return query;
     }

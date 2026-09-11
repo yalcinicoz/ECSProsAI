@@ -2,15 +2,15 @@ using ECSPros.Order.Application.Queries.GetReturns;
 
 namespace ECSPros.Api.Grid;
 
-/// <summary>İadeler Excel kolonları (iade no + durum kilitli).</summary>
+/// <summary>İadeler Excel kolonları (sipariş no + durum kilitli).</summary>
 public static class ReturnExportColumns
 {
     private static object? Tarih(DateTime? d) => d.HasValue ? GridExportWriter.ToIstanbul(d.Value) : null;
 
     public static readonly IReadOnlyList<GridExportColumn<ReturnExportRow>> All = new GridExportColumn<ReturnExportRow>[]
     {
-        new("returnNumber", "İade No", r => r.ReturnNumber, Locked: true),
-        new("orderNumber", "Sipariş No", r => r.OrderNumber),
+        new("orderNumber", "Sipariş No", r => r.OrderNumber, Locked: true),
+        new("returnNumber", "İade No", r => r.ReturnNumber),
         new("createdAt", "Tarih", r => GridExportWriter.ToIstanbul(r.CreatedAt)),
         new("returnType", "Tip", r => ReturnGrid.TypeLabel(r.ReturnType)),
         new("status", "Durum", r => ReturnGrid.StatusLabel(r.Status), Locked: true),

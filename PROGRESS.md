@@ -126,6 +126,43 @@ Doğrulama: 280 test geçiyor (313 toplam, +1 yeni yerel-grid denetimi), GridSch
 
 # ECSPros — Geliştirme İlerleme Takibi
 
+### ADM-COMP1 — GitHub sonrası test uyumluluğu ve grup araması (2026-09-10)
+
+- 19 admin hatasının nedeni ayrıştırıldı: ERP grid import sınırı (8), yeni
+  sayfa izinleriyle favori test kullanıcısı (3), 65 -> 68 menü envanteri (1),
+  ürün gruplarının eski istemci tablo beklentisi (7). Testler yeni sözleşmeye
+  uyarlandı; hiçbir test devre dışı bırakılmadı. İzin iptalinde favori/sayaç
+  görünürlüğü regresyonu eklendi; kayıtlar silinmez. Admin 52/52 başarılı.
+- Gerçek fark: ProductGroupGrid araması yalnız TR/kod içeriyordu. Parametreli
+  yerleşik jsonb_path_exists çevirisiyle tüm dil değerleri ve Türkçe/ASCII
+  araması eklendi; kullanıcı regex karakterleri kaçırılır. Sunucuda sayfalama,
+  liste/export ortak filtre yolu ve dropdown uçları korundu. Migration yok.
+- ProductCardPage boş messages dizisi useMemo ile sabitlendi. TypeScript ve
+  genel ESLint 0 hata/0 uyarı. Yeni ProductGroupSearchTests 3/3; genel API
+  DB/Acceptance hariç 276 geçti, 1 mevcut atlama. EF SQL çevirisi bağlantısız
+  doğrulandı; gerçek PG/oturumlu tarayıcı/performance kabulü yapılmadı.
+- Ayrıntı ve dosya envanteri: docs/raporlar/2026-09-10-admin-guncelleme-uyumluluk.md.
+  DB/sunucu, production build, migration uygulama, yayın veya push yok.
+  Önceki PDF ve yerel PROGRESS kayıtları korundu.
+
+### GitHub — Yerel dosyalar korunarak güncelleme (2026-09-10)
+
+- 66ff5356 -> 164033f5 fast-forward: 33 commit, 463 dosya. Admin DataGrid,
+  yetkilendirme, bildirimler ve API güncellemeleri alındı. Push/yayın yapılmadı.
+- Yerel PROGRESS ve untracked AI PDF, d8de25674f35ee9e580b9e822dbdb96c2f22467f
+  safety-before-github-sync-20260910-ai-report stash'iyle korundu; stash silinmedi.
+  Yalnız PROGRESS çakıştı; iki tarafın notları korundu. Yerel 32 dolu ek satır
+  doğrulandı, PDF SHA256 E9E0AA7048C8A8903740AEAFC54FA4986C3A04481AC11010006F46228BA4C5B3
+  aynı kaldı. Yerel dosyalar unstaged/untracked durumunda, unmerged dosya yok.
+- Admin TypeScript başarılı; lint 0 hata/1 ProductCardPage hook uyarısı.
+  node --test tests/*.cjs: 32 geçti/19 başarısız. 15 test yeni grid importunu
+  mock/alias düzeneğinde çözemiyor; 1 test menü sayısını 65 beklerken 68 buluyor;
+  3 favori testinde undefined düğüm/props hatası var. Test uyarlaması ve gerçek
+  regresyon ayrımı yayın öncesinde incelenmeli; bu alma işinde kod değiştirilmedi.
+- API DB/Acceptance hariç test: 273 geçti, 1 atlandı, 0 hata (274 toplam).
+  Derleyici uyarıları mevcut. 6 yeni migration kaynağı geldi; hiçbir migration,
+  DB/sunucu işlemi veya production build çalıştırılmadı. HEAD/origin main 0/0.
+
 **DATAGRID — filtreler sütun başlıklarına taşındı (2026-09-08, kullanıcı kararı):** "Gelişmiş" paneli kaldırıldı; filtrelenebilir her başlıkta filtre ikonu (`HeaderFilterButton`, aktif → marka renginde dolu + alan sayısı), tıklayınca body'ye portal edilen pencere (`HeaderPopover`; kaydırma kabı kırpmaz, viewport taşmasında sola/yukarı kayar; Temizle/Tamam; Escape/dışarı tıklama kapatır). Kolon tanımı: `filter` (ana alan) + `filters[]` (aynı pencerede ek alanlar; örn. Siparişler ÖDEME → ödeme durumu + yöntem; SİPARİŞ NO → dış sipariş no + kargo; MÜŞTERİ → telefon). Çubukta yalnız global arama + `quick` filtreler + çipler; kolonu olmayan ek alanlar için yedek "Diğer filtreler ▾" penceresi (`extraFilters`). Mobil bottom sheet tüm alanları listelemeye devam eder. Düzenek F2 **37/37**. Diğer 7 sayfanın ek filtreleri sütun başlıklarına eşlendi (fork; Ürünler ÜRÜN/GRUP, Üyeler AD SOYAD/E-POSTA/TELEFON/ÜYELİK/KAYIT, Talepler Sipariş/Müşteri/Arayan/Kayıt/Son İşlem/Durum, Stoklar STOK/REZ./MEVCUT, Faturalar FATURA NO/ALICI/PDF/TARİH, İadeler İADE NO/GERİ ÖDEME/TARİH, Kampanyalar KOD/KAPSAM/ÖNCELİK/TARİH); "Diğer filtreler" hiçbir sayfada dolu değil. Regresyon F1 29/29, F3 11/11, F4 182/182, F5 21/21. Bilinen: mobil tablo modunda gizli kolonun başlık filtresi erişilemez (bottom sheet tüm alanları listeler).
 
 **DATAGRID F4 KALAN — eski DataTable+Pager sayfaları DataGrid'e taşındı (2026-09-08, Admin panel; 2 paralel fork, yalnız frontend):** Denetim logları (`audit-logs`, 30; 'Kayıt tipi süz' → URL `?search=` ama uca `entityType` gider), Entegrasyon logları (`integration-logs`, 50; sekme `?tab=`), Toplama planları (`picking-plans`; Başlat/Tamamla `RowActions`), POS satışları (`pos-sales`), Teklifler (`quotes`), Tedarikçi faturaları (`supplier-invoices`), Hediye kartları (`gift-cards`; arama `grid.setSearch`), Tracking outbox (`tracking-outbox`; kanal seçilince). ProductQuestions `Pager`→`Pagination`. **`Pager` bileşeni kaldırıldı** (DataTable.tsx'te yalnız `DataTable` kaldı; sayfasız küçük listeler Roles/Languages/Registers/PackingStations/TaskCreate bilinçli olarak DataTable'da). Bu uçlarda backend grid desteği yok → sıralama/filtre/export/görünüm kapalı; sayfa boyu tercihi (25/50/100/250) uca gider. Düzenek `grid-f4-check.mjs` 14 sayfa × masaüstü/mobil **182/182**; tsc+eslint temiz; `admin/dist` canlı. DataTable→DataGrid göçü TAMAM; DataGrid planı F0-F5 + kalanlar KAPANDI — açık: kullanıcı gerçek veri testleri + restart.
@@ -149,6 +186,41 @@ Doğrulama: 280 test geçiyor (313 toplam, +1 yeni yerel-grid denetimi), GridSch
 **2026-09-08 push cüzdan düzeltmesi (Mobil API):** "üyeye bakiye ekledim, bildirim gelmedi" → `PushTarayici.CuzdanAsync` boş kalmış eski `crm.crm_wallet_transactions`'a bakıyordu; bakiye Accounts cari çatısına yazılıyor (`current_account_transactions` + ledger ConceptCode=wallet + OwnerType=member). Sorgu cari çatıya çevrildi, dedup `wallet_credit:{txId}`, 24 sa pencere. `publish`/demo/staging eşitlendi ⚠️ restart (ecspros, ecspros-staging, ecspros-demo). Not: `wallet_credit` şablon gövdesi "İade tutarın cüzdanında" — manuel hediye yüklemelerinde panel Push Şablonları'ndan metin genelleştirilebilir. Favori fiyat düşüşü 45 dk gecikmesi sistematik değil: 09:21 kampanya → 09:38 izin fix → 10:38 kampanya-fiyat fix → 10:42 restart'tan 20 sn sonra gitti; olağan gecikme ≤ 15 dk tarama + 2 dk fiyat cache.
 
 **2026-09-08 GitHub eşitleme + servis eşitleme:** origin/main (ekip arkadaşının ERP eşleme/Ortam önceliği/admin favoriler commit'leri 15963b8, b9d4b01, 66ff535) yerel main'e alındı, tek çakışma PROGRESS.md (iki taraf korundu), API Release build + admin tsc/build ✓, bekleyen migration YOK (15 bağlam DB ile eşit). `publish`/`publish-demo`/`publish-staging` aynı binary ile eşitlendi (appsettings*.json hariç; SHA eşit), `admin/dist` derlendi (nginx doğrudan servis ediyor) ⚠️ restart kullanıcıda: `ecspros`, `ecspros-staging`, `ecspros-demo`. Not: bu publish ekip arkadaşının ERP panel modu fail-closed davranışını da canlıya taşır.
+### AI-RPT0 — Yalnız AI raporlama planı (2026-09-10)
+
+- Kullanıcı sabit/hazır raporları kapsamdan çıkardı. AI ile işletme raporları,
+  kişisel kayıt, yetkili paylaşım, alan/veri/işlem izinleri ve kapsam dışı
+  taleplerin reddi için altı sayfalık planlama PDF'si hazırlandı:
+  output/pdf/ECSProsAI_AI_Raporlama_Plani.pdf.
+- Veri sözlüğü, güvenli yapılandırılmış rapor yürütme, çoklu node, doğruluk,
+  uygulama fazları ve kabul testleri belgelendi. Sağlayıcı/limit/saklama
+  kararları öneri veya açık karar olarak ayrıldı; uygulama onayı değildir.
+- PDF metni/sayfa sayısı ve altı render görseli kontrol edildi. Uygulama kodu,
+  DB, migration, sunucu, yayın veya GitHub değişikliği yapılmadı. Yalnız belge
+  ve bu ilerleme kaydı eklendi; mevcut yerel ilerleme notları korundu.
+
+### ADM / API — GitHub sonrası birleşmiş sürüm yayını (2026-09-08)
+
+- Kullanıcı yeni gelen değişikliklerin yayınını onayladı; kaynak 66ff5356.
+  Kullanıcı yeni admin build'ini tamamladı: index-T5g5eWwF.js / index-CDnxQoXD.css.
+  Yeni üye cihaz/deneme gönder ve personel telefon ekranları ile mevcut favoriler
+  paket içinde doğrulandı. .56 yalnız admin release/symlink yayını:
+  /usr/share/nginx/admin-releases/20260908_admin_github_66ff5356.
+- Linux publish ilk denemede NETSDK1047 verdi; linux-x64 restore sonrasında
+  başarılı. API02 canary, ardından API01 /opt/ECSProsAI/releases/20260908_github_66ff5356
+  sürümüne atomik restart/rollback kapısıyla geçirildi. İki node DLL SHA256:
+  2307686b4c45509140a3cd216a4e4eb262bfb7aa40fad4fb1f6d1e1c59485c3a.
+- Kaynak testleri önceki tur admin 51/51, API acceptance dışı 138/138;
+  TypeScript/ESLint başarılı. Publish mevcut derleyici uyarılarıyla başarılı.
+  İki API active/running, NRestarts=0, live/ready/ana sayfa 200, başlangıç
+  hata satırı 0, Redis aktif. Public admin HTML+7 asset birebir doğrulandı;
+  public site, örnek ürün, live ve ready 200. Oturumlu ekran kabulü kullanıcıda.
+- Sunucu appsettings dosyaları korundu; Node Role=Api, MigrateOnStartup=false,
+  Push=false. Yeni push kodu pakette, otomatik gönderim açılmadı. Worker'lar,
+  DB/migration/seed, .59 ve Nginx config/reload değiştirilmedi. Önceden mevcut
+  systemd unit/drop-in disk değişikliği uyarısı tekrar görüldü; daemon-reload yok.
+- Çalışan ve önceki rollback release'leri korundu. Bu işin hash doğrulanmış
+  geçici aktarım arşivleri temizlendi. GitHub'a bu yayın kaydı henüz gönderilmedi.
 
 ### GitHub — Yerel geliştirmelerin paylaşım kaydı (2026-09-08)
 
@@ -7249,6 +7321,320 @@ ecspros` yapmadı. Yeni publish'te Sıra 1+1.5+2'nin tamamı var; restart sonras
 - Acceptance dışı API test paketi ayrı artifacts yolunda `120/120` geçti; yalnız önceden mevcut derleyici
   uyarıları görüldü. Production yayını ve GitHub push yapılmadı.
 
+### 2026-09-10 — Git güncellemesi sonrası hedef DB migration kontrolü (kısmen tamamlandı)
+
+- API01 üzerinden hedef `192.168.0.241 / ecommerce_db` doğrulandı; `.59` production'a yazılmadı. Son Git değişikliklerindeki altı migration ve hedef migration geçmişi karşılaştırıldı.
+- Transaction içinde rollback provası başarılı olduktan sonra beş bağımsız migration uygulandı: CRM `AddCartItemEffectivePriceAtAdd`; IAM `AddPermissionCatalogAndSuperAdmin`, `AddPermissionChannelScopeOverride`; Storefront `AddNotificationInbox`, `AddFavoriteStockState`. Sonrasında ayrı salt-okunur sorguyla migration kayıtları ve kolonlar doğrulandı.
+- Sepete ekleme anı fiyatı, yetki kataloğu/kanal kapsamı, süper admin bayrağı, bildirim kutusu ve favori stok durumu alanları eklendi. Bildirim migration'ının mevcut kayıt dönüşümleri uygulandı. Kullanıcı-yetki mükerrer çifti sayısı sıfır; mevcut dört super_admin rol üyeliği kontrol edildi. Yeni kişilere rol atayan seed çalıştırılmadı.
+- BEKLİYOR: Order hedefinde eski dört migration da eksik: `TypedInvoiceSeriesAndChannelBindings`, `EnforceInvoiceSeriesTypeConsistency`, `InvoiceInternalNumberUniqueOnly`, `AddInvoiceDispatches`. Bu zincir dört tablo (`ord_channel_invoice_series`, `ord_channel_invoice_settings`, `ord_invoice_series_counters`, `ord_invoice_dispatches`) açıyor, fatura seri kolonlarını yeniden adlandırıyor/kaldırıyor. Çalışan eski API ile uyumsuzluk riski nedeniyle zincir ve arkasındaki yeni `AddOrderShippingFee` uygulanmadı; koordineli API yayını gerekir.
+- BEKLİYOR: Yeni `favorite_back_in_stock` / `cart_price_drop` bildirim şablonları ve yetki kataloğu seed'i henüz çalıştırılmadı. Genel seeder ayrıca rolü olmayan kullanıcılara geniş erişim sağlayan `gecis_tam_erisim` rolünü atıyor; bu güvenlik değişikliği ayrı karar gerektirir. Genel seeder otomatik çalıştırılmadı.
+- Bu adımda uygulama kodu değiştirilmedi, servis restart/yayın/GitHub push yapılmadı. Önceki yerel çalışmalar korundu. Kontrol: gerçek hedefte transaction rollback provası ve uygulama sonrası salt-okunur şema/geçmiş doğrulaması başarılı. İşin tamamı bitmiş sayılmamalıdır.
+
+### 2026-09-10 — Kalan fatura migration/yayın ön kontrolü
+
+- Kullanıcı kalan fatura migration'larını API yayınıyla tamamlamayı ve geniş erişimli geçici rol seed'ini hariç tutmayı onayladı.
+- Order zinciri API01 üzerinden `.241 / ecommerce_db` hedefinde 3 saniye lock timeout, 60 saniye statement timeout ve transaction sonunda ROLLBACK ile denendi: başarılı, kalıcı şema değişikliği yapılmadı.
+- Kritik yayın bağımlılığı gerçek çalışan binary üzerinde doğrulandı: API01 `ecspros-legacy-import.service`, `worker-releases/20260902T102951Z_newest_first` paketinde. DLL içinde `SELECT "Id","EArchiveSerial","EInvoiceSerial","ExportSerial"` sorgusu mevcut; yeni `SELECT "Id","Serial","InvoiceType"` sorgusu yok. Migration eski kolonları kaldırdığından yalnız API yayını bu worker'ı bozacaktır. Git'teki `477b2859` commit'i importer'ı yeni modele uyarlıyor. API + legacy import worker birlikte geçiş kapsamına alınmadan kalıcı Order migration/yayın başlatılmadı.
+- API01/API02 mevcut API paketleri `20260908_github_66ff5356`, ikisi de active/running ve startup migration kapalı. Bu turda servis durdurma/restart, seed, deployment veya production `.59` değişikliği yapılmadı.
+- Test: `dotnet test tests/ECSPros.Api.Tests/ECSPros.Api.Tests.csproj --no-restore --filter "FullyQualifiedName!~.Acceptance." --verbosity quiet`: 276 geçti, 7 atlandı, 0 başarısız (283 toplam). Atlanan testler geçti sayılmadı. Önceki beş uygulanmış migration korunuyor; yerel çalışmalar silinmedi.
+- Sonraki adım: legacy importer'ın da aynı bakım geçişinde güncellenmesi için kapsamı netleştir; tüm ilgili modüllerin migration geçmişini (Core fatura bağlantısı dahil) kontrol et; sonra API/worker paketlerini birlikte hazırla, yalnız onaylı seed adımlarını uygula. Geniş yetkili geçici rol hariç tutulacak.
+
+### 2026-09-10 — L5/FE0 legacy fatura firma kapsamı düzeltmesi (yayınlanmadı)
+
+- Aktif API01 legacy importer ayarları secret göstermeden salt-okunur doğrulandı: `PlatformId=41`, `FirmPlatformCode=mishar`, `Enabled=true`, `InvoicesEnabled=true`, `DryRun=false`. Kaynak filtre firma adı değil platform kimliğidir; kaynakta bütün firmalar topluca okunmaz.
+- `477b2859` commit'i ve `docs/fatura-entegrasyon-plani.md` FE0 ilkeleri incelendi: üçlü seri seti yerine tekil `Serial + InvoiceType` geçişinin amacı e-arşiv/e-fatura tipi karışmasını önlemek. Kaynak kodda uyarlama zaten var, aktif legacy worker paketi eski.
+- Eksik firma sınırı düzeltildi: `LegacyInvoiceImportSlice`, yapılandırılmış aktif hedef kanalın tekil Id/FirmId kaydını çözer; siparişleri yalnız bu kanalda, serileri yalnız bu firmada arar. Kanal eksik/tekil değilse veya doğru kapsamda sipariş/seri yoksa yazmadan durur. Başka firmanın aynı adlı serisi eşlemeye girmez. Yeni firma/seri/özellik kaydı eklenmez.
+- İki kaynak-sözleşme regresyon testi eklendi (kaynak platform filtresi; hedef kanal/firma ve yeni seri modeli). Bu testler gerçek DB kabulü değildir. Servis yayını, migration veya MySQL/V3 yazısı yapılmadı. Kalıcı GitHub güncellemesi inceleme kuralı handoff belgesine eklendi.
+- Doğrulama: `dotnet test tests/ECSPros.Api.Tests/ECSPros.Api.Tests.csproj --no-restore --filter "FullyQualifiedName~LegacyInvoice|FullyQualifiedName~LegacyReadImportOptions" --verbosity quiet` başarılı: 16 geçti, 0 atlandı, 0 hata. Mevcut derleyici uyarıları sürüyor; `git diff --check` temiz. Yeni şemayla gerçek DB dry-run kabulü koordineli migration/yayın öncesinde ayrıca yapılmalı.
+
+### 2026-09-10 — L5/FE0 gerçek hedef eşleme provası: firma sahipliği kararı gerekiyor
+
+- Order migration zinciri `.241 / ecommerce_db` üzerinde tek transaction içinde denendi; yeni modelde mevcut legacy faturaların firma/kanal/seri eşleşmesi SQL ile kontrol edildi. Bu, MySQL'den yeni snapshot alan tam worker dry-run'ı değildir.
+- Sonuç: mevcut 45 legacy fatura `mishar` kanalında tek firmaya bağlı, hepsinin sipariş kalemi var. Ancak yeni firma-sınırlı eşleme `0/45`: MSR 38 e-arşiv, TYA 7 e-arşiv.
+- Salt-okunur kök neden: `mishar` kanalının firması `eldi / ELDİ TEKSTİL SAN. VE TİC A.Ş.`; MSR ve TYA serilerinin firması `misaroglu / MİŞAROĞLU TEKSTİL PAZ. DAĞITIM SAN. ve TİC. LTD. ŞTİ.`. Eski global seri araması firma farkını gizlemiş. Geçmiş L8 kaydı serilerin eklendiğini doğruluyor fakat hangi hukuki firmaya ait olması gerektiğini kesinleştirmiyor.
+- Eşleme doğrulaması beklenen şekilde hata verdi; transaction bağlantı kapanınca geri alındı. Ayrı salt-okunur kontrolde Order geçmişi hâlâ `20260901133654_AddLegacyCommerceIdentities`, yeni `Serial` kolonu yok. Kalıcı DB değişikliği/seed/yayın yapılmadı; mevcut beş bağımsız migration korunuyor.
+- Core geçmişinde ayrıca `20260906120857_DropFirmPlatformInvoiceSeriesId` eksik (son kayıt `20260824161340_AddLabelTemplates`). Koordineli geçiş envanterine dahil edilmeli.
+- Firma sahipliği finansal bir karar olduğundan kanal/seri başka firmaya taşınmadı ve güvenlik filtresi kaldırılmadı. Kullanıcıdan MSR/TYA faturalarının gerçek düzenleyen firmasını netleştirmesi bekleniyor; bu karar olmadan yayın yapılmamalı. Kaynak kod bu turda değişmedi.
+
+### 2026-09-10 — L5/FE0 firma devri kararı ve tarihsel seri düzeltmesi
+
+- Kullanıcı açıklaması önceki firma uyuşmazlığı yorumunu düzeltti: platform geçmişte başka firmadayken devredilmiş, seri değişmiş. Kullanıcının bildirdiği güncel kaynak zinciri `dfplatforms.Id=41 / invoiceinfoid=27 → dfinvoicenumbers.Id=27 / invoiceinfoid=8 → dfinvoiceinfo.Id=8`; bu turda kaynak MySQL üzerinden yeniden doğrulanmış sayılmaz.
+- Önceki "firma sahipliği kararı bekleniyor" notu bu kararla aşılmıştır. Geçmiş seri bugünkü kanal firmasına zorlanmayacak; firma/seri kayıtları taşınmayacak. `LegacyInvoiceImportSlice` içindeki yeni eklenen güncel FirmId filtresi kaldırıldı; tekil aktif hedef kanal ve sipariş kanal filtresi korundu. Seri + fatura tipi birden fazla aktif kayıtla eşleşirse açık hata verilip bütün dilim yazmadan durur; tahmini firma seçilmez. Kaynak `PlatformId` filtresi değişmedi.
+- Kaynak sözleşme testi yeni karara uyarlandı. İlgili testler 16/16 başarılı (0 atlanan/başarısız), mevcut derleyici uyarıları devam ediyor. Bu testler kaynak SQL sözleşmesini kontrol eder; tam worker DB kabulü değildir.
+- Hedef `.241` üzerinde migration + yeni eşleme SQL kontrolü tek transaction içinde başarılı: `mishar` kanalındaki 45 mevcut legacy fatura için 45 tekil eşleşme, eksik kalem 0; MSR/e_archive 38, TYA/e_archive 7. Transaction sonunda ROLLBACK tamamlandı. Bu doğrulama mevcut hedef kayıtları kapsar, yeni MySQL snapshot okuması veya gerçek worker upsert koşusu değildir.
+- Yayın, kalıcı migration, seed, firma/seri veri değişikliği veya production MySQL/V3 yazısı yapılmadı. Sonraki adım koordineli API/legacy worker yayını öncesi kalan migration/seed kapsamı ve tam yazmasız aktarım kabulüdür.
+
+### 2026-09-10 — L5 güncel MySQL snapshot + gerçek hazırlama kontrolü
+
+- API01 üzerinden aktif legacy worker'ın bağlantısı bellekte kullanılarak `LegacyInvoiceReader` / `MySqlLegacyReadSource` ile platform 41 READ ONLY okundu. Güncel kaynak 46 fatura: MSR 39, TYA 7. Önceki 45 sayısı aktarılmış hedef kayıtlarına aitti; kaynakta bir yeni fatura var.
+- Geçici .NET araç, yeni şemayı hedef `.241 / ecommerce_db` üzerinde transaction içinde hazırlayıp gerçek `LegacyInvoiceImportSlice.LoadReferencesAsync` ve `Prepare` metotlarını aynı bağlantıda çağırdı. `RunAsync`/upsert/checkpoint çağrılmadı; bu hazırlama kabulüdür, gerçek yazım testi değildir.
+- Sonuç: prepared=45, errors=1; fatura `2393699` için legacy sipariş `934203419` hedefte yok. Tüm kanalları kapsayan ayrı salt-okunur sorgu da siparişin hiç bulunmadığını doğruladı. Dolayısıyla güvenli kapı geçmedi; kısmi fatura aktarımı yapılmadı. Kaynak siparişin varlığı/platformu ve sipariş aktarımına neden gelmediği sonraki incelemedir; henüz kaynak yetimi olduğu sonucuna varılmadı.
+- Hedef transaction açıkça ROLLBACK edildi. Ayrı kontrolde hedef legacy fatura sayısı 45 ve Order migration geçmişi `20260901133654_AddLegacyCommerceIdentities` olarak sabit. V3/MySQL yazısı, kalıcı migration, seed veya yayın yapılmadı.
+- İlk geçici araç derlemesi sandbox NuGet.Config okuma izninde başarısız oldu; izinli derleme başarılı. API01'de geçici test dizini finally ile, aktarım arşivi ayrıca doğrulanarak silindi. Repository uygulama kodu bu turda değiştirilmedi; önceki yerel çalışmalar korundu.
+
+### 2026-09-10 — L4/L5 eksik sipariş nedeninin salt-okunur doğrulanması
+
+- Gerçek MySQL READ ONLY sorgusu: `oporders.Id=934203419` mevcut, `platformId=41`; `opinvoices.Id=2393699` aynı siparişe ve platform 41'e bağlı. Kaynak yetimi veya platform filtresi problemi değil.
+- Aktif API01 legacy worker'da OrdersEnabled/MembersEnabled/InvoicesEnabled=true, PlatformId=41, FirmPlatformCode=mishar, DryRun=false. Son 20 dakika loglarından iki ayrı hazırlama engeli doğrulandı: `934203419: hedef sipariş numarası başka kayda ait`; `934206251: teslimat adresi 0 kaynakta yok`.
+- L4 hazırlama kodu herhangi bir hata varsa bütün dilimi yazmadan döndürüyor. Bu nedenle sipariş aktarımı duruyor, ona bağlı yeni fatura L5'te hedef sipariş bulunamadığı için bekliyor. Yeni seri modeli bu sipariş engelinin nedeni değildir.
+- Çakışan hedef kaydın sahipliği (native/legacy ve gerçek aynı sipariş olup olmadığı) henüz incelenmedi; kayıt birleştirme/üzerine yazma yapılmadı. Adres 0 için tahmini adres üretilmedi. Sonraki düzeltme bu iki veri durumunu ayrı doğrulamalıdır.
+- Salt-okunur inceleme aracı 0 hata/uyarıyla derlendi. Kaynak transaction rollback edildi; API01 geçici araç dizini ve DLL dosyası temizlendi. Uygulama kodu, DB, servis/release veya GitHub değiştirilmedi; bu turda yalnız PROGRESS kaydı ve yerel geçici inceleme aracı güncellendi.
+
+### 2026-09-10 — MIS0000049 çakışmasının alan bazlı kanıtı
+
+- Kaynak MySQL salt-okunur: `oporders.Id=934203419`, platform 41, `orderNumber=MIS0000049`, `orderTotal=799.99`, tarih 2026-08-30, durum `Teslim Edilemeden İade Geldi`; fatura 2393699 bu siparişe bağlı.
+- Hedef `.241` salt-okunur: aynı `MIS0000049` numarası, mishar kanalı, 799.99 toplam, 1 aktif kalem; Id `cc8687f5-f34d-4112-ad4d-e5a978f56026`, **LegacyOrderId NULL**, durum `pending`, CreatedAt `2026-08-30 18:48:52.496631+00`.
+- Kesin engel kaynak numarası hatası değil: hedef numara sahibi var ama kaynak kimlik bağı yok. Importer ExistingByLegacyId içinde 934203419'u bulamayınca aynı numaralı hedefi otomatik sahiplenmiyor ve yazmadan duruyor. Aynı tutar/numara/tarih tek başına kayıtların tamamen aynı olduğunu kanıtlamaz; kalem/müşteri/ödeme eşitliği ve kayıt kökeni henüz doğrulanmadı. LegacyOrderId ataması veya durum güncellemesi yapılmadı.
+- İnceleme aracı derlemesi 0 hata/uyarıyla geçti; kaynak READ ONLY transaction rollback edildi, uzak geçici araç temizlendi. Kalıcı uygulama kodu/DB/servis/yayın değişikliği yok; yalnız PROGRESS ve yerel geçici sorgu aracı güncellendi.
+
+### 2026-09-10 — MIS0000049 eksik legacy kimlik bağlantısı tamamlandı
+
+- Kullanıcının açık "eksik olan bilgiyi tamamla" onayıyla önce kaynak/ hedef karşılaştırıldı: kaynak Id 934203419 / platform41 / MIS0000049 / 2026-08-30 / 799.99; hedef aynı numara/tarih/tutar. Kaynak ve hedef varyant barkodu `8690552190773`, adet1, fiyat799.99, indirim0 eşleşti. Kaynak ödeme tipi1 kart, ödenmiş799.99; hedef kart/paid fakat ödeme alt satırı yok. Durum farkı bilinerek yalnız kimlik bağı düzeltildi.
+- `.241 / ecommerce_db` hedefinde, `cc8687f5-f34d-4112-ad4d-e5a978f56026` siparişinin yalnız NULL `LegacyOrderId` alanı `934203419` yapıldı. Target guard, satır kilidi, başka kimlik sahibi olmaması, kanal/tutar/barkod/adet koşulları, tam 1 satır güncelleme ve önce/sonra JSON farkının yalnız LegacyOrderId olması transaction içinde doğrulandı; COMMIT başarılı.
+- Commit anında durum pending, tutar799.99 sabit. Uygulama bu işlemde kalem/ödeme/durum değiştirmedi. Kullanıcıya açıklandığı üzere çalışan legacy worker artık sonraki döngüde kendi normal eşitlemesini yapabilir; bunun tamamlandığı bu kayıtla iddia edilmez.
+- Production MySQL/V3 yazısı, kod değişikliği, servis restart veya yayın yapılmadı. Geçici karşılaştırma aracının derlemesi 0 hata/uyarıyla başarılı; kaynak READ ONLY rollback ve uzak araç temizliği tamamlandı. İlk salt-okunur sorgudaki `SKU` kolon adı hatası gerçek `Sku` adıyla düzeltilip karşılaştırma tekrarlandı.
+
+### 2026-09-10 — MIS0000049 sonrası normal worker döngüsü doğrulandı
+
+- Salt-okunur hedef kontrolünde MIS0000049 durumu `returned` olmuş; mevcut legacy worker kaynak durumunu normal döngüsünde güncellemiş. Kalem kimliği `LegacyOrderLineId=7935937`, adet1/fiyat799.99; ödeme `LegacyOrderPaymentId=2538505`, tutar799.99, durum completed olarak mevcut.
+- Bekleyen fatura `LegacyInvoiceId=2393699`, `MSR2026000000039`, e_archive/issued olarak aynı hedef siparişe aktarılmış. Aktif legacy fatura sayısı 46; önceki 45'e göre eksik bir fatura tamamlanmış.
+- Platform41 için invoices/members/orders/returns checkpoint LastError alanları NULL. orders LastSourceId=934203419, invoices LastSourceId=2393699. Son20 dakika loglarında önceki çakışma satırları hâlâ görülebiliyor; bunlar güncel başarısızlık olarak yorumlanmadı, güncel DB sonucu ve hata kapısı esas alındı.
+- Bu turda yalnız salt-okunur kontrol ve PROGRESS kaydı yapıldı. Veri değişikliklerini mevcut worker gerçekleştirdi; manuel DB yazısı, servis restart/yayın veya migration yapılmadı. Yereldeki yeni seri uyarlaması ve kalan Order/Core migration/seed/yayın işi hâlâ ayrı bekliyor; bu sonuç yeni paketin yayınlandığı anlamına gelmez.
+
+### 2026-09-10 — MIS0000049 iade ekranı açıklaması
+
+- Salt-okunur JOIN doğrulaması: ekranın ilk satırı `LRET-221201`, LegacyReturnId221201, **MIS0000049** siparişine bağlı; tutar799.99, CreatedAt2026-09-10 07:47:47UTC. İade aktarılmamış değil; listede sipariş numarası gösterilmediği için ilişki anlaşılmıyor. Toplam13 aktif legacy iade mevcut.
+- Kodda `LRET-` kaynak iade Id öneki; `legacy_imported` tarihsel aktarım etiketi. `legacy_type_1/2` iade tipi/ödeme yöntemi iş anlamları doğrulanmadığından kaynak sayısal değerini koruyor. `legacy_pending`, PaidToMemberAt yokken atanıyor; gerçek para iadesi yapıldığı/başlatıldığı anlamına gelmez.
+- Bu turda uygulama/DB değişikliği, yayın veya ödeme işlemi yapılmadı; yalnız inceleme ve PROGRESS kaydı. Önerilen ayrı UI işi: iade listesine sipariş numarası/linki ve doğrulanmış Türkçe legacy etiketleri eklemek; kod1/2 anlamları tahmin edilmemeli.
+
+### 2026-09-10 — İade listesinde sipariş numarası ve veri sözleşmesi
+
+- Kullanıcı isteğiyle iade listesinin ana sütunu ve mobil kompakt başlığı İade No yerine Sipariş No oldu. API `ReturnListDto.OrderNumber` alanını doğrudan bağlı `Order.OrderNumber` üzerinden projekte eder; yalnız başlık değişikliği değil gerçek veri sözleşmesi düzeltildi.
+- ReturnGrid'e orderNumber arama/filtre/sıralaması eklendi; mevcut kanal yetki filtresi korunuyor. Excel'de kilitli ana sütun Sipariş No; eski iade no geriye uyumluluk için isteğe bağlı kolon olarak korunuyor.
+- ReturnNumber/LegacyReturnId/OrderId verileri yeniden yazılmadı. Aynı siparişin birden fazla iadesi olabileceğinden iç kimlik sipariş numarasıyla değiştirilmez; mevcut kayıtlar bağlı siparişten doğru numarayı alır. Yeni DB alanı/migration/veri taşıma gerekmiyor.
+- Sipariş numarası arama ve kimlik koruma regresyon testi eklendi; ilk test koşusu 4/4 geçti. Yayın yapılmadı, npm run build çalıştırılmadı. API ve admin birlikte güncellenmeli; eski API yeni OrderNumber alanını sağlamaz.
+- Son kontroller: ReturnOrderNumber + DataGridKeyConsistency + GridExportWriter testleri 7/7 geçti; admin TypeScript (`npx tsc --noEmit -p tsconfig.app.json`) ve ReturnsPage ESLint başarılı. Mevcut API derleyici uyarıları devam ediyor; görsel tarayıcı kabulü/yayın henüz yapılmadı.
+
+### 2026-09-10 — Sipariş listesi gelişmiş filtreler
+
+- Sipariş durum sekmeleri ve sekme sayaç sorgusu kaldırıldı. Durum/tarih/ödeme dahil sütun filtreleri korunarak aynı URL/grid durumunu kullanan Gelişmiş Filtreler panelinde de sunuldu; tablo dışındaki hızlı filtreler bu panelin içine alındı. Genel metin araması korundu. Yeni filtresiz görünüm tüm durumları sayfalı ve en yeni önce listeler; eski tab bağlantıları durum filtresine çevrilir.
+- Barkod ve ürün kodu tam eşleşme filtreleri eklendi. API ürün/varyant ve sipariş kalemini parametreli SQL alt sorgusunda kontrol eder; iki filtre birlikte kullanıldığında aynı kalemde eşleşir. Liste sayfalaması öncesi uygulanır, sipariş çoğalmaz; Excel ve kanal yetki kapsamı aynı filtreleri kullanır. Eski kalem SKU bilgisi de eşleşmeye dahil edilir.
+- Ortak grid için gelişmiş mod isteğe bağlıdır; diğer ekranların filtre düzeni korunur. Yeni tablo/alan/migration, DB yazısı, yayın veya GitHub push yapılmadı. API ve admin birlikte yayınlanmalı; npm production build kullanıcı tarafından alınmalı.
+- API kontrolleri: hedefli SQL çeviri/grid testleri 14/14; acceptance dışı genel koşu 281 başarılı, 7 atlanan, 0 başarısız. Bunlar canlı DB üzerinde veri kabul testi değildir. Admin TypeScript ve değişen dosyalarda ESLint son koşusu başarılı; mevcut admin regresyon testleri 52/52 geçti. Tarayıcı görsel kabulü henüz yapılmadı.
+
+### 2026-09-10 — Açık iş / karar bekliyor: sipariş sekmelerinin backend temizliği
+
+- [ ] `/orders/status-counts` endpoint'i ve bağlı query/handler/DTO/testlerin diğer ekranlar veya istemciler tarafından kullanılıp kullanılmadığını incele. Sipariş listesindeki çağrı ve periyodik sayaç sorgusu kaldırıldı; backend endpoint henüz kaldırılmadı.
+- [ ] Sekmelere özel kalan kodları ve bağımlılıkları belirle; ortak liste/Excel filtrelerini, yetki kapsamını ve gerekli geriye uyumluluğu koruyacak temizlik kapsamını kullanıcıya sun.
+- [ ] Kullanıcıyla karar verildikten sonra yalnız kullanılmadığı doğrulanan parçaları kaldır ve ilgili regresyon testlerini çalıştır.
+- Kullanıcı şimdilik yalnız açık iş kaydı istedi. Bu turda sadece PROGRESS.md güncellendi; API/kod silme, DB işlemi veya yayın yapılmadı. Dokümantasyon değişikliği olduğu için uygulama testleri tekrar çalıştırılmadı.
+
+### 2026-09-10 — Admin/API yayın talebi ön kontrolü
+
+- Kullanıcı yapılan işleri derleyip yayınlama talebi verdi. Yerel tracked/untracked çalışmalar korundu; bu turda sunucu veya DB değişikliği yapılmadı.
+- Kayıtlı admin hedefi production Nginx LB `.56` üzerindeki admin dosyaları/symlink olduğundan bu hedef için yeniden açık kapsam onayı bekleniyor; `.59` değişiklik yasağı korunuyor. Admin production build'i AGENTS kuralı gereği kullanıcı terminalinde alınmalı.
+- Son DB kayıtlarında Order fatura migration zinciri ve ShippingFee ile ilişkili koordineli API/worker geçişi hâlâ bekliyor. Sipariş filtreleri kendi başına migration gerektirmese de bütün güncel API paketinin eski şemaya doğrudan yayınlanması güvenli kabul edilmedi; yayın öncesinde hedef şema/worker uyumu yeniden doğrulanmalı.
+
+### 2026-09-10 — R1 Sabit raporlar menüsü ve ilk rapor ekranları
+
+- Kullanıcı yayın öncesi raporlar bölümünü istedi; yayın bekletildi. Yeni Raporlar ana menüsü: Sipariş Dökümü, Stok Durumu, İade Dökümü ve mevcut Tedarik Raporu. Tedarik raporunun URL'si korunarak menü konumu değiştirildi.
+- Yeni salt-okunur rapor sayfaları mevcut DataGrid ile arama, gelişmiş/sütun filtreleri, sıralama, sunucu sayfalaması, kolon tercihleri ve Excel kullanır. Kartlı rapor seçimi, kapsam açıklamaları, yüklenme/hata/boş durumları eklendi. İşlem/ödeme/stok değiştirme düğmesi yok.
+- Mevcut orders.view / inventory.view / procurement.manage izinleri korunur; yetkisiz rapor kartı gösterilmez, yeni rapor veri bileşeni yetki kontrolünden önce mount edilmez. Liste/export mevcut API yetki ve kapsam kontrollerinden geçer; sorgu anahtarı kullanıcıya özeldir. Yeni endpoint, DB alanı, migration veya seed yok.
+- Stok sorgusu ürün araması/ürün filtresi olmadan çalışmaz; tüm stokları tarayıcıya çekme yok. Sayfadaki satırlardan yanıltıcı genel toplam/KPI hesaplanmaz. Sipariş dökümü net satış/kâr, stok dökümü geçmiş stok/maliyet raporu olarak sunulmaz. Maliyet/kârlılık ve toplulaştırılmış satış raporları bu ilk fazın kapsamında uygulanmadı; iş kurallarıyla ayrı genişletilmeli.
+- Son TypeScript ve hedefli ESLint başarılı. İlk admin test koşusunda 55/56 geçti; eski sabit menü sayısı beklentisi yeni üç route eklenerek güncellendi (benzersizlik ve yetki kontrolleri korunur). Son admin regresyon koşusu 56/56 başarılı; yeni rapor testleri kaynak sözleşmesi kontrolleridir, tarayıcı kabulünün yerine geçmez. Görsel tarayıcı kabulü, kullanıcı admin build'i ve koordineli API/worker/migration yayını hâlâ bekliyor; bu turda hiçbir sunucuya yazılmadı.
+
+### 2026-09-10 — Yerel admin giriş bağlantısı teşhisi
+
+- Vite geliştirme proxy'si /api isteklerini localhost:5050'ye yönlendiriyor. Kimlik bilgisi göndermeyen /api/auth/me kontrolünde localhost:3000 HTTP500 verdi; localhost:5050 isteği 4 saniyede zaman aşımına uğradı. Yerel backend erişimi şu an doğrulanamadı.
+- LoginPage tüm hataları aynı kullanıcı adı/şifre hatası olarak gösteriyor; bu nedenle ekrandaki mesaj şifrenin yanlış olduğunu kanıtlamıyor. Önceki yalnız npm run dev önerisi backend bağımlılığını karşılamıyor.
+- Bu tur yalnız teşhis ve dokümantasyon: şifre/auth/proxy yapılandırması, sunucu veya DB değiştirilmedi. Sonraki seçenek kullanıcı onayıyla sadece geliştirme proxy'sini multi-test API'ye bağlamak; bu hedef gerçek verili olduğundan yerel paneldeki kaydet/sil işlemleri de uzak API'ye gider. Alternatif yalnız tasarım için izole örnek verili önizleme.
+
+### 2026-09-10 — Geçici yerel admin → multi-test API bağlantısı
+
+- Kullanıcı geçici uzak API bağlantısını onayladı. admin/vite.config.ts geliştirme proxy hedefini ADMIN_DEV_API_TARGET üzerinden okur; varsayılan localhost:5050 korunur. API, önizleme ve SignalR proxy'leri aynı hedefi kullanır; TLS doğrulaması kapatılmadı.
+- Git tarafından ignored admin/.env.development.local dosyasına yalnız multi-test HTTPS hedefi eklendi; secret yok. Production build'in /api göreli adresi değişmedi. Geri dönüş: bu dosyadaki ADMIN_DEV_API_TARGET satırını kaldırıp dev server'ı yeniden başlatmak. Dosya geçici bağlantı bitince temizlenmeli.
+- Kontrol: Vite config ESLint ve tsconfig.node TypeScript başarılı; local /api/auth/me artık HTTP401 veriyor (kimliksiz istek için beklenen sonuç), eski bağlantı reddi/500 ortadan kalktı. Kullanıcı şifresiyle giriş denenmedi. Sunucuda dosya/config/DB değişikliği yapılmadı; yerel panelden kullanıcının yapacağı işlemler multi-test verisine gider.
+
+### 2026-09-10 — Rapor menüsü eksik görünme nedeni doğrulandı
+
+- API01 üzerinden .241/ecommerce_db üzerinde READ ONLY sorgu: kullanıcının IsSuperAdmin=true, IsActive=true, IsDeleted=false; aktif super_admin rolü var. Rol/izin eksikliği için yeni yetki verilmedi.
+- API01 ve API02 current hedefi /opt/ECSProsAI/releases/20260908_github_66ff5356. İki node'un ECSPros.Api.dll ve ECSPros.Iam.Domain.dll dosyalarında IsSuperAdmin/isSuperAdmin metadata adı yok; çalışan paket yeni alanı tanımıyor. Yeni admin login ise /auth/me isSuperAdmin===true bekliyor ve yalnız explicit permission listesine geri düşüyor. Eski API/yeni admin uyumsuzluğu doğrulandı; yalnız admin yayını çözüm değil. Kimlik doğrulanmış /auth/me cevabı bu araçla alınmadı.
+- Ayrıca yerel auth.ts fetchMe yolunun isSuperAdmin alanını user nesnesine taşımadığı bulundu; login yolu taşıyor. İlgili düzeltme/regresyon ayrı açık iş; bu tur teşhis talebi kapsamında auth kodu değiştirilmedi.
+- Sonraki işlem: bekleyen şema uyumu doğrulanarak API01/API02 + legacy worker koordineli yayın; ardından oturum yenileyip /auth/me ve rapor menüsü kabulü. Yetki bypass'ı eklenmemeli. İlk sandbox SSH reddi izinli yürütmeyle çözüldü; ilk eski yanlış paket yolu gerçek deploy helper yolu ile düzeltildi.
+- Yalnız salt-okunur kontroller ve PROGRESS kaydı; DB/rol/sunucu değişikliği veya yayın yok. Bu teşhiste oluşturulan iki geçici yerel kontrol dosyası kaldırıldı; uzak diske araç yüklenmedi. Uygulama kodu değişmediği için testler tekrar çalıştırılmadı.
+
+### 2026-09-10 — Süper admin oturum yenileme düzeltmesi ve yayın kapısı
+
+- Kullanıcı devam onayıyla admin/src/store/auth.ts fetchMe eşlemesine isSuperAdmin: me.isSuperAdmin === true eklendi. Login ile aynı kaynak/sıkı boolean kontrolü kullanılır; eski API'deki eksik alan için yetki bypass'ı yapılmadı. False/eksik/string değer eski süper admin yetkisini korumaz.
+- Gerçek store'u mock API ile çalıştıran auth-permissions.test.cjs eklendi: login → fetchMe bayrak korunması, API false/eksik/string dönüşünde yetkinin kalkması, explicit permission korunması doğrulandı. Admin testleri 57/57; auth ESLint ve TypeScript başarılı.
+- API01 üzerinden .241/ecommerce_db READ ONLY preflight tekrarlandı: IAM yeni alanları mevcut; Order son migration hâlâ AddLegacyCommerceIdentities, ShippingFee yok. Dört fatura migration'ı ve ShippingFee hâlâ bekliyor. Geniş yetkili geçiş rolü ve bildirim şablonu seed'leri çalıştırılmadı.
+- Yalnız admin değişikliği eski API'nin alanı döndürmemesini çözmez. Koordineli migration geçişinde eski API/legacy worker aynı şemayı kullanamayacağı için multi-test için kısa bakım kesintisi riski kullanıcıya açıklanmalı ve bakım zamanı onaylanmalı. Bu turda servis durdurulmadı, DB yazılmadı, paket yayınlanmadı. .59 ve Nginx değişmedi.
+
+### 2026-09-10 — Onaylı bakım geçişi başladı (API/legacy importer)
+
+- Kullanıcı kısa bakım kesintisini onayladı. Release publish başarılı: output/publish-20260910-reports-api; aktarım arşivi SHA256 510c501e7534bbf9dc9bcd85915e6c62e9c4f647f1e81e261e579f7fdf9da4a5. Appsettings dosyaları pakete dahil edilmedi; sunucu ayarları ayrı korunacak.
+- Order migration provası .241/ecommerce_db üzerinde yeniden başarılı ve ROLLBACK: 46/46 legacy fatura tek seriyle eşleşiyor (MSR39/TYA7), eksik kalem0. Core eski InvoiceSeriesId kolonunun kaldırılması bu bakım kapsamına alınmadı; diğer eski worker'lar açısından ayrı değerlendirme bekliyor. Genel seed/gecis_tam_erisim çalıştırılmayacak.
+- Paketler API01/API02'ye aktarılıyor. Bu kayıt anında servisler durdurulmadı, kalıcı migration yapılmadı. Admin production build/yayını yapılmıyor; kullanıcı yerel Vite üzerinden yeni admini görüyor. Nihai sonuç aşağıya ayrıca yazılmalı.
+
+### 2026-09-10 — API01/API02 + legacy importer bakım yayını tamamlandı
+
+- API01/API02 current → /opt/ECSProsAI/releases/20260910_reports_auth; API01 worker-current → /opt/ECSProsAI/worker-releases/20260910_reports_auth. Üç process DLL SHA256 a549c70af20d8c9d20d6e8cb295b0fa3abe31206e08d3e9e673cf66cc72fd4e4. Ayarlar ve sahiplikleri önceki paketlerden korundu; Node:MigrateOnStartup=false kaldı.
+- Onaylı kısa bakımda eski iki API ve legacy importer durduruldu; .241/ecommerce_db üzerinde guard'lı tek transaction ile dört fatura migration'ı ve AddOrderShippingFee uygulandı. Son history=20260909104823_AddOrderShippingFee; legacy fatura46 korundu, ShippingFee mevcut. Yeni paketler başlatıldı. Production .59/MySQL'e yazılmadı; Nginx'e dokunulmadı.
+- Son kontrol: üç servis active, başlangıçtan beri ERR/FTL/unhandled/42703/42P01 satırı0. Her iki API /live,/ready,/ yanıtları200. Bu kısa başlangıç kontrolüdür; tüm worker dilimlerinin uzun dönem kabulü iddia edilmez. Kullanıcı oturumuyla /auth/me ve menü kabulü çıkış/giriş sonrasında yapılmalı.
+- Test eksikliği kapatıldı: yeni ReportsPage, DataGridKeyConsistencyTests eşleşmesine Order/Return/Stock şemalarıyla eklendi; test muaf tutulmadı. Yeniden genel API testi281 geçti/7 atlandı/0 hata. Admin57/57 ve TypeScript/ESLint önceki başarılı sonuçları korunuyor; test-only kayıt değişikliği API paketini etkilemez.
+- Yalnız bu yayının /tmp/ecspros-reports-20260910.tar.gz aktarım arşivleri hash doğrulanarak iki API'den temizlendi. Önceki release klasörleri otomatik silinmedi: Order şeması değiştiğinden eski binary'ye tek başına rollback UYGUN DEĞİLDİR. Gerekirse şema uyumlu ileri düzeltme/ayrı kurtarma planı gerekir.
+- Açık: admin production build/yayını (şu anda yeni admin yalnız yerel Vite); Core DropFirmPlatformInvoiceSeriesId eski worker bağımlılık kontrolü sonrası ayrı; dar kapsamlı bildirim/yetki katalog seed'leri ayrı. Geniş erişim rol seed'i çalıştırılmadı. ERP/stock worker paketleri bu tur değiştirilmedi. Geçici local multi-test proxy kullanıcı önizlemesi bitene kadar açık.
+
+### 2026-09-10 — Yayın sonrası rapor menüsü kabulü açık
+
+- Kullanıcı hâlâ yalnız Tedarik Raporu görüyor; önceki yayın teknik sağlık kontrolü kullanıcı kabulü sayılmadı. Salt-okunur nginx -T incelemesi multi-test isteklerinin .245:5050/.58:5050 upstream'ine gittiğini doğruladı. İlk okuma karakter kodlaması hatası errors=replace ile çözüldü; Nginx değiştirilmedi.
+- İki çalışan API process cwd'si 20260910_reports_auth, komut satırı current/ECSPros.Api.dll; gerçek bağlantı Host=.241 Database=ecommerce_db. Yanlış process/DB hedefi bulgusu yok. Kimlik doğrulanmış kullanıcı /auth/me yanıtı henüz görülemedi; tarayıcı oturumunun isSuperAdmin/permissions alanlarının doğrulanması gerekiyor. Oturumun doğru olduğu varsayılıp izin genişletilmedi.
+- Bu tur salt-okunur teşhis; iki geçici yerel kontrol aracı silindi. Kod/DB/servis değişikliği ve yeni yayın yapılmadı; menü görünürlüğü sorunu çözülmüş olarak işaretlenmedi.
+
+### 2026-09-10 — R1 kapsam daraltma: yalnız Stok Durumu raporu
+
+- Kullanıcı sipariş raporunu mevcut listeyi tekrarladığı, tedarik raporunu yararsız bulduğu için stok dışındaki raporların ve varsa özel API'lerinin kaldırılmasını istedi. Sipariş/İade rapor route'ları, menü/kartları ve bunlara ait rapor kolon/filtre kodları kaldırıldı. Stok raporunun DataGrid, ürün arama kapısı, filtre ve Excel akışı korundu.
+- Mevcut Tedarik Raporu ekranı ve /procurement/report route/breadcrumb kaydı kaldırıldı. Repository kullanım taramasında tek tüketicisi bu ekran olan GET /api/procurement/report, ProcurementReportService (iç DTO'larıyla) ve DI kaydı silindi. Tedarik operasyonları ve verileri silinmedi. Silinen iki kaynak dosya Git geçmişinden geri alınabilir.
+- Sipariş/İade raporları ayrı backend kullanmıyordu: normal sipariş/iade listeleri ve Excel için gereken ortak API'ler KORUNDU. /orders/status-counts temizliği daha önceki karar bekleyen açık iştir, bu tur silinmedi.
+- Menü, rapor ve DataGrid şema eşleme testleri yeni kapsama uyarlandı; tedarik raporu endpoint/DI artık olmamalı regresyonu eklendi. Admin TypeScript/hedefli ESLint başarılı; admin testleri58/58, API acceptance dışı281 geçti/7 atlandı/0 hata. Kullanım taramasında aktif kaynakta silinen rapor referansı kalmadı; git diff --check temiz. DB/migration/sunucu işlemi veya yayın yapılmadı; şu an çalışan API'de eski tedarik endpoint'i bir sonraki yayına kadar kalır.
+
+### 2026-09-10 — AI raporlama değerlendirmesi ve uygulama hazırlığı
+
+- Kullanıcının 5 sayfalık ECSProsAI_AI_Raporlama_Degerlendirme.pdf belgesi tamamen okundu. Tek kaynaklı sözlük, sunucu hesaplaması, katmanlı yetki, kayıtlı tarif ve mükerrer toplam koruması için uygulama sırası docs/raporlar/2026-09-10-ai-raporlama-uygulama-kararlari.md içerisinde kaydedildi.
+- İlk sürüm satış+stok, dövizleri dönüştürmeden ayrı gösterme ve drill-down ertelemesi öneridir; onaylı iş kuralı sayılmadı. Kaynakta mevcut AI sağlayıcı entegrasyonu bulunamadı; sağlayıcı/veri aktarımı seçilmeden harici çağrı açılmayacak.
+- Bu adım belge incelemesi ve hazırlıktır; AI özelliği uygulanmış değildir. Uygulama kodu/DB/sunucu değiştirilmedi, yayın yapılmadı. Kod değişmediği için uygulama testleri yeniden çalıştırılmadı; yerel önceki çalışmalar korundu.
+
+### 2026-09-10 — AI Faz 1: OpenAI firma entegrasyonu form sözleşmesi
+
+- Kullanıcı OpenAI'ı ilk sağlayıcı ve Sistem > Firmalar > Entegrasyonlar ekranını anahtar giriş yeri olarak onayladı. OpenAiReportingCatalog şeması (openai_reporting/ai_reporting) mevcut idempotent servis kataloğu seed'ine eklendi. apiKey zorunlu password/credentials, model zorunlu text/settings; serbest API URL alanı yok. Mevcut firma formu şemadan alan üretir; yeni ayrı form ve tablo gerekmedi. Servis kataloğuna AI Raporlama tip etiketi eklendi.
+- Mevcut şifreli credentials, maskeyi koruyan güncelleme ve yetkili gösterme akışı değiştirilmedi. Bu adım rapor çalıştırmaz veya OpenAI'a istek göndermez. Resmi OpenAI anahtar güvenliği belgesi incelendi; istemciden doğrudan model çağrısı eklenmedi.
+- Şema/JSON sözleşmesi testleri 2/2 geçti; admin hedef dosya ESLint ve TypeScript kontrolü başarılı. API derlemesinde önceden mevcut uyarılar var. Hedef DB seed'i/migration veya yayın yapılmadı; panelde görünmesi için katalog kaydı kontrollü eklenmeli. Genel seed yalnız bu amaçla çalıştırılmamalı. AI yürütücüsü ve veri aktarımı kabulü sonraki fazdır.
+
+### 2026-09-10 — AI Faz 1: sürümlü tarif ve sözlük doğrulayıcı
+
+- Services/AiReporting altında ReportDefinition, ReportDictionary ve ReportDefinitionValidator eklendi. Mevcut stok entity'sindeki Quantity/ReservedQuantity/AvailableQuantity ve fiziksel-sanal ayrımı baz alındı; onaysız satış/kâr formülü eklenmedi. Bu stok odaklı teknik başlangıçtır, nihai kapsam daraltma kararı değildir.
+- JSON yalnız izinli şemayı kabul eder: bilinmeyen SQL/firma/yetki alanları, yinelenen anahtarlar, null/geçersiz değerler, uyumsuz sürüm/konu, yetkisiz alan/filtre, geçersiz depo/stok türü ve limit aşımı reddedilir. Aynı sözlük gelecekte prompt/yürütücü tarafından kullanılacak; mevcutta bu ikisi uygulanmış değildir.
+- reports.ai.use + inventory.view; export için ayrıca reports.ai.export sözleşmesi eklendi. İzinler henüz IAM katalog/rol seed'ine eklenmedi. Testte izin kaldırılan kayıtlı tarif yeniden doğrulamada reddediliyor. Firma/platform/depo satır yetkisi bu saf doğrulayıcının kapsamı değildir; yürütücüde sunucu kaynaklı uygulanmadan API açılmayacak.
+- 34 yeni doğrulayıcı testi geçti. Yeni testlerdeki DataTestMethod uyarısı TestMethod ile düzeltildi; genel acceptance dışı regresyon 317 başarılı / 7 atlandı / 0 hata. Admin değişmedi. DB/migration/seed, harici AI çağrısı, yayın/push yok; önceki yerel değişiklikler korundu. Faz belgesi güncellendi.
+
+### 2026-09-10 — AI Faz 2 öncesi mevcut yetki kapsamı incelemesi
+
+- IAM EtkinYetkiServisi, User/Stock/Warehouse entity'leri, stok export sorgusu ve panel-yetki-sistemi-tasarim.md K1/N kararları karşılaştırıldı. Mevcut kapsam yalnız satış kanalı; stok/depo entity'lerinde firma/kanal sahipliği alanı yok. Önceki “firma/depo kapsamını hazır sistemden çözme” varsayımı düzeltilerek AI karar belgesine işlendi.
+- Stok raporunda mevcut ortak stok erişimini mi koruyacağımız, yoksa ayrı firma/depo izolasyonu mu gerektiği kullanıcı kararıdır. İkinci seçenek yeni kapsam/veri modeli gerektirir ve kendiliğinden eklenmedi. Öneri: inventory.view + AI rapor izniyle mevcut stok erişimi; satışta mevcut kanal kapsamı.
+- Bu tur yalnız inceleme ve dokümantasyon. Yürütücü/API/DB/seed/yayın değişikliği yok; testler kod değişmediği için yeniden çalıştırılmadı. Önceki test sonucu 317 başarılı/7 atlandı/0 hata olarak kalır; çalışma tamamlandı sayılmadı.
+
+### 2026-09-10 — AI Faz 2: ortak stok erişimi onayı ve salt-okunur yürütücü
+
+- Kullanıcı stok ekranıyla aynı ortak veri erişimini + ayrı AI rapor iznini onayladı; satışta mevcut kanal kapsamı korunacak. Ayrı firma/depo yetki modeli eklenmedi. AI karar belgesindeki bekleyen kapsam maddesi güncellendi.
+- StockReportQuery sabit SQL alan eşlemeleri, tipli array parametreleri, soft-delete, tekil PK LEFT JOIN, bigint toplamlar ve limit+1 taşma tespitiyle eklendi. StockReportExecutor güncel etkin izin servisi, kanal sınırlı izni globalleştirmeme, READ ONLY transaction, 15s statement timeout/20s command timeout ve node başına iki eşzamanlı iş kapısı içerir. İptal ve hata sıfır sonuç gibi gösterilmez.
+- Bu yerel backend altyapısıdır; DI/endpoint henüz açık değil. Gerçek DB sorgu/yük kabulü, audit, panel, kayıt/paylaşım/export ve OpenAI yorumlama henüz tamamlanmadı. DB/seed/yayın veya harici çağrı yapılmadı. Önceki değişiklikler korundu. Yedi yeni sorgu/izin testi dahil genel acceptance dışı sonuç: 324 başarılı / 7 atlandı / 0 hata. git diff --check temiz. Derlemede önceden mevcut uyarılar devam ediyor; bu sonuç gerçek PostgreSQL yürütme kabulü değildir.
+
+### 2026-09-10 — AI Faz 3 başlangıcı: panel/API rapor hazırlama bağlantısı
+
+- AiReportsController katalog/run uçları ve StockReportExecutor DI kaydı eklendi. İzinler kullanıcı kimliğinden etkin yetki servisiyle okunur, shared inventory kapsamı korunur. reports.ai.use katalog kaynağına eklendi; DB senkronu/otomatik rol ataması yapılmadı. AiReporting:Enabled açıkça true olmadıkça run 503 verir; config/sunucu değiştirilmedi.
+- Admin Raporlar > AI Raporlama sayfası ürün kodu, stok türü, gruplama, kapsam özeti ve mevcut DataGrid sonuç tablosuyla eklendi. Doğal dil AI'ın bağlı olmadığı ve hesaplama kapalı durumu açıkça gösterilir. Kullanıcı değişimi form/sonuç state'ini sıfırlar; tarif değişimi/hata eski sonucu gizler. Otomatik rapor sorgusu ve sonuç localStorage kaydı yok.
+- Başarılı run metadata audit'i mevcut best-effort IVitrinAuditLogger ile sınırlı (sürüm/satır sayısı); prompt, filtre ve sonuç değerleri loglanmaz. No-store, body sınırı ve güvenli hata mesajları eklendi. Gerçek DB/yük kabulü olmadan etkinleştirme/yayın yapılmadı.
+- Controller kapalı özellik/yetkisiz erişim/katalog kabiliyet testleri ve admin regresyon testleri eklendi. DataGrid şema envanteri ve menü testi güncellendi. Admin TypeScript/hedef ESLint başarılı; admin 61/61 geçti. API acceptance dışı 327 başarılı / 7 atlandı / 0 hata. Eksikler faz belgesinde; AI yorumlama, grafik, kayıt/paylaşım/export henüz yok. Yerel önceki çalışmalar korundu.
+
+### 2026-09-10 — AI stok gerçek veri salt-okunur kabulü
+
+- Acceptance/AiStockReadAcceptanceTests eklendi; yalnız açık environment bağlantısıyla loopback tünelinden .241/ecommerce_db hedefini ve READ ONLY durumunu doğrular. 15s sorgu sınırı, pooling kapalı, repeatable-read snapshot ve rollback korunur; startup/seed/audit yazımı yoktur.
+- API01 geçici tüneli üzerinden gerçek StockReportQuery genel toplam, depo/stok türü kırılımı, fiziksel stok ve örnek ürün toplamları bağımsız referans sorgularla eşleşti: 1/1 başarılı, test yaklaşık 1s. Bu SQL hesap kabulüdür; eşzamanlı yük veya HTTP/UI uçtan uca kabulü değildir. Veri değerleri/secret'lar raporlanmadı.
+- İlk bağlantısız koşu atlandı. İlk hedef guard hataları DbConnectionStringBuilder get_Item/set_Item ve PostgreSQL IP /32 gösterimi için host() ile düzeltildi; hedef veya salt-okunur sınırı gevşetilmedi. Son gerçek koşu başarılıdır.
+- Geçici tüneller kapatıldı, yalnız bu işin tmp/ai-stock-read-check.ps1 dosyası silindi (bağlantı yordamı mevcut handoff ve bu kayıtla tekrar kurulabilir). Kalıcı test korundu. .59, Nginx, MySQL veya yeni sistem DB'ye yazılmadı; AiReporting:Enabled açılmadı/yayın yok. Genel API testi 327 başarılı/7 atlandı/0 hata; diff --check temiz.
+
+### 2026-09-10 — AI Faz 3: OpenAI tarif yorumlama adapter'ı (mock kabul)
+
+- OpenAiReportContract ve OpenAiReportInterpreter eklendi. Resmi OpenAI Structured Outputs belgesine göre Responses API strict json_schema; sözlükten yetkili alanlar; sabit netleştirme/kapsam dışı mesajlar; ready tarif için tekrar doğrulama. Serbest sohbet cevabı/SQL çalıştırılmaz; incomplete/refusal/bozuk/yetkisiz çıktı kullanılmaz.
+- Sabit HTTPS hedef, redirect kapalı HttpClient, istek başına Authorization, store=false, 30s timeout/64KiB yanıt sınırı ve genel hata mesajları. Otomatik retry yok. store=false sıfır saklama garantisi diye sunulmadı; kullanıcı metninin gizlilik kontrolü ve veri aktarımı kararı hâlâ açık.
+- Adapter DI'a kaydedildi ancak controller/panel bağlantısı açılmadı; naturalLanguageEnabled=false. Firma bazlı credential çözümleme, kota, PII koruması ve gerçek model eval'i sonraki işler. Gerçek anahtar okunmadı; dışarıya veri/AI çağrısı yok. 13 yeni mock test dahil genel sonuç 340 başarılı / 7 atlandı / 0 hata. DB/seed/yayın yapılmadı; yerel çalışmalar korundu.
+
+### 2026-09-10 — AI firma OpenAI ayar çözümleyicisi
+
+- OpenAiFirmSettingsProvider ve DI kaydı eklendi. Aktif DB kullanıcısı, normal kullanıcıda kendi firma bağı, süper adminde açık firma seçimi; aktif/silinmemiş firma-geneli sözleşme + tarih aralığı + servis kod/tip kontrolü. Başka firma/platform/config fallback'i ve global key cache yok. Firma seçimi raporun stok veri kapsamını değiştirmez; harici hesap sahibini belirler.
+- Birden fazla adayda önce yalnız ID'ler kontrol edilip hata verilir; rastgele anahtar seçilmez. Tek kaydın credentials alanı mevcut EF converter ile okunacak. apiKey yalnız Credentials'tan, model Settings'ten; JSON/ToString anahtarı ifşa etmez, maskeli/yanlış tipli alanlar reddedilir.
+- EF PostgreSQL ToQueryString testi dahil 6/6 hedefli test geçti; genel regresyon 346 başarılı / 7 atlandı / 0 hata. Son model kontrol-karakter koruması sonrası hedefli 6 test yeniden geçti; diff --check temiz. SQL çeviri testi DB açmaz. Yeni controller/gerçek anahtar okuma/AI çağrısı veya DB/seed/yayın yapılmadı; panel doğal dil bağlantısı kapalı. Gizlilik/kota ve kullanıcı akışı hâlâ açık, faz belgesine işlendi.
+
+### 2026-09-10 — AI Faz 3: gönderim kontrolü ve ayrı taslak/onay akışı
+
+- ApprovedReportPrompt, interpret endpoint'i ve AiReportsPage doğal dil alanı bağlandı. Kullanıcı gönderimi onaylar; belirgin hassas bilgi kalıpları yerelde reddedilir. Kontrol tam PII tespiti/anonimleştirme garantisi değildir. OpenAI yalnız tarif önerir; rapor ancak kapsam görüldükten sonra ayrı çalıştırılır. Metin değişince onay/taslak/eski sonuç sıfırlanır.
+- NaturalLanguageEnabled ve Enabled varsayılan kapalı kaldı; gerçek API anahtarı okunmadı, OpenAI çağrısı/DB seed/migration/yayın/push yapılmadı. Firma bağlamı yoksa ilk firma seçilmez; panel firma seçimi, dağıtık kota, aktarım politikası ve gerçek uçtan uca kabul açık işlerdir. Ayrıntılar AI faz belgesinde.
+- 16 yeni gönderim kontrolü testi geçti. İlk genel koşuda kaynak tabanlı DI testi typed AddHttpClient kaydını tanımadığı için 1 hata verdi; test geçerli kayıt türünü tanıyacak şekilde düzeltildi. Son genel API: 362 başarılı / 7 atlandı / 0 hata. Admin: 62/62; TypeScript ve hedef ESLint başarılı; diff --check temiz. Bu sonuç gerçek model veya tarayıcı görsel kabulü değildir. Yerel diğer çalışmalar korundu.
+
+### 2026-09-10 — AI Faz 3: firma hesabını panelden açık seçme
+
+- OpenAiFirmSettingsProvider yalnız Id/Code/NameI18n projeksiyonuyla yetkili aktif firma listesini sağlar. AiReportsController firms ucu rapor/stok izniyle korunur. Normal kullanıcı kendi firmasıyla sınırlı; süper admin aktif firmaları seçebilir. Anahtar/vergi/iletişim bilgisi listede okunmaz. Interpret mevcut firma ve entegrasyon kontrollerini tekrar uygular.
+- AiReportsPage firma seçicisi eklendi; otomatik ilk seçim yok. Seçim değişince onay/taslak/sonuç sıfırlanır. Yükleme/hata/boş sonuç durumları ve kullanıcıya özel query key korunur. Kapsam/SQL projeksiyonu/controller/admin regresyonları eklendi.
+- Genel API: 364 geçti / 7 atlandı / 0 hata; önceki derleyici uyarıları devam ediyor. Admin TypeScript ve hedef ESLint temiz, AI ekranı testleri 5/5 başarılı. Dağıtık kota sonraki iştir; doğal dil ve hesaplama kapıları açılmadı. DB/seed/migration, gerçek AI çağrısı, yayın/push yapılmadı; diğer yerel çalışmalar korundu.
+
+### 2026-09-10 — AI Faz 3: ortak Redis istek kotası
+
+- AiReportQuota/RedisAiReportQuotaStore eklendi, Program DI ve interpret çağrı öncesi kapısı bağlandı. Kullanıcı dakika/24saat + firma 24saat limitleri tek Lua işleminde kontrol edilir; ortak Redis hash slotu kullanılır, kullanıcı firma değiştirerek kendi sayacını atlayamaz. Memory fallback yok. Redis/ayar/süre hatası 503; sınırda 429 ve Retry-After. Harici çağrı hatasında hak iade edilmez.
+- Scope ve üç sayısal limit zorunludur; işletme adına varsayılan değer seçilmedi, config/sunucu değiştirilmedi. Bu para/token bütçesi veya eşzamanlılık limiti değildir. Pencereler ilk kullanımdan başlar. Redis veri kaybı/eviction ve gerçek iki-node yarış/TTL kabulü faz belgesinde açık kapıdır; doğal dil ve hesaplama kapıları açılmadı.
+- Sekiz yeni kota testi dahil genel API 372 geçti / 7 atlandı / 0 hata. Mevcut derleyici uyarıları sürüyor. Admin bu adımda değişmedi; üretim build çalıştırılmadı. Gerçek Redis/OpenAI çağrısı, DB yazımı/seed/migration, yayın/push yok. Yerel diğer çalışmalar korundu.
+
+### 2026-09-10 — AI kota izole Redis kabul testi hazırlığı
+
+- Yerelde Redis/Docker bulunamadı; WSL kurulu değil. Kurulum/uzak altyapı değişikliği yapılmadı. AiQuotaRedisAcceptanceTests eklendi: iki ayrı bağlantıyla kullanıcı/firma yarış sınırı, TTL ve bozuk state testleri aynı üretim Lua script'ini kullanır. Gerçek iki-node/process kabulü değildir.
+- Sabit loopback 16379 ve açık ECSPROS_ACCEPTANCE_AI_QUOTA_DISPOSABLE_REDIS=1 onayı gerekir; appsettings okunmaz. Beş rastgele test key'i finally'de yalnız tek tek hedeflenerek temizlenir; flush/scan yok. Kullanım sınırları faz belgesine yazıldı.
+- Hedefli test: 8 başarılı / 4 Redis kabulü atlandı / 0 hata. Derleme ve diff --check başarılı. Redis testleri gerçekten çalışmadığından kabul hâlâ açık; atlama başarı sayılmadı. İzole Redis ortamı gerekli. Production/DB/OpenAI/yayın/push değişikliği yok, diğer yerel çalışmalar korundu.
+
+### 2026-09-10 — AI kota mevcut state Redis gerçek kabulü
+
+- Kullanıcı mevcut Redis'te yalnız kota testi yapılmasını onayladı. Kayıtlı API01 SSH yordamıyla ecspros.service aktif process/config üzerinden state hedefi 192.168.0.243:6380 doğrulandı (cache 6379 ayrı). Secret değerleri dışarı basılmadı; .59'a gidilmedi. İlk SSH komutunda quoting hatası ve yanlış ecspros-api.service adı düzeltildi; kalıcı bağlantı yordamı remote.ps1 ve doğru ecspros.service kullanıldı.
+- Üretim AiReportQuota.cs içindeki Lua doğrudan çıkarılıp API01 üzerinde bellekte çalışan Python/RESP kontrolüne aktarıldı. İki bağımsız Redis bağlantısıyla 4/4 gerçek kontrol geçti: kullanıcı yarışı 40 istekte 5 kabul, farklı kullanıcıların firma yarışı 40 istekte 7 kabul, kısa pencere dolumunda uzun sayacın korunması, bozuk state'te yazmadan ret. TTL denemesinde test süreleri kısa; üretim süreleri değişmedi.
+- Rastgele acceptance prefix'li yalnız beş key kullanıldı; sonunda DEL ve EXISTS ile sıfır kalıntı doğrulandı. Cache/oturum/gerçek kota key'lerine dokunulmadı; flush/scan/config/restart yok. Yerel tmp/ai-quota-remote-check.py kaldırıldı; sunucuya dosya yazılmadı. Kalıcı C# acceptance testleri korundu.
+- Bu gerçek Lua/Redis kabulüdür; C# acceptance sınıfının bağlantılı koşusu, tam HTTP/credential/AI uçtan uca veya iki ayrı API process testi değildir. Önceki 8 unit başarılı/4 C# acceptance atlandı kaydı değişmez. OpenAI çağrısı, yayın, feature flag açma, DB/seed/migration/push yapılmadı.
+
+### 2026-09-10 — AI yorumlama controller akışı regresyonu
+
+- Firma ayar sağlayıcısına IOpenAiFirmSettingsProvider sözleşmesi eklendi; Program/controller aynı üretim implementasyonunu arayüzden kullanır. İş yetkisi/ayar davranışı değiştirilmedi. AiInterpretFlowTests gerçek controller+kota+interpreter+tarif doğrulayıcı ve sahte dış sınırlarla yedi senaryoyu kontrol eder: eksik onay/hassas metin, yetkisiz kullanıcı, kota dolu/erişilemez, yalnız taslak dönen başarı, model beklerken yetki iptali. Otomatik stok sorgusu ve audit içerik sızıntısı kontrol edilir.
+- Genel API 379 başarılı / 7 atlandı / 0 hata; diff --check temiz. Mevcut derleyici uyarıları devam ediyor. Bu gerçek HTTP host/middleware, tarayıcı veya OpenAI model kabulü değildir. Admin değişmedi. Harici çağrı/DB/Redis yazımı, yayın/push/feature flag değişikliği yok; yerel çalışmalar korundu. Ayrıntı AI faz belgesine işlendi.
+
+### 2026-09-10 — AI test ortamı yayın ön kontrolü (kullanıcı onaylı)
+
+- Kullanıcı admin/API test yayını ve kontrollü ücretli OpenAI denemesini onayladı. API Release publish başarılı: output/publish/ai-reporting-20260910. Önceki derleyici uyarıları sürüyor. Admin tüm testleri 63/63 geçti. Kaynak/appsettings secret'ları herhangi bir sunucuya gönderilmedi; paket henüz stage/activate edilmedi.
+- API01/API02 aktif current 20260910_reports_auth; API rolleri ve Node:MigrateOnStartup=false doğrulandı. Disk yeterli (yaklaşık 62/67 milyar byte boş). Worker'lar değiştirilmedi. Nginx admin aktif 20260908_admin_github_66ff5356; yalnız yayın yolu/disk envanteri okundu, değişiklik yapılmadı. .59'a dokunulmadı.
+- Hedef .241/ecommerce_db salt-okunur sorguda openai_reporting servis katalog kaydı 0, firma entegrasyonu 0 çıktı. Genel seed/migration çalıştırılmadı. Yalnız gerekli katalog kaydının kontrollü eklenmesi ve kullanıcının panelden kendi anahtar/modelini girmesi gerekiyor; harici çağrı henüz mümkün değil.
+- Yerel admin/dist/index.html 8 Eylül, AI ekranı 10 Eylül: eski paket yayınlanmadı. Kullanıcıdan admin klasöründe npm run build tamamlaması istendi (ajan build yasağı korundu). Deneme kotası önerisi kullanıcı dakika3/24saat20, firma24saat50 için onay bekliyor; ayarlar uygulanmadı. Yayın/anahtar/gerçek model kabulü tamamlandı sayılmamalı.
+
+### 2026-09-10 — AI yayın hazırlığı ve kullanıcı kota onayı
+
+- Kullanıcı admin build'ini tamamladı, kota önerisini uygula diyerek onayladı: kullanıcı3/dakika, kullanıcı20/24saat, firma50/24saat; Scope=multi-test iki API'de ortak. Admin index-DAFB2gqC.js güncel build olarak doğrulandı. API DLL SHA256 85339cf9859c87a10001edaf716d0d72dc5505de114838b8db1cec786fddd6bb.
+- .241/ecommerce_db kimlik guard'ıyla yalnız definition.integration_services openai_reporting satırı eklendi; ON CONFLICT ile mevcut kayıt ezilmez. Aktif ai_reporting tipi doğrulandı. Firma credentials/model veya rol atanmadı, migration/genel seed çalıştırılmadı. Servis formunda apiKey credentials/password, model settings/text alanları bulunur.
+- API arşivi c9b9024a32af1665b24a45fa9c18dfd1403cad3e5da1f2e727e0900279cc4e07; admin arşivi 689c48cf927a9e10c7ffa2f8c1e541bc8ebbbd44407f9d44519ed71712e36bb7. API appsettings dosyaları arşivden hariç tutuldu. Aktarım başlatıldı; bu kayıt anında aktivasyon yok. Final sonuç ayrıca eklenecek. Worker/.59 değişikliği yapılmadı.
+
+### 2026-09-10 — AI admin/API yayını ve onaylı kota devrede
+
+- API01/API02 current → /opt/ECSProsAI/releases/20260910_ai_reporting; Nginx yalnız admin symlink → /usr/share/nginx/admin-releases/20260910_ai_reporting. Nginx config/reload, .59 ve worker değişmedi. API'ler sırayla yeniden başlatıldı. Önceki release geri dönüş için korundu; sunucu appsettings dosyaları önceki paketten sahiplikleriyle alındı, yalnız AiReporting bölümü güncellendi.
+- Enabled=true, NaturalLanguageEnabled=true; Scope=multi-test, UserPerMinute=3, UserPer24Hours=20, FirmPer24Hours=50 iki node'da doğrulandı. Node:MigrateOnStartup=false korundu; genel seed/migration/rol ataması yok. OpenAI servis tanımı önceki adımda eklendi; firma anahtarı/modeli hâlâ kullanıcı tarafından panelden girilmeli.
+- İki node DLL SHA256 85339cf9859c87a10001edaf716d0d72dc5505de114838b8db1cec786fddd6bb eşleşti. /live,/ready,/ 200; process cwd yeni release. Başlangıçtan itibaren ERR/FTL/unhandled/42703/42P01 satırı0. Kimliksiz /api/reports/ai/catalog 401. Admin index-DAFB2gqC.js ve HTML'deki bağlı asset dosyaları HTTP içeriğiyle birebir doğrulandı.
+- Son sağlık doğrulamasından sonra üç hedefte yalnız bu yayının hash doğrulanmış /tmp arşivleri kaldırıldı. Aktif/geri dönüş klasörleri korundu. Geçici kolon inceleme SQL'i kaldırıldı. GitHub push yapılmadı; diğer yerel çalışmalar korundu.
+- Açık kabul: kullanıcının Sistem > Firmalar > Entegrasyonlar üzerinden firma-geneli OpenAI API anahtarı/model girişi, oturumla AI Raporlama ekranında taslak ve hesaplama testi. Gerçek OpenAI çağrısı veya model anlamsal doğruluk kabulü yapıldı sayılmamalı. Anonim HTTP sağlık kontrolü yetkili kullanıcı uçtan uca kabulünün yerine geçmez.
+
+### 2026-09-10 — AI firma entegrasyonu hata teşhisi
+
+- Kullanıcı ekranında seçilen firma eldi; .241 üzerinde salt-okunur kontrol OpenAI entegrasyonunun yalnız misaroglu (MİŞAROĞLU TEKSTİL PAZ. DAĞITIM SAN. ve TİC. LTD. ŞTİ.) firmasına kaydedildiğini gösterdi. Tek kayıt, firma-geneli, aktif, tarih aralığı geçerli; model alanı string/dolu ve şifreli credentials mevcut. Anahtar içeriği okunmadı/deşifre edilmedi; anahtar geçerliliği kanıtlanmış değildir.
+- Hatanın bu istek için nedeni farklı firma seçimi: eldi için uygun entegrasyon yok. Kullanıcıya kayıtlı misaroglu firmasını seçip taslağı tekrar hazırlaması yönlendirildi. Başka firmanın anahtarına otomatik fallback, veri/ayar/yetki değişikliği yapılmadı. Geçici teşhis SQL'i kaldırıldı. Kod değişmediği için test yeniden çalıştırılmadı; gerçek OpenAI çağrısı yapılmadı.
+
+### 2026-09-10 — AI fiziksel/genel toplam yorumlama ve manuel fallback karışması düzeltmesi
+
+- OpenAiReportContract talimatına açık Türkçe stok/ölçü/gruplama eşlemeleri ve olumlu/belirsiz örnekler eklendi. Kullanıcı fiziksel ve genel toplamı açık söylediğinde tekrar sorulmaması tarif edildi; belirsiz/çelişkili istek koruması bırakıldı. Eksik eşleme olası katkıdır; gerçek model kabulü yapılmadan kesin başarı iddia edilmez. Resmi Structured Outputs rehberi incelendi.
+- AiReportsPage: AI metni varken hazır taslak yoksa submit ve çalıştır düğmesi bloke, manuel kapsam gizli. Netleştirme/hata sonrası sessiz manuel rapor çalışmaz. Açık temizle/manuel moda dönüş istek/onay/taslak/sonucu sıfırlar. Bekleyen işlemde dönüş düğmesi kapalıdır. Diğer rapor fonksiyonları korunur.
+- API genel 380 geçti / 7 atlandı / 0 hata. Admin AI testleri6/6, TypeScript ve hedef ESLint başarılı; diff --check temiz. Testler prompt sözleşmesi/arayüz kaynak regresyonudur, canlı model veya tarayıcı görsel kabulü değildir. DB/harici çağrı/yayın/push yok. Yeni admin build + API yayını ve aynı istemin gerçek denemesi bekliyor; önceki yayın bu düzeltmeyi içermez.
+
+### 2026-09-10 — AI kapsam düzeltmesi yayın hazırlığı
+
+- Kullanıcı yeni admin build'ini tamamladı. index-CwqreWSt.js güncel; admin tüm testler64/64. API Release publish output/publish/ai-scope-fix-20260910 başarılı; önceki derleyici uyarıları devam ediyor. Önceki genel API sonucu380 geçti/7 atlandı.
+- Hedef önceki release20260910_ai_reporting iki API'de hash/kota/başlangıç hata ve anonim401 kontrolleriyle doğrulandı. Yeni20260910_ai_scope_fix için appsettings dosyaları byte-for-byte korunacak; kota/anahtar/DB/worker değişikliği yok. Bu kayıt hazırlık aşaması; aktivasyon sonucu ayrıca yazılacak.
+
+### 2026-09-10 — AI kapsam düzeltmesi API/admin yayını tamamlandı
+
+- API01/API02 current ve Nginx admin symlink20260910_ai_scope_fix release'ine geçti. Admin index-CwqreWSt.js/HTML ve bağlı dosyalar sunulan içerikle doğrulandı. API DLL SHA2560ff31e5d98e65ba011e4a89fd3583983f22e1f147bd30f7dd9bb7e70712867db iki node'da eşleşti; /live,/ready,/200, anonim AI katalog401, yeni başlangıç hata satırı0.
+- appsettings dosyaları önceki release'ten sahiplikleri ve içeriği birebir korunarak alındı. API'ler sıralı sağlık kontrollü restart edildi; önceki20260910_ai_reporting geri dönüş için korundu. Onaylı kotalar aynı; DB/seed/anahtar/worker/.59 veya Nginx config/reload değişmedi. Panelden talimat yönetimi bu yayında YOKTUR.
+- API arşiv5beabee60db89865cb76459d77ce00ec7dd1b2b878ea96841f322ad1c2810bbd, admin003a1fc5ff36f39aaadfae7a9f96f6deadba98f92d508fa30457fc129fdcfa53. Üç sunucudaki bu aktarım arşivleri sağlık/hash kontrolünden sonra silindi; release'ler korundu. GitHub push yok. Önceki380 API başarılı/7 atlandı; admin64/64 ve yayın derlemesi başarılı.
+- Kullanıcı aynı fiziksel genel toplam istemini yeni panelde tekrar denemeli. Sağlık/asset doğrulaması gerçek modelin anlamsal doğruluğu değildir; agent bu tur OpenAI çağrısı yapmadı. Tam kullanıcı rapor sonucu kabulü bekliyor.
+
 ## Yeniden Yapılanma Kararları (2026-03-11)
 
 ### Genel Yaklaşım
@@ -7278,3 +7664,331 @@ ecspros` yapmadı. Yeni publish'te Sıra 1+1.5+2'nin tamamı var; restart sonras
   (ürün adı, açıklama, kategori adı, SEO başlık vb.)
   Fiyat, stok, SKU, tarih alanları çok dilli DEĞİL.
 - Çeviri popup örneği: option-a ve option-c'de görülebilir.
+
+## 2026-09-10 — AI raporlama Faz 3: dinamik stok özellikleri (yerel, yayın bekliyor)
+
+- “Cinsiyet bazlı stok” isteğinin dar sabit sözlük nedeniyle reddedilmesine sadece cinsiyet koşulu eklenmedi. Yeni ReportAttributeCatalog mevcut aktif definition.attribute_types select/multi_select tanımlarından attribute.UUID alanları üretir; model şeması, API kataloğu, doğrulayıcı ve SQL aynı sözlükle çalışır. Yeni uygun özellik için derleme gerekmez. Serbest metin/CustomValue/JSON bu kapsamda değil.
+- Dinamik alanlar reports.ai.use + genel inventory.view + genel catalog.products.view ister. Kapsamlı izin genele dönüşmez, filtre de aynı yetkiyi ister. Model beklerken izin yeniden kontrol edilir; çalıştırmada sözlük yeniden okunur, kaldırılan/bilinmeyen alan reddedilir. 256 tip/128 karakter ad sınırında sessiz kırpma yoktur.
+- Stok satırını çoğaltmayan LEFT LATERAL aggregate: varyant öncelikli, yoksa ürün özelliği; çoklu değer birleşik grup, eksik değer Belirtilmemiş. Aktif/silinmemiş seçenekler, UUID ve Türkçe seçenek adı eq/in parametreleri kullanılır. Stok türü söylenmemişse fiziksel/sanalı ayrı gruplama talimatı verilir; otomatik birleştirmez.
+- Değişen dosyalar: Services/AiReporting altında ReportAttributeCatalog (yeni), ReportDictionary, ReportDefinitionValidator, StockReportQuery, StockReportExecutor, OpenAiReportContract, OpenAiReportInterpreter; AiReportsController, Program.cs; admin AiReportsPage; DynamicStockAttributeTests/ReportAttributeCatalogStub (yeni), AiReportsControllerTests, AiInterpretFlowTests, Acceptance/AiStockReadAcceptanceTests. Faz notu docs/raporlar/2026-09-10-ai-raporlama-uygulama-kararlari.md başına eklendi.
+- Doğrulama: API acceptance dışı385 başarılı/7 atlandı/0 hata; admin64/64, TypeScript ve hedef ESLint temiz. API01 loopback tüneli üzerinden yalnız .241/ecommerce_db salt-okunur kabul1/1 geçti (son koşu16s): gerçek EF özellik sözlüğü, özellik+stok türü kırılım toplamları ve bağımsız stok toplamı aynı snapshot'ta karşılaştırıldı. VALUES-only CTE örneğinde çoklu/tekrarlı değer, varyant önceliği, pasif seçenek, yetim stok ve KADIN filtresi doğrulandı. Veri/DDL/temp tablo yazımı yok.
+- Geçici tünel kapandı, bu işin bağlantı betiği kaldırıldı; kalıcı testler korundu. Sunucu/DB/anahtar/ayar/migration/seed/yayın/GitHub değişmedi. Gerçek OpenAI, tarayıcı ve yük kabulü bu tur yapılmadı. OpenAI Docs Structured Outputs rehberi şema/doğrulama sınırı için kullanıldı; anlamsal başarı mock testten çıkarılmadı.
+- Kalan: satış/iade/maliyet kaynakları, grafik, kayıt/paylaşım/export, panelden talimat yönetimi. Bu adım tüm AI projesinin kapanışı değildir. API/admin yayını sonrası gerçek “cinsiyet bazlı stok raporu istiyorum” isteğiyle kullanıcı kabulü gerekir.
+
+## 2026-09-10 — AI raporlama Faz 4: konuşma temeli (yerel)
+
+- Kullanıcının son kararı: hazır/sabit rapor seçimi değil, yetkili veri üzerinde dinamik detay/özet rapor; eksik istekte tek tek yönlendiren sorular; rapor sonrası DataGrid üzerinden tüm kapsamı sunucuda filtreleme. Detaylı sipariş raporu hedef kapsamına alındı. Faz belgesinin başına hedef ve uygulanmayan sonraki adımlar yazıldı.
+- ReportConversation (yeni) kontrollü geçmiş taşır: kullanıcı mesajları + izinli netleştirme kodları; istemciden serbest assistant/system metni, sonuç veya yetki alınmaz. Geçmiş ve yeni mesaj her çağrıda açık onay ve gizlilik denetiminden geçer.8 geçmiş tur/6000 karakter/32KiB gövde sınırı var, sessiz kırpma yok. Kota/yetki/şema doğrulaması ve store=false korunur; DB/Redis geçmiş kaydı açılmadı.
+- OpenAiReportContract/Interpreter ve AiReportsController geçmişi iletir; kısa yanıt önceki soruyla değerlendirilir, açık seçimleri koruma/tek soru talimatı verilir. Clarification kodu panelde hızlı yanıt seçeneklerini besler. Güncel stok dışındaki veri kaynakları hâlâ uygulanmadı.
+- AiReportsPage konuşmayı kullanıcıya bağlı bellekte korur, firma değişince/yeni raporda/manuel geçişte temizler. Hızlı seçenek otomatik istek/hesaplama yapmaz. Hazır taslak olmayan konuşmada manuel fallback engellenir. Hatalı çağrıda yazılan mesaj/geçmiş tutulur.
+- Değişenler: ReportConversation.cs (yeni), OpenAiReportContract.cs, OpenAiReportInterpreter.cs, AiReportsController.cs, AiReportsPage.tsx; ReportConversationTests.cs (yeni), AiInterpretFlowTests.cs, admin/tests/ai-reports.test.cjs; ilgili faz notu. Mevcut diğer yerel çalışmalar korundu.
+- Kontrol: API394 başarılı/7 atlandı/0 hata; admin65/65; TypeScript, hedef ESLint ve diff whitespace temiz. Geçmiş sırası/sabit soru, gizlilik/izin, bilinmeyen role alanı, tur/karakter sınırı ve çağrıdan önce hassas geçmiş reddi test edildi. Bunlar gerçek model veya tarayıcı kabulü değildir. Mevcut derleyici uyarıları sürüyor.
+- Harici AI/DB/Redis/SSH/yayın/migration/seed/push yapılmadı; npm run build çalıştırılmadı. OpenAI Docs Conversation state rehberi kullanıldı. Sonraki iş: tüm kapsamda sunucu filtre/sıralama/sayım/sayfalama protokolü ve yetkili stok hareketi/sipariş sorgu modelleri. Mevcut1000 satırlı stok grid'i tüm-kayıt sunucu filtrelemesi olarak sunulamaz. Grafik/kayıt/paylaşım/export da açık; işin tamamı bitmedi.
+
+## 2026-09-10 — AI raporlama Faz 5: tüm kapsamda sunucu grid'i (yerel)
+
+- Yeni ReportGridQuery/ReportGridState ve /reports/ai/grid: temel rapor tarifi ile tablo filtreleri ayrıdır. Seçili alan allowlist'i, güncel sözlük/yetki, metin ve sayısal operatör/uzunluk/sayfa doğrulaması vardır. Parametreli filtreler temel kapsamı genişletemez. Tüm aggregate filtrelenir, aynı sorguda sayım/ölçü toplamı alınır, sonra sayfalanır. Yeni grid ilk1000 satırla sınırlanmaz; sayfa250, timeout15s, node başına2 sorgu ve READ ONLY korunur. Eski /run davranışı korunur.
+- AiReportsPage mevcut DataGrid ile kolon/gelişmiş filtre, arama, sıralama ve sunucu sayfalama kullanır; bu etkileşimler AI çağırmaz. Yeni tarif eski tablo koşullarını temizler. Hata/yüklemede eski sonuç gösterilmez; filtreyi düzeltmek için grid kalır. Boş/son sayfa ötesi yanıtta toplam ve sayım döner. Grafik/sipariş/stok hareketi henüz eklenmedi.
+- Dosyalar: ReportGridQuery.cs (yeni), StockReportQuery.cs, StockReportExecutor.cs, AiReportsController.cs, AiReportsPage.tsx; ReportGridQueryTests.cs (yeni), AiReportsControllerTests.cs, AiStockReadAcceptanceTests.cs, admin/tests/ai-reports.test.cjs ve faz belgesi. Diğer yerel değişiklikler korundu.
+- Kontrol: son artımlı olmayan test projesi derlemesi sonrası API398 başarılı/7 atlandı/0 hata (yeni controller kapı testi dahil), admin66/66, TypeScript ve hedef ESLint temiz. Derleme0 hata/88 mevcut uyarı; whitespace temiz. Gerçek PostgreSQL salt-okunur kabul1/1 (17s): önceki özellik/toplam kontrollerine ek SELECT generate_series1505 satır,1000 sonrası sayfa/arama, sayısal aralık/ters sıra, sıfır sonuç ve taşan sayfada toplam doğrulandı.
+- Kabul bağlantısı yalnız API01 loopback tüneliyle .241/ecommerce_db; production .59 erişimi ve DB/veri/DDL/temp tablo yazımı yok. Geçici ai-grid-read.ps1 silindi ve15439 portunun kapandığı doğrulandı. İlk betik denemelerinde shell adı ve PowerShell DbConnectionStringBuilder setter sorunu bağlantıdan önce durdu; düzeltildi ve kabul başarıyla tamamlandı.
+- Yayın/push/migration/seed/ayar/gerçek AI çağrısı yapılmadı; npm run build çalıştırılmadı. Tarayıcı ve eşzamanlı yük kabulü bekliyor. Sonraki aşama yetkili sipariş detay/özet ve stok hareketi kaynakları; grafik, kayıt/paylaşım/export ayrıca açık.
+
+## 2026-09-10 — AI raporlama Faz 6a: sipariş kaynak temeli (yerel)
+
+- OrderReportSource.cs eklendi: mevcut OrderGrid üzerinde temel tarih/durum/kanal kapsamı, rapor ve orders.view kanal yetkilerinin kesişimi, istemci KanalKisiti'ni yok sayan sunucu kapsamı. Grid yalnız izinli kolonları kullanır; ürün/barkod için ayrıca genel katalog görüntüleme gerekir. Tarih başlangıcı dahil/bitişi hariç UTC, en çok366 gün; sayfa250 ve filtre16 sınırı.
+- Detayda kişisel alanlar çıkarıldı; global arama yalnız sipariş no. Gizli müşteri/telefon/memberId alanlarıyla filtreleme, sıralama ve gruplama reddedilir. İstenen kanal/tarih ve grid birbirini yalnız daraltır; silinmiş siparişler dışlanır.
+- Dinamik özet durum/ödeme durumu/kanal/sipariş tipi kırılımlarını birleştirir; para birimi zorunlu ayrıdır. Toplam ve sayım detay sayfalamasından önceki filtrelenmiş kapsamdan gelir. Kayıtlı sipariş tutarı net satış veya tahsilat diye etiketlenmez; cancelled/returned seçilebilir, gerçek iade tutarı/hareketi olarak yorumlanmaz.
+- Test: OrderReportSourceTests6/6; tüm acceptance dışı API404 başarılı/7 atlandı/0 hata (17s). Yetki kesişimi/istemci sahteciliği, tarih sınırları/soft delete, sayfadan bağımsız toplam/para birimi, gizli alan ve geçersiz girdiler, EF Npgsql detay/özet SQL çevirisi doğrulandı. SQL çeviri testi bağlantısızdır; gerçek DB çalıştırması değildir. Mevcut derleyici uyarıları sürüyor; diff whitespace temiz.
+- Değişenler yalnız yeni OrderReportSource.cs, OrderReportSourceTests.cs ve PROGRESS/faz belgesi. Çalışan OrderGrid, stok raporu ve admin değiştirilmedi. Bu kaynak henüz UI/API/AI tarifiyle bağlı değil; yeni servis kullanıma açıldı denemez. Sonraki iş sürümlü çok-kaynaklı tarif/yetkili katalog, konuşma ve yürütücü bağlantısı, özet-grid ve admin konu desteğidir.
+- DB/SSH/AI çağrısı/yayın/push/migration/seed/config değişikliği yok; geçici dosya üretilmedi. npm run build çalıştırılmadı; admin değişmediğinden frontend testleri bu adımda yeniden çalıştırılmadı.
+
+## 2026-09-10 — AI raporlama Faz 6b: sipariş AI/API/admin bağlantısı (yerel)
+
+- OrderReportRecipe ve OrderReportExecutor eklendi; version1/subject=orders/namespace orders.* sözlüğü ve katı doğrulama. Zorunlu timezone'lu366 günlük tarih aralığı ve para birimi boyutu; sipariş no boyutu detay, diğer izinli durum/ödeme durumu/kanal/tip birleşimleri özet. Kullanıcıdan SQL/yetki/serbest şema alınmaz. OrderAmount kayıtlı GrandTotal'dır, net satış/tahsilat/iade diye sunulmaz.
+- ReportDictionary konu çözümü ve StockReportExecutor izin çözümüne orders.view desteği eklendi; kapsamlı sipariş izni veri katmanında kanal kesişimiyle korunur. Inventory izni olmayan sipariş personeli AI kullanım izniyle rapor alabilir. Controller aynı grid ucundan kaynağa yönlendirir; /run sipariş için sayfalı grid ister. Catalog izinli konuları döner; Program DI kaydı yapıldı.
+- OpenAI yorumlayıcı seçili kaynağın şemasıyla çalışır; order_dates/order_layout soruları kontrollü geçmişe eklendi. Güncel İstanbul iş tarihi bağlama verilir, açık tercihler korunur. OpenAI Docs Structured Outputs rehberinin strict schema kuralları kullanıldı; sonuç doğruluğu yalnız şemadan varsayılmadı. Gerçek AI çağrısı yapılmadı, göreli tarih/konuşma kullanıcı kabulü bekliyor.
+- Sipariş yürütücüsü güncel yetkiyi yeniden çözer, READ ONLY RepeatableRead snapshot'ta çalışır; sorgu15s/toplam30s, sayfa250, sipariş için node başına2 eşzamanlı slot. Taban tarif ve grid filtreleri ayrı uygulanır, count/toplam/paging aynı snapshot'tadır. Dövizler ayrı CurrencyTotals ile gelir; detay sayfa limiti toplamı kesmez. Stok kaynağının ayrı slot ve eski tarif davranışı korunur.
+- AiReportsPage kaynak seçimi, kaynak değişince konuşma/taslak/sonuç sıfırlama, tarih ve detay/özet hızlı cevapları, sipariş kolon filtreleri ve mevcut orderConstants etiketleriyle bağlandı. Sipariş hazır taslağı olmadan manuel stok formu çalışmaz. Filtre/sıralama/paging AI çağırmaz. Firma seçimi veri/kanal yetkisini değiştirmez. DateTime İstanbul saatinde, tutarlar para birimi ayrı gösterilir.
+- Test: API409 başarılı/7 atlandı/0 hata (son tam koşu14s), admin67/67, tsc/hedef eslint/whitespace temiz. OrderReportRecipeTests5 yeni test: kaynak/yetki ayrımı, tarih/para birimi/özel alan reddi, model şeması/konu izolasyonu, özet filtre/sıralama/para birimi toplamı EF çevirisi, soru geçmişi. Genel kanal-şema testi eksik Kanal bildirimini yakaladı; SummarySchema düzeltildi. İki eski admin yapısal beklentisi kaynaklı teste dönüştürüldü. Yeni nullability uyarıları temizlendi; önceki proje uyarıları sürüyor.
+- Gerçek .241/ecommerce_db SELECT-only kabul1/1 geçti (20s); önceki stok kapsamları ve sipariş yürütücüsü detay/özet/numeric filtre/döviz toplamı/boş kanal yetkisi çalıştı. API01 loopback15439 tüneli kapatıldı ve geçici ai-order-read.ps1 silindi; portun kapalı olduğu doğrulandı. Production .59'a erişilmedi. İş verisi/DDL/seed/migration/yayın/push/config değişmedi; npm run build çalıştırılmadı.
+- Değişenler: yeni OrderReportRecipe.cs, OrderReportExecutor.cs, OrderReportRecipeTests.cs; OrderReportSource, ReportDefinitionValidator, ReportDictionary, StockReportExecutor, OpenAiReportContract/Interpreter, ReportConversation, AiReportsController, Program, AiReportsPage, admin AI testleri, AiStockReadAcceptanceTests ve faz belgesi. Diğer yerel işler korundu.
+- Kalan: gerçek AI/tarayıcı ve yük kabulü; sipariş gün/ay kırılımı, yetkili kanal adı çözümü, gerçek iade/ödeme/net satış kaynakları, stok hareketi, grafik/kayıt/paylaşım/export. Kullanıcı konu seçer; otomatik kaynak yönlendirme yok. Tüm raporlama projesi tamamlanmış sayılmaz; bu yerel kod henüz yayınlanmadı.
+
+## 2026-09-10 — AI raporlama ana kapsamının netleştirilmesi
+
+- Kullanıcı onayıyla hedef tek tek stok/sipariş raporu eklemek değil, yetkili işletme kaynakları ve ilişkileri üzerinden dinamik raporlama olarak uygulama kararlarına kaydedildi. Personel performansı dahil örnekler kabul senaryosudur; veri yoksa sonuç uydurulmaz, belirsiz ölçüler konuşmayla netleştirilir.
+- ReportDictionary'nin yalnız iki konuya yönlendirdiği; OrderPayment, Return ve StockMovement alanları koddan kontrol edildi. Ödeme/iade/hareket iş anlamları ve Fulfillment personel-süre bağlantıları için doğrulama gereksinimleri not edildi. Mevcut motorun genel hedefi karşılamadığı açıkça belirtildi.
+- Bu adım yalnız gereksinim/inceleme kaydıdır: çalışma kodu, DB, yetki, servis veya yayın değişmedi. Kod testi çalıştırılmadı; önceki faz sonuçları bu hedef tamamlanmış gibi sunulmaz. Sonraki adım ortak kaynak/ilişki/ölçü kataloğu ve güvenli plan doğrulamasıdır.
+
+## 2026-09-10 — AI raporlama Faz 7a: ortak kaynak ve kapsam kataloğu (yerel)
+
+- ReportSourceCatalog eklendi: kaynak kimliği/adı, satır anlamı, açıklama ve kapsam politikası ortak metadata üzerinden keşfedilir. Yalnız yürütücüsü hazır stok/sipariş yayınlanır; DB şeması/SQL/model kaynaklı işlem alınmaz. ReportDictionary uyumluluk katmanı, controller katalog yanıtı, stok izin çözümü ve sipariş kanal kesişimi bu ortak kaynağa bağlandı.
+- Kanal-kapsamlı reports.ai.use sahibi sipariş kullanıcısının üst katmanda reddedilmesi düzeltildi. orders.view ve reports.ai.use kanal kesişimi korunur; boş kesişim sıfır kayıt, yetki yoksa ret. Aynı kullanıcıya global stok erişimi açılmaz. Superadmin ve eski alan kimlikleri korundu.
+- Dinamik stok özellikleri yalnız attribute.GUID/dimension/catalog.products.view/eq-in olarak kabul edilir; tekrar, built-in gölgeleme ve metadata yetki genişletme kontrollü katalog hatasıdır. Controller alanları try içinde materialize eder; bozuk metadata serialization sırasında kontrolsüz exception yerine503 verir.
+- Bir alt ajan salt-okunur güvenlik incelemesi yaptı; kapsam ve ertelenmiş sorgu hata-yakalama bulguları uygulandı. Alt ajan dosya/DB değiştirmedi.
+- Değişenler: ReportSourceCatalog.cs, ReportDictionary.cs, StockReportExecutor.cs, OrderReportSource.cs, AiReportsController.cs, ReportSourceCatalogTests.cs, AiReportsControllerTests.cs ve faz belgesi.
+- Test: acceptance dışı API415 başarılı/7 atlandı/0 hata (422 toplam); ilgili admin AI9/9. Yeni6 test kaynak uyumu, scoped yetki, boş/yok kapsam, bozuk metadata ve controller davranışını kapsar. İlk derlemede önceki proje uyarıları görüldü; son koşuda WarningLevel=0 kullanıldı. DB/AI/ağ/kullanıcı kabulü yapılmadı; npm run build, migration/seed/yayın/push yok. Yerel çalışmalar korundu.
+- Kalan: genel plan sürümü ve doğrulayıcısı; onaylı ilişkiler/EXISTS ve ön-toplama; gerçek ödeme/iade/hareket/personel kaynakları; konuşmadan çok-kaynak seçimi. Bu çalışma tüm dinamik raporlama hedefinin tamamlandığı anlamına gelmez.
+
+## 2026-09-10 — AI raporlama Faz 7b: dinamik koşul ve ilişki derleyicisi (yerel)
+
+- ReportPredicate/ReportPredicateSchema<T> eklendi. Ortak koşul ağacı all/any/not, türlenmiş karşılaştırmalar ve exists/notExists destekler. Alan/ilişki lambda tanımları yalnız sunucudadır; model SQL, tablo adı, property path veya yetki belirleyemez. Zorunlu satır koruması kullanıcı ağacının dışında kalır; alt ilişkiler kendi yetki/korumasını kontrol eder.
+- OrderReportPredicates adaptörü gerçek sipariş/ödeme/iade ilişkilerini bağlar; ödeme kaydı yöntemi ID'dir ve sipariş üzerindeki yöntem metniyle karıştırılmaz. İade ayrı orders.returns.view ister ve kanal kapsamını korur. EXISTS sipariş başlık tutarını çoklamaz; notExists yalnız erişilebilir alt kayıtların yokluğunu ifade eder.
+- OrderReportSource.Create opsiyonel predicate alır ve mevcut filtre/kapsamın ardından, özet/sayfalamadan önce uygular. Eski çağrılar değişmez. Yeni koşul yapısı henüz API/AI/admin sözleşmesine açılmadı; kullanıcıya genel dinamik raporlama hazır diye sunulmaz.
+- Parse sınırları:16KiB/JSON derinliği20, koşul derinliği6/node64/grup16/değer20, unknown/duplicate ret. DateTime UTC ve açık timezone, between başlangıç dahil/bitiş hariç; metin contains case-sensitive. Parametreli EF expression üretilir, doğrudan SQL veya veri yürütme yoktur.
+- Dosyalar: yeni ReportPredicate.cs, ReportPredicateSchema.cs, OrderReportPredicates.cs, ReportPredicateTests.cs; OrderReportSource.cs ve faz belgesi güncellendi.
+- Test: acceptance dışı API422 başarılı/7 atlandı/0 hata (429 toplam); ilk hedefli koşu11/11. Yedi yeni test: yetki sınırı/NOT, child permission, ilişkide çoğaltmama/softdelete, bozuk tarif/tür/boyut, timezone/aralık, gerçek PostgreSQL SQL çevirisi (DB bağlantısı olmadan), dinamik koşulun sayfalamadan önce toplama etkisi. WarningLevel=0 kullanıldı. Admin değişmedi; frontend testi bu adımda tekrarlanmadı.
+- DB/AI/ağ/servis/yayın/push/migration/seed değişikliği yok; npm run build çalıştırılmadı. Sonraki adım genel seçim/gruplama/ölçü/sıralama planı ve AI/API bağlantısıdır; göreli zaman/kart tarihine bağlı hareket analizi, müşteri/personel kaynakları halen açık.
+
+## 2026-09-10 — AI raporlama Faz 7c: dinamik gruplama ve ölçü planı (yerel)
+
+- Yeni ReportAggregatePlan/ReportAggregateSchema<T>/ReportAggregateQuery: onaylı alanlardan 0–4 metin kırılımı ve1–4 ölçü seçimi, count/sum/average/minimum/maximum, seçilmiş kolonda sıralama ve tüm grup anahtarlarıyla sabit tie-breaker. Model SQL/property path vermez. Plan kolonları snapshot alınır; duplike/bilinmeyen/sıralama dışı alanlar reddedilir.
+- Kaynak yetkisi/satır koruması ve ölçünün zorunlu kırılımı korunur. Sipariş tutar ölçüleri currencyCode ister; para birimleri karışmaz. Boş girdi boş sonuçtur. Tüm filtreli veri gruplanır, sayfalama çağıran katmana bırakılır; ortalamalar sayfa ortalamaları toplanarak üretilmez.
+- OrderReportSource.DynamicSummary eklendi: mevcut koşullardan geçen tüm sorguyu ortak derleyiciye verir, güncel kanal kapsamını yeniden uygular. Durum/ödeme durumu/yöntemi/tip/para birimi kombinasyonları için ayrı rapor kodu yoktur. Eski Summary/V1/API/admin değişmedi; yeni plan HTTP/AI ekranına henüz açılmadı.
+- Dosyalar: yeni ReportAggregatePlan.cs, ReportAggregateSchema.cs, ReportAggregateTests.cs; OrderReportSource.cs, faz belgesi ve bu kayıt. Diğer yerel işler korundu.
+- Test: acceptance dışı API428 başarılı/7 atlandı/0 hata (435 toplam); ilk hedefli4/4, ardından altı yeni test dahil genel koşu. Gerçek entity PostgreSQL SQL çevirisi (bağlantı açmadan), adet/tutar/ortalama/min/max, para birimi, yetki/kanal, boş sonuç, kolon snapshot ve sıralama doğrulandı. WarningLevel=0 kullanıldı; whitespace kontrolü temiz (CRLF uyarıları var). Frontend değişmedi, frontend testi tekrarlanmadı.
+- DB/AI/ağ/yayın/push/migration/seed yok; npm run build çalıştırılmadı. Sonraki adım sürümlü plan zarfı ve AI/API/admin bağlantısı; detay projeksiyonu, tarih/Guid/sayısal kırılımlar ve müşteri/personel/hareket kaynakları açık. Genel hedef henüz tamamlanmadı.
+
+## 2026-09-10 — AI raporlama Faz 7d: sürümlü dinamik plan API bağlantısı (yerel)
+
+- DynamicReportPlan V2 strict zarfı eklendi; source/from/to/predicate/aggregate.16KiB/derinlik24, duplicate/unknown ret, timezone ve366gün sınırı. İlk kaynak orders; hazır olmayan kaynaklar reddedilir.
+- /reports/ai/grid V2 dalı eklendi, V1 korunur. Ayrı AiReporting:DynamicEnabled defaultfalse kapısı ve mevcut Enabled birlikte gerekir. Config/ortam ayarı değiştirilmedi; catalog yalnız bayrağın mevcut değerini bildirir. /run V2 için400, kaynak yetkisi yoksa403, kapalıysa503.
+- ExecuteDynamicAsync V1 OrderReportExecutor ile aynı slot/read-only RR/15s sorgu30s deadline sınırlarını paylaşır. Güncel effective yetkiyle kaynak/ilişki/aggregate tekrar doğrulanır. SQL çevirisi concurrency/deadline içinde, bağlantı açılmadan yapılır. Tüm filtreli grup sayısı ve sayfa aynı transaction'da okunur; audit metadata-only.
+- ReportAggregateGrid seçili kolonların metin/sayı filtrelerini ve kararlı sıralamayı uygular. Arama yalnız metin boyutları; boyutsuz raporda arama sessizce boşaltmak yerine açıklayıcı400 verir. En çok250satır/sayfa. Ortalama/min/max ve para birimlerinde yanlış footer toplamı üretmemek için totals boş döner.
+- Alt ajan salt-okunur entegrasyon incelemesi yaptı; arama ve concurrency bulguları düzeltildi. Dosyalar: yeni DynamicReportPlan.cs, ReportAggregateGrid.cs, DynamicReportPlanTests.cs; OrderReportExecutor.cs, AiReportsController.cs, AiReportsControllerTests.cs ve faz belgesi.
+- Test: API432 başarılı/7 atlandı/0 hata (439 toplam); son küçük düzeltmeler sonrası DynamicReportPlan/AiReportsController10/10 geçti. Yeni4 test strict zarf, grid filtre/count/boş sayfa, PostgreSQL aggregate sonrası SQL çevirisi ve controller rollout/yetki kapıları. WarningLevel=0; gerçek DB bağlantısı/model/tarayıcı kabulü yok. Frontend değişmedi.
+- DB/yayın/push/migration/seed/config değişikliği yok; npm run build çalıştırılmadı. V2 AI tarafından üretilmiyor/admin henüz göndermiyor; yeni bayrak kapalı. Sonraki adım yetkili V2 metadata+AI sözleşmesi ve admin plan/sonuç arayüzüdür; ek işletme kaynakları ve kabul testleri açık.
+
+## 2026-09-10 — AI raporlama Faz 7e: OpenAI V2 ve admin taslak akışı (yerel)
+
+- DynamicReportMetadata ve OpenAiDynamicReportContract eklendi. Yetkili alan/ilişki sözlüğü, recursive strict JSON schema, store=false; firma modeli aynen korunur. Official OpenAI Structured Outputs rehberi kullanıldı. Yeni API key aracı mevcut değildi; gerçek anahtar/provider çağrısı yapılmadı.
+- Interpreter planVersion2 ile ayrı sözleşmeye yönlenir; V1 default kalır. Aynı consent/privacy/history/firm/kota/HTTP timeout/yanıt boyutu kuralları korunur. DynamicPlan yanıta eklendi. Interpret controller güncel effective yetkiyle OrderReportExecutor.ValidateDynamicPlan derleyicisinden geçirir; model hazır dedi diye veri çalıştırmaz. İade metadata izni effective çözümüne eklendi; veri katmanında kanal kesişimi değişmedi.
+- Admin dynamicEnabled kapısına göre V2 ister, okunur dönem/kırılım/ölçü/sıralama/nested predicate taslağı gösterir; açık kullanıcı submit sonrası /grid çalışır. V2 kapanırsa eski plan/sonuç bloke olur. dynamic_layout kodu yalnız aggregate seçenekleri sorar; V1detail önerisi korunur. İlgili filtre/ilişki etiketleri metadata'dan gelir; boyutsuz raporda global arama kapalıdır.
+- Değişenler: DynamicReportMetadata.cs, OpenAiDynamicReportContract.cs; OpenAiReportContract/Interpreter, ReportConversation, ReportSourceCatalog, OrderReportExecutor, AiReportsController; admin AiReportsPage.tsx ve ai-reports.test.cjs; AiInterpretFlowTests.cs, yeni OpenAiDynamicReportContractTests.cs, faz belgesi. İki alt ajan admin ve backend test dosyalarında ayrı çalıştı.
+- Test: API448 başarılı/7 atlandı/0 hata (455 toplam), admin70/70; agent TSC/hedefESLint0. Yeni14 contract/mocktransport ve2flow testi geçti. Genel koşuda eşzamanlı dotnet test DLL kopyalama retry uyarıları oluştu; diğer koşu bitince retry başarıyla tamamlandı, test hatası yok. Gerçek model/DB/Redis/tarayıcı/yük kabulü yok. Yerel çalışmalar korundu.
+- DynamicEnabled config'i kapalı kaldı; DB/migration/seed/yayın/push yok, npm run build çalıştırılmadı. Sıradaki iş kabul ve veri kaynağı genişlemesi. V2 henüz sipariş aggregate kaynağıdır: otomatik çok-kaynak seçim, müşteri/personel/hareket/detay kaynakları ve kayıt/paylaşım/grafik/topN/export açık; tüm raporlama hedefi tamamlanmış değildir.
+
+## 2026-09-10 — AI raporlama Faz 7f: ortak iş veri sözlüğü (yerel)
+
+- Kullanıcının her soru için ayrı kod yazılmaması beklentisi doğrultusunda ReportEntityDefinition/ReportRelationDefinition/ReportBusinessDictionary eklendi. Mevcut sipariş, ödeme ve iade alan/ilişki tanımları tek kaynağa taşındı; AI metadata, izinli operatörler, filtre ve aggregate kayıtları buradan üretilir. Yeni hazır rapor eklenmedi.
+- OrderReportPredicates, OrderReportSource, DynamicReportMetadata ve OpenAiDynamicReportContract ortak tanımları kullanıyor. Kaynak/kanal/iade yetkileri, para birimi koşulu ve sunucu doğrulaması korundu. OpenAI şema enum'ları artık ayrı sabit alan listesi değil sözlükten üretiliyor.
+- Yeni ReportBusinessDictionaryTests dahil acceptance dışı API: 452 başarılı/7 atlandı/0 hata (459 toplam). Tek kayıtla filtre/gruplama/metadata, enum tutarlılığı, sözlük sabitleme ve yetkisiz ilişki sızıntısı kontrol edildi. git diff --check başarılı (CRLF uyarıları mevcut). Frontend değişmedi; bu adımda frontend testi tekrarlanmadı.
+- DB/model/tarayıcı testi, migration/seed/config/yayın/push yapılmadı; yerel işler korundu, DynamicEnabled kapalı. Ayrıntılar uygulama kararları belgesinde Faz 7f. Yeni işletme verisini bağlamak halen kod/derleme ister; bağlı veriler üzerindeki yeni soru kombinasyonları istemez. Genel çok-kaynak, detay ve kalan işletme kapsamı açık; bütün dinamik raporlama tamamlandı denemez.
+
+## 2026-09-10 — AI raporlama Faz 7g: kaynak bağımsız tekil sayım (yerel)
+
+- ReportAggregateSchema.cs ve ReportEntityDefinition.cs içine genel DistinctCount eklendi. Metin/Guid/int/long ve nullable kimlik alanlarında, yetkili filtreli grup içindeki benzersiz non-null değerler sayılır. Mevcut sayım/toplam/ortalama davranışları korunur; sayfalama öncesinde DB tarafında hesaplanabilir. Boş metin normalize edilmez. Yeni müşteri/personel raporu ya da alan yetkisi açılmadı.
+- Yeni ReportDistinctCountTests.cs: tekrar/null/boş kaynak, soft-delete guard, yetki reddi, metadata, tanım hataları ve bağlantı açmadan PostgreSQL DISTINCT/GROUP BY/ORDER BY/LIMIT çevirisi. Acceptance dışı testler 455 başarılı/7 atlandı/0 hata (462 toplam). git diff --check başarılı, mevcut CRLF uyarıları sürüyor. Admin değişmedi; frontend kontrolü tekrarlanmadı.
+- Faz 7g uygulama kararlarına kaydedildi. DB/model/tarayıcı çağrısı, migration/seed/config/yayın/push yok; DynamicEnabled kapalı ve diğer yerel çalışmalar korundu. Bu adım ortak motor içindir; genel çok-kaynak/detay raporlama ve işletme verilerinin yetkili bağlantıları halen açık.
+
+## 2026-09-10 — AI raporlama Faz 7h: dinamik ilk N sonuç sınırı (yerel)
+
+- ReportAggregatePlan.Top (nullable, 1–1000) eklendi. Açık sıralama/kırılım zorunlu; eski planlarda null sınır yoktur. ReportAggregateSchema yetkili filtreli tüm grupları hesaplar, plan sıralaması/tam anahtar tie-breaker sonrası Take uygular. Tablo filtreleri yalnız seçilmiş ilk N kümesini daraltır; tablo sıralaması üyeliği değiştirmez. Ayrı rapor metodu eklenmedi.
+- DynamicReportPlan ve OpenAiDynamicReportContract validasyonu/şeması/talimatı güncellendi. OpenAI Docs required/nullable yönergeleri kullanıldı; firma modeli korunur. Admin AiReportsPage.tsx önizlemesi sonucu ilk N grup olarak ve filtre kapsamıyla açıklar. Yeni müşteri/personel kaynağı açılmadı, V2 kapısı kapalı kaldı.
+- Testler: acceptance dışı API 460 başarılı/7 atlandı/0 hata (467 toplam); yeni ReportTopLimitTests beş test. Admin node --test tests/*.test.cjs 71/71; npx tsc --noEmit -p tsconfig.app.json ve sayfa ESLint başarılı. git diff --check başarılı (mevcut CRLF uyarıları). SQL çevirisi DB bağlantısı açmadan test edildi; gerçek model/DB/tarayıcı/yük kabulü yapılmadı.
+- Dosyalar: ReportAggregatePlan.cs, ReportAggregateSchema.cs, DynamicReportPlan.cs, OpenAiDynamicReportContract.cs, AiReportsPage.tsx, ai-reports.test.cjs, yeni ReportTopLimitTests.cs ve faz belgesi. Diğer yerel değişiklikler korundu. Migration/seed/config/yayın/push yok; npm run build çalıştırılmadı. Genel çok-kaynak/detay ve kalan işletme kapsamı halen açık.
+
+## 2026-09-10 — AI raporlama Faz 7i: sipariş ürün satırı ilişkisi (yerel)
+
+- ReportBusinessDictionary/DynamicReportMetadata/OrderReportPredicates ortak yapısına orders.items bağlandı; ürün kodu, barkod, snapshot SKU/ad ve tek satır adediyle koşul kurulabilir. Ayrı hazır rapor/soru kodu yok. Aynı EXISTS'te tüm koşullar aynı kaleme aittir; çok satır ana sipariş sayısını/tutarını çoğaltmaz, yetki/kanal/soft-delete korunur.
+- Yeni OrderReportLine yalnız okuma DTO'su; IOrderDbContext.ReportLines ve OrderDbContext sabit SELECT projeksiyonu eklendi. Yeni tablo/kolon/migration yok. Güncel aktif katalog kodu/barkodu SKU ile karıştırılmaz, eksik katalog null kalır; eski sipariş listesi filtre davranışı değiştirilmedi.
+- OpenAiDynamicReportContract talimatı ve admin AiReportsPage önizlemesi satır koşulunun yalnız sipariş seçtiğini, GrandTotal'ın siparişin tamamı olduğunu açıklar. OpenAI Docs kullanıldı; model/config/kapılar değişmedi. Satır fiyat/tutar/ürün kırılımı ve ürün bazlı satış toplamı bu fazda desteklenmiyor.
+- Yeni ReportOrderLineTests dahil API 464 başarılı/7 atlandı/0 hata (471 toplam). Aynı satır/eksik katalog/soft-delete/kanal/çoğalmama/metadata/yetki ve parametreli PostgreSQL EXISTS çevirisi, migration modeline entity eklenmemesi doğrulandı. Admin 71/71; TypeScript noEmit ve hedef ESLint başarılı. Gerçek DB/model/tarayıcı testi yok.
+- Değişen dosyalar yukarıdaki adapter/DTO/sözlük/AI/admin dosyaları, yeni test ve faz belgesi. Yerel çalışmalar korundu; migration/seed/config/yayın/push yapılmadı, npm run build çalıştırılmadı. DynamicEnabled kapalı; genel işletme kaynakları ve detay planı açık.
+
+## 2026-09-10 — AI raporlama Faz 7j: ürün ilişkisi katalog yetkisi düzeltmesi (yerel)
+
+- Detay planı incelemesinde önceki Faz 7i ürün ilişkisi ile OrderReportSource ürün filtresi arasında yetki farkı bulundu: ilişki yalnız sipariş izniyle katalog verisini okuyabiliyordu. Yayınlanmamış/kapalı koddaki bu fark yeni özelliğe geçmeden kapatıldı; gerçek veri erişimi yapılmadı.
+- ReportBusinessDictionary.Items catalog.products.view gerektirir; OrderReportPredicates merkezi ResolvePermissions kullanır. Global katalog okuması için kanal kapsamlı katalog yetkisi yeterli sayılmaz. İzin yoksa projeksiyon oluşturulmaz, metadata'da ilişki/alanlar görünmez, tüm olumlu/olumsuz/OR/NOT koşulları reddedilir. Sipariş izni ve kanal koruması değişmez; normal sipariş raporu katalog izni olmadan çalışır.
+- ReportOrderLineTests fixture izinleri düzeltildi; eksik/kapsamlı/boş katalog yetkisi, yalnız katalog izni, negatif koşullar ve önceki plan sonrası yetki iptali için iki yeni test eklendi. Acceptance dışı API 466 başarılı/7 atlandı/0 hata (473 toplam). git diff --check başarılı; mevcut CRLF uyarıları. Admin değişmedi, frontend testi tekrarlanmadı.
+- Değişenler: ReportBusinessDictionary.cs, OrderReportPredicates.cs, ReportOrderLineTests.cs, faz belgesi ve bu kayıt. Tüm orders.items ilişkisi (snapshot SKU/ad/adet dahil) katalog izni ister; snapshot-only ayrı kaynak açık iş. Detay projeksiyonu sonraki adım olarak kaldı. DB/model çağrısı, migration/seed/config/yayın/push yok; DynamicEnabled kapalı, diğer yerel işler korundu.
+
+## 2026-09-10 — AI raporlama Faz 7k: ortak detay kolon projeksiyonu (yerel)
+
+- Yeni ReportDetailSchema.cs içinde ReportDetailPlan/ReportDetailQuery/ortak derleyici eklendi: 1–16 onaylı kolon, tür korumalı projection, seçili kolonlarla GridSchema filtre/sıralama/arama, benzersiz anahtarla kararlı sayfalama, opsiyonel Top. Yetki/satır guard'ı zorunlu; gizli veya seçilmemiş kolonlardan filtreleme yok.
+- ReportEntityDefinition detay tanımını aynı alan kaydından üretir; count/average/min/max/distinctCount ham detay kolonu değildir. Tutarın zorunlu para birimi kolonu korunur. OrderReportSource.DynamicDetails giriş koşulları ve güncel kanal yetkisiyle derleyiciye bağlandı. Ayrı rapor şablonu eklenmedi.
+- Yeni ReportDetailTests beş test dahil acceptance dışı API 471 başarılı/7 atlandı/0 hata (478 toplam). Seçili kolon/snapshot, sayım/boş sayfa, Top, yetki/gizli alan reddi, para birimi, bağlantısız PostgreSQL projection/LIMIT/OFFSET ve yeniden kanal kontrolü geçti. git diff --check başarılı; mevcut CRLF uyarıları. Admin değişmedi, frontend testleri tekrarlanmadı.
+- Değişenler: yeni ReportDetailSchema.cs, ReportDetailTests.cs; ReportEntityDefinition.cs, OrderReportSource.cs, faz belgesi ve bu kayıt. DB/model/tarayıcı çağrısı, migration/seed/config/yayın/push yok; yerel işler korundu. V2 API zarfı/executor/AI/admin detay bağlantısı henüz yapılmadı; son kullanıcıya detay yeteneği açıldığı iddia edilmez. Sıradaki adım bu bağlantıdır; genel işletme kapsamı ayrıca açık.
+
+## 2026-09-10 — AI raporlama Faz 7l: detay planı API/AI/admin bağlantısı (yerel)
+
+- DynamicReportPlan V2 yalnız bir aggregate/detail dalı kabul ediyor. OrderReportExecutor detay dalı ortak izin/satır koşulları ve iki slot/30s deadline/15s timeout/READ ONLY RepeatableRead ile çalışıyor; sayım ve seçili kolon sayfası aynı snapshot'ta. ValidateDynamicPlan detay derleyicisini de sorgu çalıştırmadan doğrular. Eski V1/aggregate yolları korundu.
+- ReportField/ReportEntityDefinition dataType üretir; AiReportsController catalog dynamicDetailFields sunar. OpenAiDynamicReportContract nullable/required detail ve aggregate, izinli kolon enum'ları ve detay talimatlarıyla güncellendi; OpenAI Docs kullanıldı, model değişmedi. ReportConversation detay/özet seçimini sorabilir.
+- AiReportsPage.tsx detay kolonlarını sırasıyla, tarih/sayı/metin filtrelerini metadata'dan, metin varsa aramayı gösterir. source ile V2 tanıma null aggregate'ın JSON'dan çıkarılmasını karşılar. Yeni raporda eski tablo filtre/sıra/sayfa temizlenir; aynı rapor korunur. Önizleme sonrası açık kullanıcı çalıştırması gerekir.
+- API 475 başarılı/7 atlandı/0 hata (482 toplam); yeni DynamicDetailPlanTests üç test ve AiInterpretFlowTests bir detay/gizli alan testi. İlk koşuda eski nullable şema yolunu beklemeyen bir test başarısızdı; yol güncellendi, son genel koşu geçti. Admin 72/72; son küçük frontend düzeltmeleri sonrası hedef 14/14. Final TypeScript noEmit ve hedef ESLint başarılı. git diff --check başarılı (CRLF uyarıları).
+- Dosyalar: DynamicReportPlan, OrderReportExecutor, ReportDefinition, ReportEntityDefinition, AiReportsController, OpenAiDynamicReportContract, ReportConversation, AiReportsPage; yeni/düzenlenen API ve admin testleri, faz belgesi. Migration/seed/config/DB/model çağrısı/yayın/push yok; DynamicEnabled kapalı ve yerel işler korundu. Gerçek DB/model/tarayıcı/yük kabulü, diğer kaynaklar ve grafik/kayıt/paylaşım/export açık.
+
+## 2026-09-11 — AI raporlama Faz 7n: kişisel tarif kaydı (yerel)
+
+- SavedAiReportsController ile JWT sahibine özel 20 insert-only tarif slotu, mevcut izin/tarif doğrulaması ve çakışmada 409 eklendi. SavedReports.tsx/savedReportValidation.ts/AiReportsPage adla kaydetme, yenileme, güvenli taslak açma sunar; otomatik hesaplama yok. Tarihler sabit, tablo filtreleri ayrı; sonuç/konuşma saklanmaz. Yeni tablo/migration yok.
+- IIamDbContext/IamDbContext WritePreferenceAsync parametreli tek-anahtar jsonb_set kullanır. MyPreferences genel yazıcısı da buna geçirildi, UTF-8 byte sınırı düzeltildi. Eski sözlüğün bütününü yazıp başka tercihi ezme kaldırıldı. Genel aynı anahtar için son yazan kazanır; rapor eklemesi dolu slotu ezmez.
+- API genel 477 başarılı/7 atlandı; yeni AtomicPreferenceTests ve SavedAiReportsTests hedef koşusu 3/3. Admin 77/77, TypeScript ve ESLint başarılı; diff kontrolü geçti. SQL parametre testi gerçek DB'ye bağlanmaz. Gerçek PostgreSQL eşzamanlılık, tarayıcı ve model kabulü yapılmadı; yayın öncesi zorunlu açık iş.
+- Faz belgesi güncellendi. Config/seed/DB/yayın/push değişmedi, yerel işler korundu. Paylaşım, kayıt güncelleme/silme, göreli dönem, export ve diğer iş kaynakları tamamlanmadı. Yeni veri erişimi vermeden alıcı yetkisiyle paylaşım ayrı tasarlanacak.
+
+## 2026-09-10 — AI raporlama Faz 7m: güvenli özet grafik görünümü (yerel)
+
+- Yeni ReportChart.tsx ve reportChartData.ts mevcut yetkili özet sonucunu yatay çubuklarla sunar. Ölçü seçimi, birleşik kırılım etiketi, negatif/sıfır/pozitif değer, erişilebilir metin sunumu; yeni bağımlılık/AI/DB isteği yok. AiReportsPage yalnız geçerli güncel özet sonuçlarında açılır grafik sunar; tablo aynı kalır. İlk TypeScript kontrolünde dosya adlarının büyük/küçük harf çözümleme çakışması bulundu; veri yardımcısı reportChartData olarak ayrıldı.
+- Eksik sayfa, 50 üstü grup, detay, karışık para birimi, kolon uyuşmazlığı ve geçersiz sayı reddedilir. Yalnız tablo sayfasını tüm rapor gibi göstermez, tarayıcıda toplam/yeniden gruplama yapmaz. Yeni report-chart.test.cjs üç çalıştırılabilir test içerir.
+- Admin 75/75, TypeScript noEmit ve hedef ESLint geçti. git diff --check geçti. API değişmedi, bu adımda API testleri tekrarlanmadı. Tarayıcı görsel kabulü ve gerçek ortam testleri yapılmadı.
+- Faz belgesi güncellendi. Build/yayın/push/config/migration/seed/veri değişikliği yok; yerel çalışmalar korundu. Genel dinamik raporlama tamamlanmadı: diğer kaynaklar, sunucu export'u, kullanıcıya özel kayıt/yetkili paylaşım ve gerçek ortam kabulü sırada.
+
+## 2026-09-11 — AI raporlama Faz 7o–7p: yönetim, paylaşım, Excel (yerel)
+
+- Kayıt güncelleme/kaldırma onaylı ve JSONB compare-and-swap korumalı; eski sekme yeni kaydı silemez/ezemez, 409 döner. SavedAiReportsController/SavedReports, IIamDbContext/IamDbContext değişti. Kaynak işletme verileri değil yalnız kişisel tarif yönetilir.
+- reports.ai.share aksiyonu, ReportSharingPolicy ve ReportShareDirectory eklendi; Program DI kaydı yapıldı. Aynı atanmış firmadaki aktif kullanıcılar, rastgele 32 byte anahtar ve iki tarafın güncel izin/tarif doğrulaması gerekir. Paylaşım veri yetkisi vermez; alıcı kendi kapsamıyla çalıştırır. Link yenileme/kapatma/güncelleme eskisini geçersiz kılar. URL fragment ve POST gövdesi kullanılır, audit yalnız metadata tutar. Önceden kopyalanmış tarifler geri alınmaz; alıcı bazlı ACL/zaman sonu yok.
+- reports.ai.export aksiyonu, /reports/ai/export, ReportExcelExport ve admin indirme butonu eklendi. Aynı executor/readonly snapshot/tablo filtreleri, sunucuda ilk sayfa/250 sınırı; tüm filtreli sonuç sığmıyorsa 422, kısmi dosya yok. Mevcut MiniExcel/GridExportWriter, typed sayı/Türkiye tarihi, formül metni nötrleme ve DeleteOnClose kullanılır. Başlıklar kararlı alan kimlikleri; PDF/büyük asenkron export açık.
+- API genel 485 başarılı/7 atlandı/0 hata; admin 78/78, TypeScript ve hedef ESLint başarılı. Son ek paylaşım controller/DI hedef koşusu 2/2 geçti: aynı firma yetkili tarif açma, yanlış token/firma/sahip-alıcı izin kaybında 404, yanıtta/auditte token veya sonuç olmaması, yazma/çalıştırma olmaması doğrulandı. Testler ayrıca CAS parametreleme, güncelleme/silme sahipliği, firma/izin/token politikası, yetkisiz export, gerçek XLSX zip ve geçici dosya temizliğini içerir. Gerçek DB/iki node/tarayıcı/OpenAI kabulü yapılmadı.
+- İlgili faz belgesi güncellendi. Yeni tablo/migration/config/deploy/push yok; production'a dokunulmadı. Yeni iki izin hedefte mevcut katalog senkronuyla ayrıca doğrulanmalı. Kalan kapsam: diğer iş kaynakları, göreli tarihler, tam gerçek ortam kabulü ve büyük export/PDF. Genel dinamik raporlama tamamlandı iddiası yok.
+
+## 2026-09-11 — AI raporlama Faz 7q: alan bazlı izin / müşteri kimliği (yerel)
+
+- ReportEntityDefinition/ReportPredicateSchema/ReportAggregateSchema/ReportDetailSchema ek alan izniyle genişletildi. Yetkisiz alan metadata'da yok; filtre, özet ve detay derlemede ayrıca reddedilir. Kaynak izni korunur. Ortak metin koşullarında isNull/isNotNull var.
+- ReportBusinessDictionary/ReportSourceCatalog kayıtlı müşteri kimliği ve tekil sayımını yalnız kapsamsız CRM görüntüleme izniyle sunar. Misafir null kimlikler tekil sayılmaz; isim/iletişim veya müşteri ana kartı raporu açılmadı. OpenAiDynamicReportContract yalnız izinli metadata ve açık kimlik-only sınırlamasıyla güncellendi; OpenAI Docs kullanıldı, model korunuyor.
+- ReportCustomerIdentityTests üç testle izin/NOT/özet/detay/scoped CRM, misafir/tekrar/soft-delete, PostgreSQL çeviri ve AI alan enum'larını kontrol eder. İlk test derleme hatası mevcut Rows üyesine düzeltilip yeniden koşuldu: API 489 başarılı/7 atlandı/0 hata. Diff kontrolü geçti. Admin değişmedi; bu adımda frontend testi tekrarlanmadı.
+- Faz belgesi güncellendi. Gerçek DB/model bağlantısı, config/migration/seed/yayın/push yok. Geniş kaynak kapsamı henüz tamamlanmadı; stok hareketi modeli yalnız incelendi. Diğer kaynaklar, göreli dönem, büyük export/PDF ve gerçek ortam kabulü açık.
+
+## 2026-09-11 — AI raporlama Faz 7r–7s: stok hareketi / göreli dönem (yerel)
+
+- MovementReportSource/Executor, DynamicReportMetadata/Plan, ReportSourceCatalog, OpenAiDynamicReportContract/Interpreter, AiReportsController ve admin rapor ekranı bağlandı. Stok hareketi için ayrı onaylı alan sözlüğü; filtre/özet/detay/Top/sunucu grid ve mevcut kayıt-paylaşım-Excel yolu kullanılır. inventory.view/use global izni, DynamicEnabled ve kaynak eşitliği doğrulanır. Ham adet net stok/bakiye gibi sunulmaz; kimlikler isim/kod yerine geçmez.
+- ReportExecutionBudget process başına ortak2 slotla stok/sipariş/hareket sorgularını birlikte sınırlar. Readonly transaction ve SQL/işlem timeout'ları korundu. Çoklu node global kotası veya gerçek yük testi olduğu iddia edilmez.
+- ReportRelativePeriod ve V2 Period alanı: bu ay/önceki ay/bugün dahil30 gün/bu ay dahil6 takvim ayı. Seçim önizlemede kullanıcıya aittir, her çalıştırmada Türkiye takvimiyle çözülür; kaydetme/paylaşma mevcut tarifte korur. Sabit tarifler değişmedi, iç koşullardaki tarihler sessizce yeniden yazılmaz. ResolvedPeriod gerçek çalıştırma dönemini sonuçta gösterir.
+- Hareket sözlüğü/izin/ham miktar/tarih sınırı/SQL çeviri/AI kaynak ayrımı ve katalog flag testleri, ortak kapasite testi, göreli dönem takvim testleri eklendi. İki admin metin-regresyon testi yeni kaynak ayrımıyla güncellendi. Nihai API:496 başarılı/7 atlandı/0 hata; admin78/78, TypeScript noEmit ve hedef ESLint geçti. Atlananlar opsiyonel kabul testleri; gerçek ortam doğrulaması yerine sayılmaz. git diff --check geçti (satır sonu uyarıları dışında hata yok).
+- İlgili faz belgesi güncellendi. Production/config/migration/seed/yayın/push/SSH işlemi yok; kullanıcı dosyaları korundu. Genel iş tamamlanmadı: diğer iş kaynakları, hareketsiz kart anti-join, büyük export/PDF ve gerçek ortam kabulü açık.
+
+### Faz 7r–7s son kontrol / yerel kod kapanışı — 2026-09-11
+
+- DynamicReportPlan.Scope göreli dönem seçiliyken de sabit tarih yedeğini doğrular; geçersiz tarih/aralıkla kayıt ve sonradan sabit döneme dönüş engellenir. ReportRelativePeriodTests kapsamı genişletildi.
+- ReportShareFlowTests hareket V2 tarifinin kaydedilip paylaşıldığında period/source değerlerini koruduğunu; DynamicEnabled kapalı veya alıcı rapor izni kapsamlıyken erişimin reddedildiğini doğrular. Sahte tercih deposu ve kullanıcı dizini, bağlantı açmayan NpgsqlDataSource kullanıldı; DB/model çağrısı yok.
+- admin/tests/ai-reports.test.cjs açık göreli seçim, seçim sonrası eski sonucu sıfırlama, gerçek sunucu dönemi ve ek tarih koşulu uyarısını kontrol eder. Genel API497 başarılı/7 atlandı/0 hata; admin79/79. Bu tur admin uygulama kodu değişmedi; önceki TypeScript/ESLint sonuçları geçerli, tekrar koşulmadı.
+- 7r–7s kod/yerel test kısmı kapatıldı. Gerçek ortam kabulü ve diğer fazlar açık; tüm dinamik raporlamanın tamamlandığı iddia edilmez. PROGRESS/faz belgesi güncellendi, production/config/DB/seed/yayın/push işlemi veya dosya silme yapılmadı.
+
+### Gerçek ortam kabul hazırlığı — 2026-09-11
+
+- Mevcut AiStockReadAcceptanceTests ve AiQuotaRedisAcceptanceTests güvenlik kapıları okundu. ECSPROS_ACCEPTANCE_AI_STOCK_READ tanımlı değil; yerel15432/16379 dinleyici sorgusu kayıt döndürmedi. PC'den private hedef bağlantısı veya SSH/sunucu değişikliği yapılmadı. Production verisine/Redis'e yazılmadı.
+- AiStockReadAcceptanceTests.CheckMovementQueries eklendi: mevcut hedef kimliği/READ ONLY guard'ından sonra aynı RepeatableRead snapshot'ta hareket grupları bağımsız SQL ile karşılaştırılır; detay sayımı ve scoped yetki reddi sınanır. Son ek SELECT/VALUES fixture dolu veri ve bitiş tarihi sınırını doğrular; kayıt/temporary table oluşturmaz.
+- Genel yerel + seçili kabul koşusu:497 başarılı/8 atlandı/0 hata. Sekizinci atlama gerçek stok kabulünün bağlantı olmadığı için inconclusive olmasıdır; canlı kabul başarısı değildir. Son fixture eklemesi sonrası hedef derleme geçti; seçili kabul1/1 bağlantı yokluğu nedeniyle atlandı. Diff kontrolü geçti. Admin kodu değişmedi.
+- Gerçek DB/model/tarayıcı/çoklu node kabulü açık; uygun onaylı bağlantı olmadan tamamlandı sayılamaz. Faz raporu güncellendi; build/yayın/push/config/seed/migration yok.
+
+### Gerçek salt-okunur AI DB kabulü geçti — 2026-09-11
+
+- Kayıtlı API01 üzerinden yalnız127.0.0.1:15432→192.168.0.241:5432 geçici SSH tüneli açıldı. İlk hazırlık erişim/PowerShell dictionary property sorunu nedeniyle DB testi başlamadan durdu; DbConnectionStringBuilder.set_ConnectionString/get_ConnectionString ve anahtarı doğrudan kullanan OpenSSH ile giderildi. Anahtar/şifre içeriği gösterilmedi, known-host/key değiştirilmedi.
+- AiStockReadAcceptanceTests --no-build --no-restore gerçek hedef/READ ONLY guard ile1/1 başarılı,0 atlandı,19s. Stok bağımsız toplamları, özellik kırılımları, ürün filtresi, SELECT-only fixture/sayfalama, sipariş executor/kapsam, hareket bağımsız SQL toplamları/detay ve VALUES sınır testi geçti. DB yazımı/startup/seed/audit/OpenAI çağrısı yok.
+- tools/run-ai-readonly-acceptance.ps1 çalışan tekrar yöntemini saklar; hedef ve port kontrolü, yalnız kayıtlı API01, geçici environment, finally task-owned SSH kapatma, test exit code aktarımı var. Betik syntax kontrolü ve diff kontrolü geçti; cleanup sonrasında15432 dinleyicisi kalmadığı doğrulandı. Üretilen geçici/yedek dosya yok.
+- Önceki DB kabul bağlantı blokajı giderildi. Gerçek OpenAI, disposable Redis/çoklu node ve tarayıcı kabulü ayrı açık; bu sonuç bunları kapsamaz. Production.59/Nginx, config/migration/yayın/push değişmedi.
+
+### Tarayıcı / Redis kabul erişim kontrolü — 2026-09-11
+
+- Computer Use ile yüzey envanteri boş döndü (apps/browsers yok); multi-test admin URL'siyle tarayıcı seçimi `No browser is available` verdi. Ekran/oturum/OpenAI kullanıcı akışı bu oturumda kontrol edilemedi. Anahtar alınmadı, oturum atlatılmadı, API çağrısı yapılmadı.
+- Disposable Redis16379 dinleyicisi ve ECSPROS_ACCEPTANCE_AI_QUOTA_DISPOSABLE_REDIS opt-in yok; PATH'te docker/redis-server bulunmadı. Paylaşılan Redis'e test yazısı yönlendirilmedi, altyapı kurulmadı. Yarış kabulü çalıştırılmadı.
+- Uygulama kodu değişmedi; önceki497 yerel API,79 admin ve gerçek salt-okunur DB1/1 sonuçları korunuyor. Yeni başarılı kabul iddiası yok. Devam için bağlı tarayıcı/admin oturumu ve ayrı disposable Redis kabul ortamı gerekir. Bu kaydın dışında dosya/config/DB/yayın değişikliği yok.
+
+### Faz 7t — Excel aktarım kapasitesi — 2026-09-11
+
+### Faz 7v — müşteri kartı ve dönemsel işlem sayıları — 2026-09-11
+
+#### Faz7w — kullanıcının stok detay kabul senaryosu, geliştirme sürüyor — 2026-09-11
+
+#### Ürün kartı ve hareket varlığı — 2026-09-11
+
+- Yayın tamamlandı:20260911_ai_card_window API01/API02 /ready Healthy; .56 yalnız multi-test admin statik release'i etkin. Kullanıcı build'i index-D6-bgTgK.js dış HTTP200 ile doğrulandı. Mevcut API ayarları korundu, migration=false; .59/Nginx config/fiyat işlemi yok. Task tar.gz dosyaları temizlendi, önceki release'ler korundu. Yeni gerçek AI/tarayıcı etkileşim kabulü henüz yapılmadı; ayrıntı faz notunda.
+
+- Devam: CardWindowMonths1..12 ile kart açılışından sonraki ilkNay ayrı mod olarak eklendi. from/to kart açılışlarını seçer; yalnız gözlem süresi tamamlanmış kartlar, Türkiye takvim ayları, bitiş hariç. Null eski hareket dönemi anlamını korur. API533/7skip, admin24, TS/ESLint ve API01→.241 READ ONLY kabul1/1 geçti. Ayrıntılar aynı faz notunda; gerçek model/tarayıcı/yayın açık. Önceki aşağıdaki ilkNay desteği yok notu bu devamla giderildi.
+
+- productCards kaynağı ortak dinamik rapor motoruna eklendi; stok satırı olmayan ürünler dahil, yetkili EXISTS/NOT EXISTS hareket ilişkisi ve ayrı kart açılış filtresi. İlk N ay/kart bazlı pencere henüz desteklenmez; son N ayla karıştırılmaz.
+- Acceptance dışı API531 geçti/7 atlandı; admin20, TypeScript noEmit ve scoped ESLint geçti. .241 READ ONLY kabul API01 tüneliyle1/1 (27s), bağımsız SQL eşleşti; tünel kapandı. Filtresiz koşudaki21 hata için ayrıntılı tekrar ERP bağlantı erişim hatasını gösterdi ve durduruldu; dış ortam testleri başarılı sayılmadı.
+- Ayrıntı: `docs/raporlar/2026-09-11-ai-urun-karti-hareket.md`. Gerçek model/tarayıcı kabulü ve yayın açık; DB/seed/migration/fiyat/.59 değişikliği yok.
+
+#### Faz7z — personel işlem kayıtları — 2026-09-11
+
+- Kullanıcı telesatış/sosyal medya personel satış ekranının henüz yapılmadığını doğruladı. Bu rapor bağlantısı ekran ve satış-personel ilişkisinin geliştirilmesine bağımlı açık iş olarak bırakıldı; kullanıcıdan aynı kaynak tekrar istenmeyecek, mevcut CreatedBy alanından satış temsilcisi tahmin edilmeyecek.
+
+- Kullanıcı operasyon ve telesatış/sosyal medya performansını ayrı istedi. Doğrulanmış ActorId/CreatedBy bağlantılarıyla staffActivities dinamik kaynak eklendi; toplama/paketleme olayları ve local internal fatura kayıtları. Süre/ciro/puan hesaplanmaz; otomatik fatura dahil, dış/legacy hariç. Kullanıcı görüntüleme ve ayrı domain/kanal kapsamları zorunlu.
+- API528 geçti/12opt-in atlandı; admin19, TypeScript noEmit/scoped ESLint ve diff kontrolü başarılı. API01 tüneliyle .241 READ ONLY kabul1/1 (27s), bağımsız sayım/grup/boş kanal kontrolü geçti; tünel kapandı. Yeni gerçek model/tarayıcı kabulü yok; yayın/push/migration/seed/.59 işlemi yok.
+- Dosyalar ve sınırlar: `docs/raporlar/2026-09-11-ai-personel-islem-kayitlari.md`. Satış-personel kaynağı henüz yapılacak ekrana bağımlıdır; CreatedBy satış temsilcisi varsayılmadı. Bu bağımlılık açık bırakıldı. Önceki tüm açık işler kapanmış sayılmaz.
+
+#### Faz7y — müşteri ilişkili faaliyet filtreleri — 2026-09-11
+
+- Müşteri → dönem/yetki kapsamlı sipariş → ürün/ödeme/iade EXISTS/NOT EXISTS ilişkileri ortak motorla bağlandı. İlişkiler seçim yapar, mevcut tüm-dönem faaliyet sayılarının anlamını değiştirmez; UI/model bu ayrımı açıklar. Yeni endpoint/migration/seed yok.
+- Hedefli36 ve genel525 API testi geçti;12 ortam testi atlandı. Admin18/18, TypeScript noEmit ve scoped ESLint geçti. API01 tüneliyle .241 READ ONLY kabul1/1 (29s): bağımsız SQL sayımı, boş kanal ve NOT EXISTS kontrolü geçti. Tünel kapatıldı. Yeni gerçek AI/tarayıcı kabulü yapılmadı, yayın/push yok.
+- Dosya listesi, sınırlar ve kalanlar: `docs/raporlar/2026-09-11-ai-musteri-iliskili-filtreler.md`. Personel ölçütü, ödeme sözlüğü çözümü, maliyet/hareketsiz kart, PDF/büyük aktarım ve diğer açık kabuller sürüyor. Tüm iş tamamlandı sayılmaz.
+
+#### Faz7x — sözlük çakışmasında sunucu netleştirmesi ve manuel tarif regresyonu — 2026-09-11
+
+- Kullanıcı kalanların tamamı bitmeden yayın yapılmamasını istedi. Yayın bekletiliyor. `ReportShareFlowTests` stok V2 varyant kapsamı+>=5 tarifinin kayıt/paylaşımda korunması ve yetki/firma değişiminde reddiyle genişletildi. Kaydet/paylaş/Excel10test geçti; ilk test fixture'ındaki eksik stockGrain düzeltilerek tekrar geçti (üretim guard'ı değiştirilmedi). Gerçek iki-kullanıcı tarayıcı kabulü yapılmış sayılmaz. Personel performansı ölçütü kullanıcıya soruldu; kalan maliyet/PDF/büyük rapor/veri alanı işleri tamamlanmadı.
+
+
+- SON KABUL: clarification_fix sürümünde kullanıcının asıl isteği → Ortam netleştirmesi → kısa `Ortam: Tesettür. Stok miktarı ve stok türünü de göster.` yanıtı → doğru7kolon, stok>=5 ve yalnız Ortam filtresi başarılı. Eski productGroup koşulu yok. Gerçek UI1.549güncel sonuç; tablo>=100 filtresi AI çağrısı olmadan7sonuç, test filtresi kaldırıldı. Bu belirli biçim hatası/senaryo kapandı; bütün rapor kapsamı ve diğer açık fazların kapandığı anlamına gelmez. Önceki alt satırlardaki kabul-engeli notları tarihsel gözlemdir.
+
+- `20260911_ai_clarification_fix` API01/API02 aktif/Healthy, DLL7C0273D670252A55C730CA2C74C3DF3F560ABCE06BDE15727611899DEC602ED4. Admin paketi aynı, .56/.59/config/worker/migration değişmedi. Geçici uzak DLL temizlendi, önceki release korundu. İlgili21 ve API522 test geçti/12opt-in atlandı. Yeni sürümde aynı ilk istek sözlük netleştirmesine başarıyla geçti; kısa yanıt kabulü sürüyor.
+
+- 2026-09-11 devam: güvenli yapısal hata kodları ve audit errorCode eklendi; ham yanıt/prompt/anahtar loglanmıyor. Diagnostics API01/API02 Healthy yayını sonrası asıl istekte `unexpected_plan` kanıtlandı: netleştirme kararı/sorusu yanında plan nesnesi gelmesi genel biçim hatasına dönüşüyordu. Bilinen netleştirme sorusunda geçici plan tamamen atılarak yalnız sunucunun sabit sorusu dönecek; ready+none doğrulaması aynen korunuyor. Tanınmayan soru/bozuk JSON/ret/araç çağrısı hâlâ çalıştırılmaz. Model değiştirilmedi, kullanıcı onayı veya yetki kontrolleri atlanmadı.
+
+- Kalan kabul engeli: son replacement sürümünde asıl istek yine genel model biçim hatası verdi. Kısa yanıt kabulü bitmedi. ParseResponse yapısal ret sebebi güvenli tanılama ile ayrılmalı; ham yanıt/kişisel veri/anahtar loglanmamalı. Yayın tamam, AI kalitesi bütünüyle tamam değil.
+
+- Son yayın `20260911_ai_binding_replacement`: API01/API02 ve yalnız multi-test admin aktif; iki API readiness Healthy, DLL41A3EAA2696385E17D783BF280A8BA30BB190356E7749AAB39C2672BC737A2BE. İlk sandbox SSH reddi sonrası yetkili bağlantıyla tamamlandı. Geçici iki aktarım arşivi temizlendi; önceki release'ler korundu. Config/worker/migration/.59/Nginx ayarı değişmedi.
+
+- Ekran kabulü: ilk çağrı biçim hatası; tekrarında Ortam netleştirmesi doğru. Kısa yanıt sonrası model eski productGroup contains koşulunu da korudu, yanlış plan çalıştırılmadı. Açık koşul-değiştirme yanıtından sonra yalnız Ortam=Tesettür ve stok>=5, istenen yedi kolonla1.550 güncel kayıt doğrulandı. Model talimatı belirsiz grup koşulunu özellik koşuluyla değiştirecek şekilde düzeltildi; soru metni de bunu söylüyor. İlgili19test geçti. Contains için deterministik sözlük koruması ve ilk biçim hatası kök nedeni açık; tüm doğal dil kabulü tamamlanmış sayılmıyor.
+
+- Kullanıcı build tamamladıktan sonra `20260911_ai_binding_guard` API01/API02 ve .56 multi-test admin üzerinde aktif edildi. Her iki API ready Healthy; DLL5F771095D55E6E26473ACA828F11F6C834CD8E9F42CA2E023199AC74A8D0F897. Config/worker/migration/Nginx ayarı/.59 değişmedi. İşe ait aktarım tar'ları temizlendi. Tarayıcı kabulü devam ediyor.
+
+- `ReportBindingGuard` ve `ReportAttributeCatalog.CheckBindingsAsync`: model stok planında seçilen productGroup eq/in değerinin gerçek grupta bulunmayıp izinli bir özelliğin seçeneği olması durumunda plan dönmez, stock_attribute netleştirmesi döner. İsim sabitlenmez; Türkçe/aksan normalleştirmesi, nested koşullar, gerçek grup önceliği ve yetkisiz katalog sorgulamama korunur. Eşleşme belirsizken hiçbir alan otomatik değiştirilmez. Kanıt bulunmayan boş sonuçlar yasaklanmaz. Kontrol AI interpret aşamasındadır, mevcut kayıtlı tariflerin anlamı değiştirilmedi.
+- `ReportField.MatchedValues` yalnız kontrollü sözlük seçeneklerini taşır, ürün/kişi satırı içermez. SQL sorguları bounded/parametreli, sorgudan önce mevcut yetki ve plan doğrulaması yapılır. Grup adı/özellik değeri çakışması yakalanır; tüm doğal dil belirsizliklerinin çözüldüğü iddia edilmez.
+- Admin dinamik metadata alanları ID ile tekilleştirildi. Manuel V1 tarif ve seçenekleri ayrı eski sözlükten üretilir; V2 barkod/kart tarihi gibi alanlar V1'e sızmaz, ölçüler tekrarlanmaz.
+- API516 geçti/12opt-in atlandı; yeni3guard testi, admin28/28 ve scoped ESLint başarılı. Gerçek .241 READ ONLY kabul1/1 (29s): guard'ın grup varlığı kararı bağımsız SQL ile karşılaştırıldı. API01 tüneli kapandı. Migration/seed/business DB yazımı/yayın/push yok. Kullanıcıdan güncel admin build istendi; tarayıcı/yayın kabulü henüz yapılmadı.
+
+- Kullanıcının `build taman yayınla` onayıyla `20260911_ai_stock_detail` API01/API02 ve .56 yalnız multi-test admin alanına yayınlandı. İki API active/ready Healthy; SHA256 C6ADCCB9F361A93571DB89740155E04F0897481F3B1E3BD2E16F9B1A8D434029. Admin index-KHbn2wFv.js. Mevcut appsettings byte içerikleri korunarak kopyalandı; migration/worker/Nginx ayarı/.59 işlemi yok. Yalnız bu yayının geçici tar arşivleri silindi, önceki release'ler korundu. Gerçek tarayıcı AI kabulü sürüyor.
+- İlk gerçek stok AI çağrısı 64KiB HTTP zarfı sınırına takıldı. Responses nesnesi instructions/text format metadata da içerir (resmî kaynak: https://developers.openai.com/api/reference/cli/resources/responses/methods/create). Zarf üst sınırı1MiB, üretilen proposal ayrı64KiB olarak ayrıldı; planın mevcut daha küçük doğrulaması/izin/node/kolon sınırları aynı. 90KiB metadata+küçük geçerli plan ve aşırı zarf/proposal ret testi eklendi. Yalnız API assembly düzeltmesi için pinlenmiş önceki release/hash ve rollback guard'lı yayın scripti hazırlandı; admin tekrar derlenmez.
+- Zarf düzeltmesi39 OpenAI testi ve513 API testi geçti/12 opt-in atlandı. API01/API02 `20260911_ai_stock_envelope` active/Healthy; DLL SHA256 2EE03BEC369AA8C7FD32B52FE662676DD143240352FB849F9FC70B32EED5D768. Admin önceki yeni build'de kaldı. İlk taslak ürün grubu=tesettur şeklindeydi; çalıştırılmadı. Önceden kullanıcı tarafından belirtilen Ortam=Tesettür eşlemesi konuşmada açıkça netleştirilince7kolon+stok>=5+Ortam=TESETTÜR taslağı oluştu. Otomatik grup/özellik belirsizlik sorusu ilk çağrıda gelmedi; bunu kendiliğinden çözülmüş saymıyoruz.
+- Gerçek tarayıcı kabulü: netleştirilmiş aynı konuşmada stok türü/ürün kodu/barkod/renk/beden/kart açılışı/miktar kolonlarıyla1.551 sonuç geldi. AI tekrar çağrılmadan sütunda miktar>=100 filtresi7sonuç döndürdü (367,272,212,193,111,105,102). Test filtresi kaldırıldı; asıl >=5 raporu açık bırakıldı. Yeni business kaydı/seed/şema/yetki eklenmedi. Bu yayın ve netleştirilmiş stok senaryosu geçti; ilk istekte otomatik alan belirsizliği sorma kalitesi ve genel rapor kapsamının kalan fazları ayrı açık konulardır.
+
+- Stok V2 ortak detail/aggregate/predicate/grid/Excel yoluna bağlandı. DynamicStockSource/Executor; barkod, ürün kodu, gerçek ürün grubu, nullable kart açılışı, güncel özellikler ve sayısal stok koşulları. variant kapsamında varyant+stok türü tüm konumlarda önce toplanır sonra >= uygulanır; location konum satırlarını ayrı tutar. Fiziksel/sanal miktar kolonları stockType olmadan gösterilemez/toplanamaz. V1 kayıtlı tarif/manual fallback korunuyor; yeni AI stok yolu V2.
+- Özellikler tek lateral aggregate/set üyeliğiyle stok çoğaltmadan gelir; varyant önceliği/ürün fallback, null korunur. Eşleşen gerçek seçenekler bounded catalog hint olarak modele verilir; grup/özellik karıştırılırsa netleştirme istenir. Model/secret değişmedi. From/to/period güncel stokta null; kart tarihi ayrı predicate. Ortak nullable date/guid predicate ve set üyeliği desteği eklendi.
+- Yeni kaynak global inventory+report kapsamı, katalog alanlarında catalog.products.view gerektirir. Query literal yerine typed parametre/izinli expression kullanır; sonuçlar OpenAI'a gönderilmez. SQL READ ONLY/15s, süreç başına ortak2slot; yeni migration/seed yok. Hata yanıtlarında incomplete/invalid plan neden kodları eklendi.
+- İlk tam API512 geçti/7 mevcut DB atlandı; admin80/80. Yeni4stok testinde7kolon, >=5eşitlik, çoklu seçenek/substring ayrımı, nullable tarih, SQL çevirisi ve yetki retleri geçti. Gerçek .241 READ ONLY kabul1/1 (27s): stok detay/özellik bağımsız EXISTS sayımı ve filtre/toplamlar eşleşti. Yeni seçenek-ipucu testi ayrıca eklenerek yeniden koşuluyor.
+- Henüz yayın/gerçek OpenAI konuşması/tarayıcı kabulü yapılmadı; tamamlandı sayılmaz. Kullanıcıdan admin build istendi (agent npm build yasağı). Yerel değişiklikler korunuyor. Sonraki müşteri/personel işleri durdu; öncelik bu stok senaryosunun gerçek ekranda kapanması.
+- Seçenek ipucu kabul testi ilk denemede tüm seçeneklerin 10.000 sınırını aşmasıyla durdu. Sınır yükseltilmedi; sunucu tarafında metindeki adaylara göre filtreleyen bounded sorgu uygulandı. Yeniden gerçek .241 READ ONLY kabulü 1/1 geçti (30s); tesettur -> Ortam ipucu da doğrulandı. API Release publish başarılı; güncel admin build ve API01/API02 + yalnız .56 multi-test admin yayını için yanıt bekleniyor. Yayın scriptine StockDetail seçeneği eklendi; bu seçenek çalışan config'i değiştirmeden kopyalar, DynamicEnabled mevcut değilse durur. Henüz çalıştırılmadı.
+- Son doğrulama: API `TestCategory!=Acceptance` 512 geçti/12 opt-in atlandı, rapor admin testleri27/27, TypeScript ve scoped ESLint geçti. Filtresiz tüm-suite çağrısı dış sistem kabul bağlantıları nedeniyle21 başarısız/512geçti/24atlandı; SQL Server erişim hataları görüldü, bunlar başarılı sayılmadı. Gerçek stok kabulü yalnız onaylı API01 tüneli üzerinden ayrıca geçti. Admin dist hâlâ yeni stok işaretini içermiyor; kullanıcı derlemesi ve yeni yayın izni gelmeden aktif sisteme dokunulmadı.
+
+#### Kullanıcı stok detay isteği — teşhis, 2026-09-11
+
+- Kullanıcının stok>=5, tesettür, barkod/renk/beden/kart açılışı/ürün kodu isteği incelendi; sonraki müşteri geliştirmesi durduruldu. Stok hâlâ V1 özet yolunda (AiReportsPage dynamicMode stok içermez). Barkod/kart açılışı sözlükte yok, stok miktarında >= filtre operatörü yok; en fazla3 dimension sınırı renk+beden+ürün+ayrık stok türünü de engeller. Bu istek mevcut haliyle eksiksiz temsil edilemez.
+- OpenAiReportContract bütün parse/validation başarısızlıklarını aynı Invalid mesajına çeviriyor. Gerçek model cevabı bu incelemede elde edilmedi; screenshot'taki reddin tek kesin nedeni uydurulmadı. Ayrıntılı isteğe genel grouping sorusu verilmesi de yetersiz yönlendirme. Tesettürün gerçek ürün grubu/Ortam özelliği ayrımı sözlük/veriyle çözülmeli; sessiz eşleme yapılmamalı.
+- İlgili mevcut validator/contract/conversation56 test geçti. Bu, kullanıcının senaryosunun geçtiği anlamına gelmez; senaryo mevcut sözleşmenin dışında. Uygulama/DB/yayın değişikliği yok, yalnız bu teşhis notu eklendi. Öncelik stok detay/özet motorunu genişletmek, stok eşiklerinin satır/toplam anlamını netleştirmek ve güvenli neden kodlarıyla anlaşılır hata sunmak; yalnız prompt/örnek kelime eklemek çözüm değil.
+
+- CustomerReportSource/Executor dinamik motor/katalog/admin/kayıtlı tariflere bağlandı. Dönem sipariş/iade tarihine uygulanır, müşteri açılışı ayrıca filtrelenmedikçe sınırlanmaz. Bağımsız gruplama sipariş-iade çarpımını önler. Global CRM+rapor yetkisi; işlem ölçüleri ayrı domain/kanal yetkili; yetkisiz tablolar sorgulanmaz. Silinmiş/anonimleştirilmiş müşteri dışarıda; hassas iletişim/kimlik/şifre alanları açılmaz.
+- Top20 sipariş veren müşteri ve son6ay iade kaydı bulunan müşteri gibi istekler aynı alan/predicate/detail mekanizmasıyla hazırlanabilir; özel sabit rapor endpoint'i yok. Sayıların tüm durumları/yetkili kanalları kapsadığı UI/modelde açık. Ödeme yöntemi/ürün/durum bazlı müşteri aktivitesi ayrıca açık; yanlış toplamla ikame edilmez.
+- API508 geçti/7 mevcut DB atlama/0 hata; admin80/80, TSC/ESLint/diff kontrolü temiz. unknown-source testinin artık desteklenen customers örneği unknownSource ile değişti, test korunuyor. Gerçek .241 READ ONLY kabul1/1 geçti,0 atlandı (25s): bağımsız müşteri/sipariş/iade sayımı eşleşti, detay/boş kanal/CRM-only kontrolleri geçti. API01 geçici tüneli kapandı, environment geri alındı.
+- Yeni migration/seed/tablo, production yazımı, yayın veya GitHub push yok. OpenAI Docs strict metadata sözleşmesi korundu; gerçek model çağrısı yapılmadı. Ayrıntı: docs/raporlar/2026-09-10-ai-raporlama-uygulama-kararlari.md Faz7v. Personel/maliyet/hareketsiz kart/PDF/asenkron işler halen açık.
+
+### Faz 7u — bağımsız dinamik iade kaynağı ve yayın hazırlığı — 2026-09-11
+
+#### Yayın ve gerçek tarayıcı kabulü tamamlandı — 2026-09-11
+
+- Kullanıcı API01/API02 aktivasyonu, DynamicEnabled=true ve sıralı servis restart için ayrıca açık onay verdi.20260911_ai_dynamic_returns iki API'de ve .56 admin statik bağlantısında aktif. DLL SHA256 c316c30c2a36af629aa9fae7515ad2d16c733fbef3bb929cf4c3eab50ab6933e iki node ve yerel pakette aynı. /ready sağlıklı, servisler active. Migration=false korundu.
+- API02 SSH sonuç dönerken reset oldu; tekrar restart yapılmadı. Salt-okunur kontrol yeni current/sağlık/hash/DynamicEnabled=true sonucunu doğruladı; ResumeAdminOnly desteğiyle yalnız admin tamamlandı. Eski API release rollback için korunuyor. Nginx yapılandırması/reload, worker, .59 değişikliği yok. Diğer Production JSON değerleri (DynamicEnabled hariç) eşit, temel appsettings byte eşitliği her iki API'de doğrulandı.
+- Yayınlı tarayıcıda yeni başlık, kayıtlı raporlar ve stok/sipariş/hareket/iade kaynakları geldi. Mevcut firma hesabıyla kişisel veri içermeyen tek OpenAI taslak denemesi:1 Ağustos dahil/1 Eylül hariç2026 iade durum/sayı isteği doğru Türkiye dönemiyle planlandı; rapor legacy_imported6 döndürdü, grafik6 gösterdi. Tablo araması eşleşmeyen değerde0, temizlenince1 grup/6 kayda döndü. Test tarifi kaydedilmedi/paylaşılmadı; sonuçlar OpenAI'a gönderilmedi. Normal rapor audit/kota işlemleri uygulama tarafından yürütüldü.
+- Bu yayına ait yerel ve uzak aktarım tar.gz dosyaları temizlendi; eski kullanıcı dosyaları ve önceki release'ler silinmedi. Publish çıktısı ve tekrar betiği korunuyor. GitHub push yok. Önceki504 API/80 admin ve READ ONLY kabul1/1 sonuçları geçerli. Excel indirme, kalıcı kayıt/paylaşım ve Redis yarışının tarayıcı/çoklu node kabulü bu denemede yapılmadı; genel geniş raporlama kapsamı halen açık.
+
+- ReturnReportSource/Executor mevcut ortak predicate/aggregate/detail/grid/Excel motoruna bağlandı. Bir satır bir iade; tarih iade CreatedAt, kanal bağlı siparişten; rapor ve orders.returns.view kapsamları kesişir. Silinmiş iade/sipariş dışarıda; tutar RefundAmount, ödenmiş geri ödeme değildir ve sipariş para birimiyle ayrı tutulur. Müşteri notları/iletişim alanları açılmadı. Yeni tablo/migration/seed yok.
+- Dinamik katalog, AI strict sözleşme, kayıtlı tarif doğrulayıcı ve admin kaynak/metinleri returns destekler. Yalnız iade yetkisiyle kullanılabilir; DynamicEnabled kapalıysa kaynak gizli. Grafik para birimi kontrolü yalnız orders değil returns ve diğer *.currencyCode kolonlarını da kapsar.
+- API504 başarılı/7 atlandı/0 hata; admin80/80; TypeScript noEmit/ESLint geçti. Yeni salt-okunur kabul .241'de1/1 geçti (22s):180 günlük iade sayı/tutarları aynı transaction'daki bağımsız SQL ile eşleşti; detay çevirisi çalıştı. Tünel kapandı. OpenAI Docs structured outputs resmi sayfası okunarak şema yaklaşımı korundu; gerçek OpenAI çağrısı yapılmadı.
+- Kullanıcı admin build tamamlandı dedi; index-DnqZ6zmh.js yeni başlık/iade içeriğini içeriyor. API Release publish output/publish/ai-dynamic-20260911 başarılı. tools/publish-ai-dynamic-20260911.ps1 hedef sabitleme, hash, migration=false, sıralı sağlık/rollback, eski config koruma ve yalnız DynamicEnabled=true, task archive cleanup içerir; syntax geçti. Çalıştırılmadı.
+- API01/API02 mevcut20260910_ai_scope_fix, gerçek bind192.168.0.245/.58:5050; /ready sağlıklı. İlk loopback kontrolleri yanlış bind adresinden bağlantı reddi verdi, gerçek process bind okunarak düzeltildi. .56 admin alias/usr/share/nginx/html/admin -> /usr/share/nginx/admin-releases/20260910_ai_scope_fix. Nginx ayarı değişmedi. .56 disk%77,11G boş; API02%14,63G boş.
+- Kullanıcı .56 için yalnız admin statik/release iznini verdi. Birleşik yayın çağrısı auto-review tarafından API01/API02 config+restart açık onayı olmadığı için BAŞLAMADAN reddedildi. Paket gönderimi/aktivasyon/DB yazımı yok. API restart ve DynamicEnabled açma açık onayı gerekir; eski API ile yeni admin karıştırılmadı. .59'a dokunulmadı.
+- Genel kapsam halen tamamlanmadı: müşteri/personel/maliyet ana kaynakları, hareketsiz ürün, PDF/asenkron büyük aktarım, gerçek OpenAI ve disposable Redis/çoklu node kabulü açık. İade kaynağı tamamlanması bunların yerine geçmez.
+
+#### AI ekran dili — 2026-09-11
+
+- AiReportsPage giriş başlığı "Nasıl bir rapor hazırlamak istiyorsunuz?" olarak netleştirildi. Yerelde başlık zaten genel rapordu; kalan "Stok raporu hazırlığı" fallback metni "Rapor hazırlığı" yapıldı. Kaynağa özgü örnekler, konuşma yanıt başlığı ve gerçek kapsam açıklamaları korundu; yeni kaynak/yetki vaat edilmedi.
+- admin/tests/ai-reports.test.cjs metin regresyonu eklendi;16/16 test, TypeScript noEmit, ilgili ESLint ve diff kontrolü geçti. Uygulama davranışı/API/DB değişmedi; yayın ve production build yapılmadı. Yayınlı eski ekranın güncellenmesi ayrı açık adımdır.
+
+#### Tarayıcı kabulü — yayınlı ekran, 2026-09-11
+
+- Uygulama içi tarayıcı artık bağlı; kullanıcı girişinden sonra multi-test/admin/reports/ai menüden açıldı. P-00022295 fiziksel stok sorgusu1 sonuç (13/0/13) döndürdü. Ürün filtresi değişince eski sonuç hemen gizlendi. Olmayan ürün kodu sorgusu0 sonuç ve anlaşılır boş durum döndürdü; ekran çökmedi. Dar ekran görüntüsünde form tek sütun gösteriliyor.
+- Yayınlı ekranda dinamik kaynak/kayıtlı rapor alanları görülmedi; yalnız eski stok formu var. Bu test yereldeki yeni fazların görsel kabulü değildir. OpenAI çağrısı, export veya kayıt/paylaşma yapılmadı. Son sürümün yayını ve ardından tam ekran kabulü açık; bu tur yayın/config/iş verisi değişikliği yok (rapor çağrıları normal uygulama audit kaydı üretebilir).
+
+- AI Excel aktarımı 250 yerine en fazla5.000 filtrelenmiş satır alır; normal tablo250 kalır. ReportGridState.ForExport yalnız sunucu içinde bütçe verir, JSON ile internal işaret gönderilemez. Grid/aggregate/detail doğrulayıcıları ve stok/sipariş/hareket executor'ları bu bütçeyi uygular; yetki ve Top sınırları korunur.
+- ReportExcelExport tam sonuç kontrolüne ek satır sayımı,32.766 karakter/hücre ve8MiB toplam metin sınırı uygular. Sınır aşımında kısmi/kırpılmış dosya üretilmez. Stok işlemine30s deadline eklendi. Admin yardım metni güncellendi.
+- Testler: API500 başarılı/7 atlandı/0 hata; admin79/79; TypeScript noEmit ve ilgili ESLint temiz. Gerçek salt-okunur .241 kabulü1/1 geçti (23s), SELECT-only1.505 satır export ve toplam eşitliği doğrulandı. Test tüneli finally kapandı/env geri alındı. İlk `powershell` PATH hatası mevcut shell'den betik çağrısıyla giderildi.
+- ReportExcelExportTests, ReportDetailTests, AiStockReadAcceptanceTests ve faz raporu güncellendi. Production/config/DB yazımı/seed/migration/yayın/push yok; kullanıcı değişiklikleri korundu. Asenkron büyük export/PDF ve diğer dinamik kaynaklar ile OpenAI/tarayıcı/Redis kabulü halen açık; tüm proje tamamlandı denmez.

@@ -36,6 +36,16 @@ public class CatalogDbContext : DbContext, ICatalogDbContext
     {
         // DataGrid: jsonb sözlük alanlarında filtre/sıralama (GridJson.Text → jsonb_extract_path_text, yerleşik PG fonksiyonu)
         modelBuilder.HasDbFunction(ECSPros.Shared.Kernel.Grid.GridJson.TextMethod).HasName("jsonb_extract_path_text").IsBuiltIn();
+        // Built-in JSONPath search: cast the bound parameter, not a DB migration/function.
+        modelBuilder.HasDbFunction(typeof(Application.Helpers.ProductGroupSearch)
+            .GetMethod(nameof(Application.Helpers.ProductGroupSearch.Matches))!)
+            .HasTranslation(args => new Microsoft.EntityFrameworkCore.Query.SqlExpressions.SqlFunctionExpression(
+                "jsonb_path_exists",
+                new Microsoft.EntityFrameworkCore.Query.SqlExpressions.SqlExpression[] {
+                    args[0], new Microsoft.EntityFrameworkCore.Query.SqlExpressions.SqlUnaryExpression(
+                        System.Linq.Expressions.ExpressionType.Convert, args[1], typeof(string),
+                        new Microsoft.EntityFrameworkCore.Storage.StringTypeMapping("jsonpath", System.Data.DbType.String)) },
+                nullable: true, argumentsPropagateNullability: new[] { true, true }, typeof(bool), null));
         modelBuilder.HasDefaultSchema("catalog");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CatalogDbContext).Assembly);
 

@@ -37,6 +37,7 @@ public class GetReturnsQueryHandler : IRequestHandler<GetReturnsQuery, Result<Pa
                 r.RefundAmount,
                 r.CreatedAt,
                 r.CargoReturnCode,
+                r.Order.OrderNumber,
                 r.RefundNotApplicableReason))
             .ToListAsync(cancellationToken);
 

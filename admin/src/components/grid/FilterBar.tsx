@@ -18,15 +18,18 @@ interface Props {
   /** sütun başlığında ikonla sunulan alanlar (çubukta tekrar gösterilmez) */
   headerFieldKeys?: Set<string>
   /** Açılır/kapanır "Gelişmiş filtre" paneli (2026-09-11, ürünler): alanlar formda dikey/ızgara dizilir; açık/kapalı durumu localStorage'da */
-  advanced?: { fields: GridFilterField[]; storageKey: string; note?: ReactNode }
+  advanced?: boolean | { fields: GridFilterField[]; storageKey: string; note?: ReactNode }
 }
 
-export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, advanced }: Props) {
+export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, advanced: advancedOption }: Props) {
+  const advanced = typeof advancedOption === 'object' ? advancedOption : undefined
+  const popupAdvanced = advancedOption === true
+  const panelTitle = popupAdvanced ? 'Gelişmiş Filtreler' : 'Diğer filtreler'
   const { state } = grid
-  const quick = fields.filter(f => f.quick)
+  const quick = popupAdvanced ? [] : fields.filter(f => f.quick)
   const advKeys = new Set((advanced?.fields ?? []).map(f => f.key))
   // Sütun başlığında sunulmayan, hızlı olmayan ve gelişmiş panelde de olmayan alanlar: "Diğer filtreler ▾" (yedek)
-  const other = fields.filter(f => !f.quick && !headerFieldKeys?.has(f.key) && !advKeys.has(f.key))
+  const other = popupAdvanced ? fields : fields.filter(f => !f.quick && !headerFieldKeys?.has(f.key) && !advKeys.has(f.key))
   const [advOpen, setAdvOpen] = useState<boolean>(() => { try { return advanced ? localStorage.getItem(advanced.storageKey) === '1' : false } catch { return false } })
   const toggleAdv = () => setAdvOpen(o => { const n = !o; try { if (advanced) localStorage.setItem(advanced.storageKey, n ? '1' : '0') } catch { /* yok say */ } return n })
   const activeAdv = (advanced?.fields ?? []).filter(f => state.filters.some(x => x.field === f.key)).length
@@ -54,12 +57,12 @@ export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, 
           <button type="button" onClick={() => setSheetOpen(true)} aria-haspopup="dialog"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap"
             style={{ border: '1px solid var(--border)', color: 'var(--text)', background: activeCount ? 'var(--surface2)' : undefined }}>
-            <SlidersHorizontal size={15} /> Filtreler{activeCount > 0 && <span className="text-xs px-1.5 rounded-full" style={{ background: 'var(--brand)', color: '#fff' }}>{activeCount}</span>}
+            <SlidersHorizontal size={15} /> {advancedOption ? 'Gelişmiş Filtreler' : 'Filtreler'}{activeCount > 0 && <span className="text-xs px-1.5 rounded-full" style={{ background: 'var(--brand)', color: '#fff' }}>{activeCount}</span>}
           </button>
         </div>
         {chips}
         {sheetOpen && (
-          <BottomSheet title={`Filtreler${activeCount ? ` (${activeCount})` : ''}`} onClose={() => setSheetOpen(false)}>
+          <BottomSheet title={`${advancedOption ? 'Gelişmiş Filtreler' : 'Filtreler'}${activeCount ? ` (${activeCount})` : ''}`} onClose={() => setSheetOpen(false)}>
             <div className="space-y-3">
               {fields.map(f => <FieldRow key={f.key} field={f} grid={grid} stacked />)}
               <div className="flex gap-2 pt-2">
@@ -93,11 +96,11 @@ export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, 
             <button type="button" onClick={() => setOtherOpen(o => !o)} aria-expanded={otherOpen} aria-haspopup="dialog"
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm"
               style={{ border: '1px solid var(--border)', color: 'var(--text)', background: otherOpen ? 'var(--surface2)' : undefined }}>
-              <SlidersHorizontal size={14} /> Diğer filtreler{activeOther > 0 && <span className="text-xs px-1.5 rounded-full" style={{ background: 'var(--brand)', color: '#fff' }}>{activeOther}</span>}
+              <SlidersHorizontal size={14} /> {panelTitle}{activeOther > 0 && <span className="text-xs px-1.5 rounded-full" style={{ background: 'var(--brand)', color: '#fff' }}>{activeOther}</span>}
               <ChevronDown size={14} className={cn('transition-transform', otherOpen && 'rotate-180')} />
             </button>
             {otherOpen && (
-              <div role="dialog" aria-label="Diğer filtreler" className="absolute left-0 mt-1 w-[300px] rounded-xl shadow-lg z-40 p-3 space-y-2" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+              <div role="dialog" aria-label={panelTitle} onKeyDown={e => { if (e.key === 'Escape') setOtherOpen(false) }} className={cn('absolute left-0 mt-1 rounded-xl shadow-lg z-40 p-3 space-y-2', popupAdvanced ? 'w-[min(420px,calc(100vw-48px))] max-h-[65vh] overflow-y-auto' : 'w-[300px]')} style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
                 {other.map(f => <FieldRow key={f.key} field={f} grid={grid} stacked />)}
               </div>
             )}

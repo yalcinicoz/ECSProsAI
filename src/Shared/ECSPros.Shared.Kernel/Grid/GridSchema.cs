@@ -45,6 +45,10 @@ public sealed class GridSchema<T>
     public GridSchema<T> Text(string key, Expression<Func<T, string?>> selector)
     { _filters[key] = new(GridFieldType.Text, selector, null, null, null); return this; }
 
+    /// <summary>İlişkili veri sorgusuyla çağıranın uyguladığı alan; doğrudan uygulanırsa sessizce atlanmaz.</summary>
+    public GridSchema<T> ExternalText(string key)
+    { _filters[key] = new(GridFieldType.Text, null, null, null, null); return this; }
+
     /// <summary><paramref name="allowed"/> boşsa her değer kabul edilir; <paramref name="nullToken"/> (örn. "none") → NULL eşleşmesi.</summary>
     public GridSchema<T> Enum(string key, Expression<Func<T, string?>> selector, IEnumerable<string>? allowed = null, string? nullToken = null)
     {
@@ -164,7 +168,7 @@ public sealed class GridSchema<T>
             return b ? p : Expression.Lambda<Func<T, bool>>(Expression.Not(p.Body), p.Parameters);
         }
 
-        var selector = field.Selector!;
+        var selector = field.Selector ?? throw new GridException($"'{f.Field}' ilişkili veri filtresi çağıran tarafından uygulanmalı.");
         var param = selector.Parameters[0];
         var body = selector.Body;
         Expression pred = field.Type switch
