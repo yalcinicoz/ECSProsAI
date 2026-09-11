@@ -342,6 +342,18 @@ public class ProductAxisSubAttributeValueConfiguration : IEntityTypeConfiguratio
     }
 }
 
+/// <summary>mv_product_stats okuma modeli — migration SQL'i ile oluşturulan MATERIALIZED VIEW; EF migration üretmez.</summary>
+public class ProductStatsConfiguration : IEntityTypeConfiguration<ProductStats>
+{
+    public void Configure(EntityTypeBuilder<ProductStats> builder)
+    {
+        builder.ToTable("mv_product_stats", "catalog", t => t.ExcludeFromMigrations());
+        builder.HasKey(x => x.ProductId);
+        builder.Property(x => x.ImageState).HasMaxLength(10);
+        builder.HasOne<Product>().WithOne(p => p.Stats).HasForeignKey<ProductStats>(x => x.ProductId);
+    }
+}
+
 public class ProductImageConfiguration : IEntityTypeConfiguration<ProductImage>
 {
     public void Configure(EntityTypeBuilder<ProductImage> builder)

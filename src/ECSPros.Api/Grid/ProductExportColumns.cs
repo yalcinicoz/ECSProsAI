@@ -20,6 +20,10 @@ public static class ProductExportColumns
         new("sourceType", "Kaynak", r => ProductGrid.SourceTypeLabel(r.SourceType)),
         new("supplierProductCode", "Tedarikçi Ürün Kodu", r => r.SupplierProductCode),
         new("variantCount", "Varyant Sayısı", r => r.VariantCount),
+        new("imageState", "Görsel Durumu", r => ProductGrid.ImageStateLabel(r.ImageState)),
+        new("imageCount", "Görsel Sayısı", r => r.ImageCount),
+        new("stock", "Stok (fiziksel)", r => r.StockQuantity),
+        new("stockAvailable", "Satılabilir Stok", r => r.StockAvailable),
         new("slug", "Slug", r => r.Slug),
         new("createdAt", "Oluşturma", r => GridExportWriter.ToIstanbul(r.CreatedAt)),
     };

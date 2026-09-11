@@ -22,6 +22,7 @@ public class CatalogDbContext : DbContext, ICatalogDbContext
     public DbSet<ProductVariantImage> ProductVariantImages => Set<ProductVariantImage>();
     public DbSet<ImageSet> ImageSets => Set<ImageSet>();
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
+    public DbSet<ProductStats> ProductStats => Set<ProductStats>();
     public DbSet<ProductImageSetMapping> ProductImageSetMappings => Set<ProductImageSetMapping>();
     public DbSet<ProductVideo> ProductVideos => Set<ProductVideo>();
     public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();

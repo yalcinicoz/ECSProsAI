@@ -42,6 +42,14 @@ bu ekranı kullanır. Listedeki her satır bir <strong>ürün</strong>dür; ür�
 <td>Ürünün varyant sayısı.</td>
 </tr>
 <tr>
+<td>Görsel</td>
+<td>Görsel durumu rozeti — <code>Var</code> (tüm renklerde görsel var), <code>Kısmi</code> (bazı renklerinde var), <code>Yok</code>; yanında görsel sayısı. Renk = ürün grubunun birincil ekseni.</td>
+</tr>
+<tr>
+<td>Stok</td>
+<td>Fiziksel stok toplamı (tüm depolar, tüm varyantlar); üzerine gelince satılabilir stok görünür.</td>
+</tr>
+<tr>
 <td>Durum</td>
 <td><code>Satışta</code> (yeşil) ya da <code>Satış Kapalı</code> (gri) rozeti — ürünün genel satış anahtarı.</td>
 </tr>
@@ -65,6 +73,14 @@ bu ekranı kullanır. Listedeki her satır bir <strong>ürün</strong>dür; ür�
 <td>Arama kutusu (&quot;Ürün adı, kod…&quot;)</td>
 <td>Ürün kodunda ve Türkçe ürün adında geçen metni arar (büyük/küçük harf duyarsız). Yazmayı bıraktıktan kısa bir süre sonra otomatik süzer; sayfa 1&#39;e döner.</td>
 </tr>
+<tr>
+<td><strong>Gelişmiş filtre ▾</strong></td>
+<td>Açılır/kapanır kapsamlı filtre paneli (açık/kapalı durumu hatırlanır). Alanlar: Ürün kodu, Ürün adı, Tedarikçi ürün kodu, Varyant barkodu (tam eşleşme ya da içerir), Ürün grubu, Kaynak, Satışta, <strong>Görsel durumu</strong> (Var / Kısmi / Yok), <strong>Stok adedi</strong> (fiziksel; <code>≥</code>, <code>≤</code>, <code>aralık</code> ile en az / en çok), Satılabilir stok, Liste fiyatı, Varyant sayısı, Görsel sayısı, Oluşturma tarihi, Son görsel tarihi. Seçilen filtreler çip olarak görünür; &quot;Tümünü temizle&quot; hepsini kaldırır.</td>
+</tr>
+<tr>
+<td>Sütun başlığı filtreleri</td>
+<td>Her sütun başlığındaki huni ikonu o alana özgü filtre açar (Görsel ve Stok kolonlarında da).</td>
+</tr>
 </tbody></table>
 <ul>
 <li><strong>Sıralama:</strong> Liste ürün koduna göre sıralıdır; sütun başlıklarına tıklayarak sıralama değiştirilemez.</li>
@@ -73,10 +89,14 @@ bu ekranı kullanır. Listedeki her satır bir <strong>ürün</strong>dür; ür�
 <li><strong>Satır tıklama:</strong> Satıra tıklayınca ürünün detay sayfası açılır (<code>/catalog/products/&lt;ürün-kodu&gt;</code>).</li>
 <li><strong>Boş durum:</strong> Arama sonucu yoksa <code>&quot;…&quot; için ürün bulunamadı</code>, hiç ürün yoksa <code>Henüz ürün eklenmemiş</code> yazar.</li>
 </ul>
+<blockquote class="">
+<p><strong>Görsel/stok tazeliği:</strong> Görsel durumu, görsel sayısı ve stok toplamları her 5 dakikada bir hesaplanan bir özet
+tablodan gelir; panelin altındaki satır son yenilenme saatini gösterir, &quot;Şimdi yenile&quot; bağlantısı hemen yeniler (~3 sn).
+Yeni yüklenen görsel ya da stok hareketi filtreye en geç 5 dk sonra yansır.</p>
+</blockquote>
 <blockquote class="callout not">
-<p><strong>Not:</strong> Bu listede ürün grubuna, kanala veya kategoriye göre ayrı bir filtre yoktur; toplu seçim/toplu işlem de
-bulunmaz. Grup bilgisi yalnızca sütun olarak görünür. Satış kanalı bazlı işlemler için
-<a href="/rehber/vitrin/kanal-urunleri/">Kanal Ürünleri</a> sayfası kullanılır.</p>
+<p><strong>Not:</strong> Bu listede kanala veya kategoriye göre filtre yoktur; toplu seçim/toplu işlem de bulunmaz.
+Satış kanalı bazlı işlemler için <a href="/rehber/vitrin/kanal-urunleri/">Kanal Ürünleri</a> sayfası kullanılır.</p>
 </blockquote>
 <h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
 <table>

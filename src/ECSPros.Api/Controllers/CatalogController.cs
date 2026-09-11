@@ -89,6 +89,20 @@ public class CatalogController : ControllerBase
     /// activeOnly, productGroupId, sort[legacy]) + kolon listesi (boş = tümü). Sayfalama uygulanmaz; tavan Grid:ExportMaxRows,
     /// kullanıcı bazlı dakikada Grid:ExportPerMinute.
     /// </summary>
+    /// <summary>Kapsamlı filtre bilgi satırı: görsel/stok istatistiklerinin son yenilenme zamanı (mv_product_stats).</summary>
+    [HttpGet("products/stats")]
+    public async Task<IActionResult> GetProductStatsInfo([FromServices] ECSPros.Api.Services.ProductStatsRefresher refresher, CancellationToken ct)
+        => Ok(new { success = true, data = new { refreshedAt = await refresher.LastRefreshAsync(ct), intervalMinutes = 5 } });
+
+    /// <summary>Görsel/stok istatistiklerini şimdi yeniler (~2-3 sn; başka örnek yeniliyorsa atlanır).</summary>
+    [HttpPost("products/stats/refresh")]
+    [RequirePermission(Permissions.CatalogProductsManage)]
+    public async Task<IActionResult> RefreshProductStats([FromServices] ECSPros.Api.Services.ProductStatsRefresher refresher, CancellationToken ct)
+    {
+        var yapildi = await refresher.RefreshAsync(ct);
+        return Ok(new { success = true, data = new { refreshed = yapildi, refreshedAt = await refresher.LastRefreshAsync(ct) } });
+    }
+
     [HttpPost("products/export")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
     public async Task<IActionResult> ExportProducts([FromServices] ECSPros.Api.Authorization.IAlanYetkileri alanYetkileri, [FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,

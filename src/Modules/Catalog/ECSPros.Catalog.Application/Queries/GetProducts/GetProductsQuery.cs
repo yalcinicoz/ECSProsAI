@@ -20,7 +20,12 @@ public record ProductListDto(
     Dictionary<string, string> NameI18n,
     Guid ProductGroupId,
     bool IsActive,
-    int VariantCount);
+    int VariantCount,
+    // 2026-09-11 kapsamlı filtre kolonları (mv_product_stats; kayıt yoksa none/0)
+    string ImageState = "none",
+    int ImageCount = 0,
+    int StockQuantity = 0,
+    int StockAvailable = 0);
 
 public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize)
 {

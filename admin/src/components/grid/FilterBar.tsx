@@ -17,13 +17,19 @@ interface Props {
   leading?: ReactNode
   /** sütun başlığında ikonla sunulan alanlar (çubukta tekrar gösterilmez) */
   headerFieldKeys?: Set<string>
+  /** Açılır/kapanır "Gelişmiş filtre" paneli (2026-09-11, ürünler): alanlar formda dikey/ızgara dizilir; açık/kapalı durumu localStorage'da */
+  advanced?: { fields: GridFilterField[]; storageKey: string; note?: ReactNode }
 }
 
-export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys }: Props) {
+export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys, advanced }: Props) {
   const { state } = grid
   const quick = fields.filter(f => f.quick)
-  // Sütun başlığında sunulmayan ve hızlı olmayan alanlar: "Diğer filtreler ▾" (kolonu olmayan ek alanlar için yedek)
-  const other = fields.filter(f => !f.quick && !headerFieldKeys?.has(f.key))
+  const advKeys = new Set((advanced?.fields ?? []).map(f => f.key))
+  // Sütun başlığında sunulmayan, hızlı olmayan ve gelişmiş panelde de olmayan alanlar: "Diğer filtreler ▾" (yedek)
+  const other = fields.filter(f => !f.quick && !headerFieldKeys?.has(f.key) && !advKeys.has(f.key))
+  const [advOpen, setAdvOpen] = useState<boolean>(() => { try { return advanced ? localStorage.getItem(advanced.storageKey) === '1' : false } catch { return false } })
+  const toggleAdv = () => setAdvOpen(o => { const n = !o; try { if (advanced) localStorage.setItem(advanced.storageKey, n ? '1' : '0') } catch { /* yok say */ } return n })
+  const activeAdv = (advanced?.fields ?? []).filter(f => state.filters.some(x => x.field === f.key)).length
   const [otherOpen, setOtherOpen] = useState(false)
   const otherRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -74,6 +80,14 @@ export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys }
         {leading}
         {search !== false && <SearchBox grid={grid} placeholder={search?.placeholder} />}
         {quick.map(f => <FieldRow key={f.key} field={f} grid={grid} />)}
+        {advanced && advanced.fields.length > 0 && (
+          <button type="button" onClick={toggleAdv} aria-expanded={advOpen} aria-controls="grid-advanced-filters"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm"
+            style={{ border: '1px solid var(--border)', color: 'var(--text)', background: advOpen ? 'var(--surface2)' : undefined }}>
+            <SlidersHorizontal size={14} /> Gelişmiş filtre{activeAdv > 0 && <span className="text-xs px-1.5 rounded-full" style={{ background: 'var(--brand)', color: '#fff' }}>{activeAdv}</span>}
+            <ChevronDown size={14} className={cn('transition-transform', advOpen && 'rotate-180')} />
+          </button>
+        )}
         {other.length > 0 && (
           <div className="relative" ref={otherRef}>
             <button type="button" onClick={() => setOtherOpen(o => !o)} aria-expanded={otherOpen} aria-haspopup="dialog"
@@ -90,6 +104,18 @@ export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys }
           </div>
         )}
       </div>
+      {advanced && advOpen && (
+        <div id="grid-advanced-filters" className="rounded-xl p-3" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+            {advanced.fields.map(f => <FieldRow key={f.key} field={f} grid={grid} stacked />)}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+            <div className="text-xs" style={{ color: 'var(--text-s)' }}>{advanced.note}</div>
+            <button type="button" onClick={() => grid.clearFilters({ keepSearch: true })} disabled={!activeCount}
+              className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40" style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Tümünü temizle</button>
+          </div>
+        </div>
+      )}
       {chips}
     </div>
   )

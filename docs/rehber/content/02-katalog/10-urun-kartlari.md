@@ -28,6 +28,8 @@ bu ekranı kullanır. Listedeki her satır bir **ürün**dür; ürünün satıla
 | Ürün | Ürün adı (Türkçe ad; yoksa ilk dildeki ad) ve altında ürün kodu. Solda ürün simgesi. |
 | Grup | Ürünün bağlı olduğu ürün grubu (örn. T-Shirt, Elbise). Grup bulunamazsa `—`. |
 | Varyant | Ürünün varyant sayısı. |
+| Görsel | Görsel durumu rozeti — `Var` (tüm renklerde görsel var), `Kısmi` (bazı renklerinde var), `Yok`; yanında görsel sayısı. Renk = ürün grubunun birincil ekseni. |
+| Stok | Fiziksel stok toplamı (tüm depolar, tüm varyantlar); üzerine gelince satılabilir stok görünür. |
 | Durum | `Satışta` (yeşil) ya da `Satış Kapalı` (gri) rozeti — ürünün genel satış anahtarı. |
 | › | Satırın sağındaki ok; satırın tıklanabilir olduğunu gösterir. |
 
@@ -35,6 +37,8 @@ bu ekranı kullanır. Listedeki her satır bir **ürün**dür; ürünün satıla
 |---|---|
 | `Tümü` / `Satışta` | `Satışta` seçilince yalnızca satışa açık ürünler listelenir; `Tümü` satışa kapalı ürünleri de gösterir. Seçim değişince sayfa 1'e döner. |
 | Arama kutusu ("Ürün adı, kod…") | Ürün kodunda ve Türkçe ürün adında geçen metni arar (büyük/küçük harf duyarsız). Yazmayı bıraktıktan kısa bir süre sonra otomatik süzer; sayfa 1'e döner. |
+| **Gelişmiş filtre ▾** | Açılır/kapanır kapsamlı filtre paneli (açık/kapalı durumu hatırlanır). Alanlar: Ürün kodu, Ürün adı, Tedarikçi ürün kodu, Varyant barkodu (tam eşleşme ya da içerir), Ürün grubu, Kaynak, Satışta, **Görsel durumu** (Var / Kısmi / Yok), **Stok adedi** (fiziksel; `≥`, `≤`, `aralık` ile en az / en çok), Satılabilir stok, Liste fiyatı, Varyant sayısı, Görsel sayısı, Oluşturma tarihi, Son görsel tarihi. Seçilen filtreler çip olarak görünür; "Tümünü temizle" hepsini kaldırır. |
+| Sütun başlığı filtreleri | Her sütun başlığındaki huni ikonu o alana özgü filtre açar (Görsel ve Stok kolonlarında da). |
 
 - **Sıralama:** Liste ürün koduna göre sıralıdır; sütun başlıklarına tıklayarak sıralama değiştirilemez.
 - **Sayfalama:** Sayfa başına 20 ürün. Altta "1–20 / 28549" aralığı, `‹` `›` okları, en fazla 5 sayfa numarası ve
@@ -42,9 +46,12 @@ bu ekranı kullanır. Listedeki her satır bir **ürün**dür; ürünün satıla
 - **Satır tıklama:** Satıra tıklayınca ürünün detay sayfası açılır (`/catalog/products/<ürün-kodu>`).
 - **Boş durum:** Arama sonucu yoksa `"…" için ürün bulunamadı`, hiç ürün yoksa `Henüz ürün eklenmemiş` yazar.
 
-> **Not:** Bu listede ürün grubuna, kanala veya kategoriye göre ayrı bir filtre yoktur; toplu seçim/toplu işlem de
-> bulunmaz. Grup bilgisi yalnızca sütun olarak görünür. Satış kanalı bazlı işlemler için
-> [Kanal Ürünleri](/rehber/vitrin/kanal-urunleri/) sayfası kullanılır.
+> **Görsel/stok tazeliği:** Görsel durumu, görsel sayısı ve stok toplamları her 5 dakikada bir hesaplanan bir özet
+> tablodan gelir; panelin altındaki satır son yenilenme saatini gösterir, "Şimdi yenile" bağlantısı hemen yeniler (~3 sn).
+> Yeni yüklenen görsel ya da stok hareketi filtreye en geç 5 dk sonra yansır.
+
+> **Not:** Bu listede kanala veya kategoriye göre filtre yoktur; toplu seçim/toplu işlem de bulunmaz.
+> Satış kanalı bazlı işlemler için [Kanal Ürünleri](/rehber/vitrin/kanal-urunleri/) sayfası kullanılır.
 
 ## Butonlar ve aksiyonlar
 

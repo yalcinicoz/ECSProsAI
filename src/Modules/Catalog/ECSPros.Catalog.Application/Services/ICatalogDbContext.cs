@@ -18,6 +18,7 @@ public interface ICatalogDbContext
     DbSet<ProductVariantImage> ProductVariantImages { get; }
     DbSet<ImageSet> ImageSets { get; }
     DbSet<ProductImage> ProductImages { get; }
+    DbSet<ProductStats> ProductStats { get; }
     DbSet<ProductImageSetMapping> ProductImageSetMappings { get; }
     DbSet<ProductVideo> ProductVideos { get; }
     DbSet<ProductUnit> ProductUnits { get; }

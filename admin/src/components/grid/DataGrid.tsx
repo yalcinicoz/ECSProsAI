@@ -49,6 +49,8 @@ export interface DataGridProps<T> {
   search?: { placeholder?: string } | false
   /** kolona bağlı olmayan ek filtre alanları (örn. 'paid' boolean) */
   extraFilters?: GridFilterField[]
+  /** Açılır/kapanır gelişmiş filtre paneli (FilterBar.advanced); alanlar çip ve mobil listesine de girer */
+  advancedFilters?: { fields: GridFilterField[]; note?: ReactNode }
   /** filtre satırının en solunda (örn. küçük seçici) */
   filterLeading?: ReactNode
   /** Excel export (plan §2.8): verilirse "Excel'e aktar ▾" düğmesi Kolonlar'ın solunda */
@@ -83,7 +85,7 @@ function defaultVisible<T>(c: GridColumn<T>, bp: GridBreakpoint) {
 
 export function DataGrid<T>({
   gridId, columns, rows, totalCount, grid, loading, fetching, error, onRowClick, rowKey, empty,
-  toolbarLeft, toolbarRight, toolbarBelow, frozen, pageSizes, minWidth, className, search, extraFilters, filterLeading, export: exportCfg,
+  toolbarLeft, toolbarRight, toolbarBelow, frozen, pageSizes, minWidth, className, search, extraFilters, advancedFilters, filterLeading, export: exportCfg,
   views: viewsEnabled, compact, selection, expandedRow,
 }: DataGridProps<T>) {
   const bp = useBreakpoint()
@@ -224,10 +226,12 @@ export function DataGrid<T>({
     }
     return m
   }, [columns])
-  const filterFields = useMemo<GridFilterField[]>(() => [
-    ...Array.from(columnFields.values()).flat(),
-    ...(extraFilters ?? []),
-  ], [columnFields, extraFilters])
+  const filterFields = useMemo<GridFilterField[]>(() => {
+    const list = [...Array.from(columnFields.values()).flat(), ...(extraFilters ?? [])]
+    const seen = new Set(list.map(f => f.key))
+    for (const f of advancedFilters?.fields ?? []) if (!seen.has(f.key)) { list.push(f); seen.add(f.key) }
+    return list
+  }, [columnFields, extraFilters, advancedFilters])
   const headerFieldKeys = useMemo(() => new Set(Array.from(columnFields.values()).flat().map(f => f.key)), [columnFields])
   const hasFilterBar = search !== false && (search !== undefined || filterFields.length > 0) || filterFields.length > 0
 
@@ -309,7 +313,8 @@ export function DataGrid<T>({
           <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
             {viewsEnabled && <ViewsMenu views={viewsApi} />}
             {toolbarLeft}
-            {hasFilterBar && <FilterBar grid={grid} fields={filterFields} search={search} bp={bp} leading={filterLeading} headerFieldKeys={headerFieldKeys} />}
+            {hasFilterBar && <FilterBar grid={grid} fields={filterFields} search={search} bp={bp} leading={filterLeading} headerFieldKeys={headerFieldKeys}
+              advanced={advancedFilters ? { fields: advancedFilters.fields, storageKey: `grid:${gridId}:adv`, note: advancedFilters.note } : undefined} />}
           </div>
           <div className="flex items-center gap-2 ml-auto">
             {toolbarRight}

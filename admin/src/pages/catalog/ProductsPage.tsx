@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -21,6 +21,11 @@ interface ProductListItem {
   productGroupId: string
   isActive: boolean
   variantCount: number
+  // 2026-09-11 kapsamlı filtre kolonları (mv_product_stats, 5 dk tazelik)
+  imageState?: 'none' | 'partial' | 'full' | string
+  imageCount?: number
+  stockQuantity?: number
+  stockAvailable?: number
 }
 
 interface PagedResult {
@@ -46,6 +51,15 @@ const SOURCE_TYPE_OPTIONS = [
   { value: 'seller', label: 'Satıcı' },
   { value: 'supply', label: 'Dış tedarik' },
 ]
+// Görsel durumu RENK bazlı (grubun birincil ekseni): Var = tüm renklerde, Kısmi = bazı renklerde, Yok = hiç görsel yok
+const IMAGE_STATE_OPTIONS = [
+  { value: 'full', label: 'Var' },
+  { value: 'partial', label: 'Kısmi (bazı renklerinde var)' },
+  { value: 'none', label: 'Yok' },
+]
+const IMAGE_STATE_BADGE: Record<string, { label: string; variant: 'success' | 'warning' | 'neutral' | 'danger' }> = {
+  full: { label: 'Var', variant: 'success' }, partial: { label: 'Kısmi', variant: 'warning' }, none: { label: 'Yok', variant: 'danger' },
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -85,6 +99,47 @@ export function ProductsPage() {
     { key: 'productGroupId', label: 'Ürün grubu', type: 'enum', options: groupOptions, quick: true },
   ], [groupOptions])
 
+  // Kapsamlı (gelişmiş) filtre — eski panel /urun/urun-yonetim'in filtre setinin karşılığı (2026-09-11):
+  // kod/ad/tedarikçi kodu/barkod, grup/kaynak, satış durumu, görsel durumu (var/kısmi/yok), stok min-maks (fiziksel + satılabilir),
+  // fiyat, varyant sayısı, görsel sayısı, oluşturma ve son görsel tarihi. Görsel/stok değerleri 5 dk'da bir yenilenir.
+  const advancedFields: GridFilterField[] = useMemo(() => [
+    { key: 'code', label: 'Ürün kodu', type: 'text' },
+    { key: 'name', label: 'Ürün adı', type: 'text' },
+    { key: 'supplierProductCode', label: 'Tedarikçi ürün kodu', type: 'text' },
+    { key: 'barcode', label: 'Varyant barkodu', type: 'text', ops: ['eq', 'contains'] },
+    { key: 'productGroupId', label: 'Ürün grubu', type: 'enum', options: groupOptions },
+    { key: 'sourceType', label: 'Kaynak', type: 'enum', multiple: true, options: SOURCE_TYPE_OPTIONS },
+    { key: 'isSaleOpen', label: 'Satışta', type: 'boolean' },
+    { key: 'imageState', label: 'Görsel durumu', type: 'enum', options: IMAGE_STATE_OPTIONS },
+    { key: 'stock', label: 'Stok adedi (fiziksel)', type: 'number' },
+    { key: 'stockAvailable', label: 'Satılabilir stok', type: 'number' },
+    { key: 'basePrice', label: 'Liste fiyatı', type: 'number' },
+    { key: 'variantCount', label: 'Varyant sayısı', type: 'number' },
+    { key: 'imageCount', label: 'Görsel sayısı', type: 'number' },
+    { key: 'createdAt', label: 'Oluşturma tarihi', type: 'date' },
+    { key: 'lastImageAt', label: 'Son görsel tarihi', type: 'date' },
+  ], [groupOptions])
+
+  // Görsel/stok istatistiklerinin tazeliği + "Şimdi yenile"
+  const queryClient = useQueryClient()
+  const { data: statsInfo } = useQuery<{ refreshedAt: string | null; intervalMinutes: number }>({
+    queryKey: ['product-stats-info'],
+    queryFn: async () => (await api.get('/catalog/products/stats')).data.data,
+    staleTime: 60_000,
+  })
+  const refreshStats = useMutation({
+    mutationFn: async () => (await api.post('/catalog/products/stats/refresh', {})).data.data as { refreshed: boolean },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['product-stats-info'] }); queryClient.invalidateQueries({ queryKey: ['products'] }) },
+  })
+  const statsNote = (
+    <span>
+      Görsel/stok bilgisi her {statsInfo?.intervalMinutes ?? 5} dk'da bir yenilenir
+      {statsInfo?.refreshedAt ? ` · son: ${new Date(statsInfo.refreshedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}` : ''}.
+      {' '}<button type="button" className="underline" style={{ color: 'var(--brand)' }} disabled={refreshStats.isPending}
+        onClick={() => refreshStats.mutate()}>{refreshStats.isPending ? 'Yenileniyor…' : 'Şimdi yenile'}</button>
+    </span>
+  )
+
   const columns: GridColumn<ProductListItem>[] = [
     { key: 'code', header: 'ÜRÜN', filters: [{ field: 'name', label: 'Ürün adı', type: 'text' }, { field: 'supplierProductCode', label: 'Tedarikçi ürün kodu', type: 'text' }, { field: 'basePrice', label: 'Liste fiyatı', type: 'number' }, { field: 'taxRate', label: 'KDV %', type: 'number' }, { field: 'createdAt', label: 'Oluşturma', type: 'date' }], frozen: true, lockVisible: true, sortable: true, minWidth: 220, filter: { type: 'text', label: 'Ürün kodu' },
       cell: (item) => (
@@ -100,6 +155,10 @@ export function ProductsPage() {
       ) },
     { key: 'group', header: 'GRUP', sortable: true, filter: { type: 'enum', label: 'Grup', field: 'productGroupId', options: groupOptions }, filters: [{ field: 'sourceType', label: 'Kaynak', type: 'enum', multiple: true, options: SOURCE_TYPE_OPTIONS }], priority: 2, cell: (item) => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{groupMap.get(item.productGroupId) ?? '—'}</span> },
     { key: 'variantCount', header: 'VARYANT', priority: 3, align: 'center', sortable: true, filter: { type: 'number', label: 'Varyant sayısı' }, cell: (item) => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{item.variantCount}</span> },
+    { key: 'imageState', header: 'GÖRSEL', priority: 2, align: 'center', sortable: true, filter: { type: 'enum', label: 'Görsel durumu', options: IMAGE_STATE_OPTIONS }, filters: [{ field: 'imageCount', label: 'Görsel sayısı', type: 'number' }, { field: 'lastImageAt', label: 'Son görsel tarihi', type: 'date' }],
+      cell: (item) => { const b = IMAGE_STATE_BADGE[item.imageState ?? 'none'] ?? IMAGE_STATE_BADGE.none; return <span className="inline-flex items-center gap-1"><Badge variant={b.variant}>{b.label}</Badge>{(item.imageCount ?? 0) > 0 && <span className="text-xs" style={{ color: 'var(--text-s)' }}>{item.imageCount}</span>}</span> } },
+    { key: 'stock', header: 'STOK', priority: 2, align: 'right', sortable: true, filter: { type: 'number', label: 'Stok adedi (fiziksel)' }, filters: [{ field: 'stockAvailable', label: 'Satılabilir stok', type: 'number' }],
+      cell: (item) => <span className="text-sm tabular-nums" style={{ color: (item.stockQuantity ?? 0) > 0 ? 'var(--text)' : 'var(--text-s)' }} title={`Satılabilir: ${item.stockAvailable ?? 0}`}>{item.stockQuantity ?? 0}</span> },
     { key: 'isSaleOpen', header: 'DURUM', priority: 1, align: 'center', sortable: true, lockVisible: true, filter: { type: 'boolean', label: 'Satışta' },
       cell: (item) => <Badge variant={item.isActive ? 'success' : 'neutral'}>{item.isActive ? 'Satışta' : 'Satış Kapalı'}</Badge> },
     { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
@@ -143,6 +202,7 @@ export function ProductsPage() {
         grid={grid}
         columns={columns}
         extraFilters={extraFilters}
+        advancedFilters={{ fields: advancedFields, note: statsNote }}
         search={{ placeholder: 'Ürün adı, kod, tedarikçi ürün kodu…' }}
         rows={items}
         totalCount={totalCount}
@@ -151,7 +211,7 @@ export function ProductsPage() {
         error={error ? errText(error) : null}
         onRowClick={(item) => navigate(`/catalog/products/${item.code}`)}
         empty={grid.state.search ? `"${grid.state.search}" için ürün bulunamadı` : 'Henüz ürün eklenmemiş'}
-        minWidth={640}
+        minWidth={860}
         export={{ endpoint: '/catalog/products/export', named: () => ({ activeOnly: String(activeOnly) }), fallbackFileName: 'urunler.xlsx' }}
         compact={{
           title: item => item.code,
